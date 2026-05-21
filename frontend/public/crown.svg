@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 44" width="56" height="44">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#A67318"/>
+      <stop offset="40%"  stop-color="#F5D060"/>
+      <stop offset="100%" stop-color="#A67318"/>
+    </linearGradient>
+  </defs>
+  <!-- Crown body -->
+  <path d="M4,42 L4,30 L13,30 L18,12 L24,30 L33,30 L40,4 L47,30 L56,30 L56,42 Z"
+        fill="none" stroke="url(#g)" stroke-width="2.4" stroke-linejoin="round"/>
+  <!-- Base inner line -->
+  <line x1="4" y1="36" x2="56" y2="36" stroke="url(#g)" stroke-width="1" opacity="0.5"/>
+  <!-- Left peak gem -->
+  <circle cx="18" cy="12" r="4.5" fill="url(#g)"/>
+  <circle cx="18" cy="12" r="2"   fill="#6B0000"/>
+  <!-- Center peak gem -->
+  <circle cx="40" cy="4"  r="5.5" fill="url(#g)"/>
+  <circle cx="40" cy="4"  r="2.5" fill="#6B0000"/>
+  <!-- Right peak gem (mirrored of left but crown is asymmetric - this is at x=56 end area) -->
+  <!-- Stitch dots on base -->
+  <circle cx="24" cy="35" r="1.8" fill="url(#g)" opacity="0.8"/>
+  <circle cx="40" cy="35" r="1.8" fill="url(#g)" opacity="0.8"/>
+  <!-- Base corner diamonds -->
+  <polygon points="0,42 4,38 8,42 4,46"  fill="url(#g)" opacity="0.8"/>
+  <polygon points="48,42 52,38 56,42 52,46" fill="url(#g)" opacity="0.8"/>
+</svg>

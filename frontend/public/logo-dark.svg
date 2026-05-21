@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300">
+  <defs>
+    <linearGradient id="gold2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#A67318"/>
+      <stop offset="35%"  stop-color="#E2B83C"/>
+      <stop offset="60%"  stop-color="#F5D060"/>
+      <stop offset="100%" stop-color="#A67318"/>
+    </linearGradient>
+    <linearGradient id="darkbg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#7A0E20"/>
+      <stop offset="100%" stop-color="#3D0510"/>
+    </linearGradient>
+    <linearGradient id="whiteText" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F0E0CC"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark maroon background -->
+  <rect width="680" height="300" fill="url(#darkbg)" rx="4"/>
+
+  <!-- Subtle texture lines (fabric weave hint) -->
+  <line x1="0"   y1="150" x2="680" y2="150" stroke="#FFFFFF" stroke-width="0.4" opacity="0.06"/>
+  <line x1="340" y1="0"   x2="340" y2="300" stroke="#FFFFFF" stroke-width="0.4" opacity="0.06"/>
+
+  <!-- ══ CROWN EMBLEM ═══════════════════════════════════════════════ -->
+  <path d="M256,104 L256,90
+            L272,90 L280,65 L290,90
+            L316,90 L340,46 L364,90
+            L390,90 L400,65 L408,90
+            L424,90 L424,104 Z"
+        fill="none" stroke="url(#gold2)" stroke-width="2.4" stroke-linejoin="round"/>
+
+  <line x1="256" y1="98" x2="424" y2="98" stroke="url(#gold2)" stroke-width="1" opacity="0.5"/>
+
+  <!-- Gems -->
+  <circle cx="280" cy="65" r="6"   fill="url(#gold2)"/>
+  <circle cx="280" cy="65" r="3"   fill="#6B0000"/>
+  <circle cx="340" cy="46" r="8"   fill="url(#gold2)"/>
+  <circle cx="340" cy="46" r="4"   fill="#6B0000"/>
+  <circle cx="400" cy="65" r="6"   fill="url(#gold2)"/>
+  <circle cx="400" cy="65" r="3"   fill="#6B0000"/>
+
+  <!-- Base corner diamonds -->
+  <polygon points="248,104 256,112 264,104 256,96" fill="url(#gold2)" opacity="0.9"/>
+  <polygon points="416,104 424,112 432,104 424,96" fill="url(#gold2)" opacity="0.9"/>
+
+  <!-- Stitch dots -->
+  <circle cx="310" cy="97" r="2.2" fill="url(#gold2)" opacity="0.8"/>
+  <circle cx="340" cy="97" r="2.2" fill="url(#gold2)" opacity="0.8"/>
+  <circle cx="370" cy="97" r="2.2" fill="url(#gold2)" opacity="0.8"/>
+
+  <!-- ══ BRAND NAME ═════════════════════════════════════════════════ -->
+  <text x="340" y="174"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
+        font-size="58"
+        font-weight="bold"
+        fill="url(#whiteText)"
+        letter-spacing="5">AMMALU TEX</text>
+
+  <!-- ══ DECORATIVE RULE ════════════════════════════════════════════ -->
+  <line x1="80"  y1="194" x2="296" y2="194" stroke="url(#gold2)" stroke-width="1.2"/>
+  <polygon points="340,186 348,194 340,202 332,194" fill="url(#gold2)"/>
+  <circle cx="318" cy="194" r="2.5" fill="url(#gold2)" opacity="0.7"/>
+  <circle cx="362" cy="194" r="2.5" fill="url(#gold2)" opacity="0.7"/>
+  <line x1="384" y1="194" x2="600" y2="194" stroke="url(#gold2)" stroke-width="1.2"/>
+
+  <!-- ══ TAGLINE ════════════════════════════════════════════════════ -->
+  <text x="340" y="224"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
+        font-size="15.5"
+        fill="url(#gold2)"
+        letter-spacing="6">PREMIUM WOMEN'S TEXTILES</text>
+
+  <!-- ══ LOCATION ════════════════════════════════════════════════════ -->
+  <line x1="175" y1="249" x2="250" y2="249" stroke="#C0A060" stroke-width="0.8" opacity="0.6"/>
+  <text x="340" y="252"
+        text-anchor="middle"
+        font-family="Georgia, Times New Roman, serif"
+        font-size="10.5"
+        fill="#C0A878"
+        letter-spacing="3.5">TEXVALLEY GANGAPURAM  ·  ERODE</text>
+  <line x1="430" y1="249" x2="505" y2="249" stroke="#C0A060" stroke-width="0.8" opacity="0.6"/>
+
+  <!-- ══ BORDER FRAME ════════════════════════════════════════════════ -->
+  <rect x="12" y="12" width="656" height="276"
+        fill="none" stroke="url(#gold2)" stroke-width="1.5" rx="3" opacity="0.5"/>
+  <rect x="18" y="18" width="644" height="264"
+        fill="none" stroke="url(#gold2)" stroke-width="0.6" rx="2" opacity="0.3"/>
+
+  <!-- Corner diamonds -->
+  <polygon points="12,24 20,12 28,24 20,36" fill="url(#gold2)" opacity="0.7"/>
+  <polygon points="652,24 660,12 668,24 660,36" fill="url(#gold2)" opacity="0.7"/>
+  <polygon points="12,276 20,264 28,276 20,288" fill="url(#gold2)" opacity="0.7"/>
+  <polygon points="652,276 660,264 668,276 660,288" fill="url(#gold2)" opacity="0.7"/>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#7A0E20"/>
+      <stop offset="100%" stop-color="#3D0510"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#A67318"/>
+      <stop offset="50%"  stop-color="#F5D060"/>
+      <stop offset="100%" stop-color="#A67318"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circular maroon background -->
+  <circle cx="100" cy="100" r="98" fill="url(#bg3)"/>
+  <circle cx="100" cy="100" r="94" fill="none" stroke="url(#g3)" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="url(#g3)" stroke-width="0.6" opacity="0.3"/>
+
+  <!-- Mini crown (scaled & centered) -->
+  <path d="M52,95 L52,84
+            L62,84 L68,64 L76,84
+            L90,84 L100,52 L110,84
+            L124,84 L132,64 L138,84
+            L148,84 L148,95 Z"
+        fill="none" stroke="url(#g3)" stroke-width="2.2" stroke-linejoin="round"/>
+
+  <!-- Gem on center peak -->
+  <circle cx="100" cy="52" r="6"   fill="url(#g3)"/>
+  <circle cx="100" cy="52" r="2.8" fill="#6B0000"/>
+  <!-- Left peak gem -->
+  <circle cx="68"  cy="64" r="4.5" fill="url(#g3)"/>
+  <circle cx="68"  cy="64" r="2"   fill="#6B0000"/>
+  <!-- Right peak gem -->
+  <circle cx="132" cy="64" r="4.5" fill="url(#g3)"/>
+  <circle cx="132" cy="64" r="2"   fill="#6B0000"/>
+
+  <!-- AMMALU TEX text below crown -->
+  <text x="100" y="148"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Georgia, serif"
+        font-size="15"
+        font-weight="bold"
+        fill="#E2B83C"
+        letter-spacing="2.5">AMMALU TEX</text>
+</svg>

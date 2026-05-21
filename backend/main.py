@@ -1,0 +1,545 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from database import engine, Base, SessionLocal
+import models
+from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist
+
+
+os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
+
+
+# ── Auto-setup on every startup ───────────────────────────────────────────────
+
+def _ensure_admin():
+    """Create (or re-hash) the admin user so login always works after a redeploy."""
+    from auth import hash_password
+    db = SessionLocal()
+    try:
+        admin_email    = os.getenv("ADMIN_EMAIL",    "kumaragurubaran27102@gmail.com")
+        admin_password = os.getenv("ADMIN_PASSWORD", "VijeyTextile@2026")
+        admin_phone    = os.getenv("ADMIN_PHONE",    "9994168839")
+
+        existing = db.query(models.User).filter(models.User.email == admin_email).first()
+        if existing:
+            existing.password_hash = hash_password(admin_password)
+            existing.is_admin  = True
+            existing.is_active = True
+            db.commit()
+            print(f"[Startup] Admin password re-synced: {admin_email}")
+        else:
+            admin = models.User(
+                full_name     = "Vijey Textile Admin",
+                email         = admin_email,
+                phone         = admin_phone,
+                password_hash = hash_password(admin_password),
+                is_admin      = True,
+                is_active     = True,
+            )
+            db.add(admin)
+            db.commit()
+            print(f"[Startup] Admin user created: {admin_email}")
+    finally:
+        db.close()
+
+
+def _ensure_products():
+    """Seed products if the table is empty."""
+    db = SessionLocal()
+    try:
+        count = db.query(models.Product).count()
+        if count == 0:
+            from seed_data import seed
+            seed()
+            print("[Startup] Products seeded.")
+        else:
+            print(f"[Startup] {count} products already in database.")
+    finally:
+        db.close()
+
+
+def _migrate_db():
+    """Add new columns/tables without dropping data. Each step is independently safe."""
+    from sqlalchemy import text, inspect as sa_inspect
+    with engine.connect() as conn:
+        inspector = sa_inspect(engine)
+
+        # ── users columns ──────────────────────────────────────────────────
+        try:
+            user_cols = [c["name"] for c in inspector.get_columns("users")]
+            if "scheduled_delete_at" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN scheduled_delete_at TIMESTAMP WITH TIME ZONE"))
+                conn.commit()
+                print("[Startup] Migrated: added scheduled_delete_at to users")
+            if "is_deactivated" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_deactivated BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("[Startup] Migrated: added is_deactivated to users")
+            if "deactivated_at" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN deactivated_at TIMESTAMP WITH TIME ZONE"))
+                conn.commit()
+                print("[Startup] Migrated: added deactivated_at to users")
+        except Exception as e:
+            print(f"[Startup] User migration note: {e}")
+
+        # ── orders columns ─────────────────────────────────────────────────
+        try:
+            orders_cols = [c["name"] for c in inspector.get_columns("orders")]
+            if "open_box_delivery" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN open_box_delivery BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("[Startup] Migrated: added open_box_delivery to orders")
+            if "delivery_otp" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_otp VARCHAR(10)"))
+                conn.commit()
+                print("[Startup] Migrated: added delivery_otp to orders")
+            if "delivery_person_name" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_person_name VARCHAR(100)"))
+                conn.commit()
+                print("[Startup] Migrated: added delivery_person_name to orders")
+            if "delivery_person_phone" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delivery_person_phone VARCHAR(20)"))
+                conn.commit()
+                print("[Startup] Migrated: added delivery_person_phone to orders")
+            if "awb_code" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN awb_code VARCHAR(50)"))
+                conn.commit()
+                print("[Startup] Migrated: added awb_code to orders")
+            if "courier_name" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN courier_name VARCHAR(100)"))
+                conn.commit()
+                print("[Startup] Migrated: added courier_name to orders")
+            if "tracking_url" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN tracking_url VARCHAR(500)"))
+                conn.commit()
+                print("[Startup] Migrated: added tracking_url to orders")
+            if "estimated_delivery" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN estimated_delivery VARCHAR(50)"))
+                conn.commit()
+                print("[Startup] Migrated: added estimated_delivery to orders")
+            if "status_location" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN status_location VARCHAR(255)"))
+                conn.commit()
+                print("[Startup] Migrated: added status_location to orders")
+            if "shiprocket_order_id" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN shiprocket_order_id VARCHAR(50)"))
+                conn.commit()
+                print("[Startup] Migrated: added shiprocket_order_id to orders")
+            if "shiprocket_shipment_id" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN shiprocket_shipment_id VARCHAR(50)"))
+                conn.commit()
+                print("[Startup] Migrated: added shiprocket_shipment_id to orders")
+            if "cancel_reason" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN cancel_reason VARCHAR(255)"))
+                conn.commit()
+                print("[Startup] Migrated: added cancel_reason to orders")
+            if "cancelled_by" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN cancelled_by VARCHAR(20)"))
+                conn.commit()
+                print("[Startup] Migrated: added cancelled_by to orders")
+        except Exception as e:
+            print(f"[Startup] Orders migration note: {e}")
+
+        # ── products columns ───────────────────────────────────────────────
+        try:
+            products_cols = [c["name"] for c in inspector.get_columns("products")]
+            if "is_featured" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN is_featured BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("[Startup] Migrated: added is_featured to products")
+            if "is_new_arrival" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN is_new_arrival BOOLEAN NOT NULL DEFAULT FALSE"))
+                conn.commit()
+                print("[Startup] Migrated: added is_new_arrival to products")
+            if "is_returnable" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN is_returnable BOOLEAN NOT NULL DEFAULT TRUE"))
+                conn.commit()
+                print("[Startup] Migrated: added is_returnable to products")
+        except Exception as e:
+            print(f"[Startup] Products migration note: {e}")
+
+        # ── new tables ─────────────────────────────────────────────────────
+        try:
+            existing_tables = inspector.get_table_names()
+            if "support_ratings" not in existing_tables:
+                conn.execute(text("""
+                    CREATE TABLE support_ratings (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        name VARCHAR(100) NOT NULL,
+                        email VARCHAR(255) NOT NULL,
+                        phone VARCHAR(20),
+                        rating INTEGER NOT NULL,
+                        category VARCHAR(100),
+                        message TEXT,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+                print("[Startup] Migrated: created support_ratings table")
+            if "reviews" not in existing_tables:
+                conn.execute(text("""
+                    CREATE TABLE reviews (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                        rating INTEGER NOT NULL,
+                        title VARCHAR(255),
+                        comment TEXT,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+                print("[Startup] Migrated: created reviews table")
+            if "support_interactions" not in existing_tables:
+                conn.execute(text("""
+                    CREATE TABLE support_interactions (
+                        id SERIAL PRIMARY KEY,
+                        cs_name VARCHAR(100) NOT NULL,
+                        cs_email VARCHAR(255),
+                        cs_phone VARCHAR(20),
+                        customer_name VARCHAR(100) NOT NULL,
+                        customer_email VARCHAR(255) NOT NULL,
+                        customer_phone VARCHAR(20),
+                        customer_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                        issue_summary VARCHAR(500),
+                        rating_token VARCHAR(100) UNIQUE NOT NULL,
+                        rating INTEGER,
+                        rating_comment TEXT,
+                        rated_at TIMESTAMP WITH TIME ZONE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    )
+                """))
+                conn.commit()
+                print("[Startup] Migrated: created support_interactions table")
+            if "return_requests" not in existing_tables:
+                conn.execute(text("""
+                    CREATE TABLE return_requests (
+                        id SERIAL PRIMARY KEY,
+                        order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        request_type VARCHAR(20) NOT NULL,
+                        reason VARCHAR(100) NOT NULL,
+                        description TEXT,
+                        images JSON DEFAULT '[]',
+                        status VARCHAR(50) DEFAULT 'pending',
+                        admin_notes TEXT,
+                        refund_id VARCHAR(100),
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        updated_at TIMESTAMP WITH TIME ZONE
+                    )
+                """))
+                conn.commit()
+                print("[Startup] Migrated: created return_requests table")
+            if "wishlist_items" not in existing_tables:
+                conn.execute(text("""
+                    CREATE TABLE wishlist_items (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                        UNIQUE(user_id, product_id)
+                    )
+                """))
+                conn.commit()
+                print("[Startup] Migrated: created wishlist_items table")
+        except Exception as e:
+            print(f"[Startup] New table migration note: {e}")
+
+    # Fix size options by category
+    try:
+        db = SessionLocal()
+        s_to_xxxl = ["S", "M", "L", "XL", "XXL", "XXXL"]
+        l_to_xxxl = ["L", "XL", "XXL", "XXXL"]
+        size_map  = {
+            "Tops":       s_to_xxxl,
+            "Crop Tops":  s_to_xxxl,
+            "Chudithar":  l_to_xxxl,
+            "Lehenga":    l_to_xxxl,
+            "Half Saree": l_to_xxxl,
+            "Party Wears":l_to_xxxl,
+        }
+        updated = 0
+        for product in db.query(models.Product).all():
+            target = size_map.get(product.category)
+            if target and product.size_options != target:
+                product.size_options = target
+                updated += 1
+        if updated:
+            db.commit()
+            print(f"[Startup] Updated size options for {updated} product(s).")
+
+        # Seed Half Saree products if none exist
+        hs_count = db.query(models.Product).filter(models.Product.category == "Half Saree").count()
+        if hs_count == 0:
+            from seed_data import PRODUCTS
+            hs_products = [p for p in PRODUCTS if p["category"] == "Half Saree"]
+            for p in hs_products:
+                db.add(models.Product(**p))
+            db.commit()
+            print(f"[Startup] Added {len(hs_products)} Half Saree product(s).")
+
+        # Seed categories table if empty
+        cat_count = db.query(models.Category).count()
+        if cat_count == 0:
+            DEFAULT_CATEGORIES = [
+                {"name": "Chudithar",   "emoji": "👘", "description": "Traditional & Casual",  "sort_order": 1},
+                {"name": "Tops",        "emoji": "👕", "description": "Trendy & Stylish",       "sort_order": 2},
+                {"name": "Lehenga",     "emoji": "👗", "description": "Bridal & Festive",       "sort_order": 3},
+                {"name": "Half Saree",  "emoji": "🥻", "description": "Traditional & Elegant",  "sort_order": 4},
+                {"name": "Crop Tops",   "emoji": "🎽", "description": "Casual & Modern",        "sort_order": 5},
+                {"name": "Party Wears", "emoji": "✨", "description": "Glam & Elegant",         "sort_order": 6},
+            ]
+            for c in DEFAULT_CATEGORIES:
+                db.add(models.Category(**c))
+            db.commit()
+            print("[Startup] Categories seeded.")
+        db.close()
+    except Exception as e:
+        print(f"[Startup] Size/seed migration note: {e}")
+
+
+def _cleanup_deleted_accounts():
+    """Permanently remove accounts whose deletion window has passed.
+    Sends a 'permanently deleted' email to each user before wiping their data.
+    """
+    from datetime import datetime, timezone
+    import notifications as _notif
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        expired = db.query(models.User).filter(
+            models.User.scheduled_delete_at.isnot(None),
+            models.User.scheduled_delete_at <= now,
+        ).all()
+        for u in expired:
+            # ── Send final goodbye email BEFORE deleting (while we still have the address) ──
+            try:
+                _notif.send_account_permanently_deleted_email(u.email, u.full_name)
+                print(f"[Cleanup] Sent deletion-confirmed email → {u.email}")
+            except Exception as e:
+                print(f"[Cleanup] Could not send deletion email to {u.email}: {e}")
+            db.delete(u)
+        if expired:
+            db.commit()
+            print(f"[Startup] Permanently deleted {len(expired)} expired account(s).")
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Create all tables
+    Base.metadata.create_all(bind=engine)
+    # Migrate new columns without data loss
+    _migrate_db()
+    # Delete accounts whose 4-hour deletion window expired + send goodbye email
+    _cleanup_deleted_accounts()
+    # Always ensure admin + products exist
+    _ensure_admin()
+    _ensure_products()
+    yield
+
+
+# ── App ───────────────────────────────────────────────────────────────────────
+
+app = FastAPI(
+    title       = "Vijey Textile API",
+    description = "Premium Textile Shopping — Texvalley Gangapuram",
+    version     = "3.0.0",
+    lifespan    = lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://vijeytextile.com",
+        "https://www.vijeytextile.com",
+        "https://vijey-textile.vercel.app",
+        "https://www.vijey-textile.vercel.app",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+upload_dir = os.getenv("UPLOAD_DIR", "uploads/products")
+app.mount("/uploads/products", StaticFiles(directory=upload_dir), name="product_images")
+
+app.include_router(auth.router)
+app.include_router(products.router)
+app.include_router(cart.router)
+app.include_router(orders.router)
+app.include_router(admin.router)
+app.include_router(payments.router)
+app.include_router(addresses.router)
+app.include_router(support.router)
+app.include_router(returns.router)
+app.include_router(wishlist.router)
+# Tracking is wired into orders router (/api/orders/{id}/track)
+
+
+@app.get("/")
+def root():
+    return {
+        "store":    "Vijey Textile",
+        "location": "Shop Ground Floor No 131, Texvalley Gangapuram",
+        "status":   "API is running",
+        "docs":     "/docs",
+    }
+
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+
+@app.get("/seed")
+def seed_database():
+    from seed_data import seed
+    seed()
+    return {"status": "Database seeded successfully"}
+
+
+@app.get("/reset-admin")
+def reset_admin():
+    _ensure_admin()
+    admin_email = os.getenv("ADMIN_EMAIL", "kumaragurubaran27102@gmail.com")
+    return {"status": "Admin reset successfully", "email": admin_email}
+
+
+@app.get("/test-notification")
+def test_notification(to: str = "", type: str = "welcome"):
+    """
+    Instantly send a real notification email to verify the template.
+    Usage: GET /test-notification?to=your@email.com&type=welcome
+    Types: welcome | order | payment | admin | deletion | retrieved | deleted
+    """
+    import notifications as _n
+    target = to.strip() or os.getenv("SMTP_EMAIL", "kumaragurubaran27102@gmail.com")
+
+    class _FakeOrder:
+        order_number = "AMT-TEST-001"
+        id = 1
+        total = 1499.00
+        subtotal = 1499.00
+        shipping_fee = 0
+        discount = 0
+        status = "confirmed"
+        payment_status = "paid"
+        payment_method = "razorpay"
+        payment_transaction_id = "pay_TEST123"
+        tracking_number = None
+        items_snapshot = [{"name": "Silk Chudithar", "quantity": 1,
+                           "price": 1499, "subtotal": 1499,
+                           "product_id": 1, "size": "L", "color": "Maroon"}]
+        shipping_address = {"full_name": "Test Customer", "phone": "9876543210",
+                            "address_line1": "123 Test Street", "city": "Coimbatore",
+                            "state": "Tamil Nadu", "pincode": "641001"}
+        created_at = __import__("datetime").datetime.now()
+
+    t = type.lower()
+    name = "Kumaraguru"
+    if t == "admin":
+        _n.send_admin_access_email(target, name)
+    elif t == "order":
+        _n.send_order_confirmation_email(target, name, _FakeOrder())
+    elif t == "payment":
+        _n.send_payment_success_email(target, name, _FakeOrder())
+    elif t == "deletion":
+        import datetime as _dt
+        _n.send_deletion_scheduled_email(target, name,
+            _dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=4))
+    elif t == "retrieved":
+        _n.send_account_retrieved_email(target, name)
+    elif t == "deleted":
+        _n.send_account_permanently_deleted_email(target, name)
+    else:  # welcome
+        _n.send_welcome_email(target, name)
+
+    return {"status": "sent", "to": target, "type": t,
+            "note": "Check your inbox (and spam folder). Email sent in background."}
+
+
+@app.get("/test-email")
+def test_email(to: str = ""):
+    """
+    Diagnostic endpoint — tests email delivery and returns the exact result.
+    Uses SendGrid HTTP API (works on Render). Falls back to SMTP.
+    Usage: GET /test-email?to=youremail@gmail.com
+    """
+    import json as _json, urllib.request as _req, urllib.error as _uerr
+
+    sg_key     = os.getenv("SENDGRID_API_KEY", "")
+    smtp_email = os.getenv("SMTP_EMAIL", "")
+    target     = to.strip() if to.strip() else smtp_email or "kumaragurubaran27102@gmail.com"
+
+    # ── Test via SendGrid ──────────────────────────────────────────────────────
+    if sg_key:
+        from_email = smtp_email or "noreply@ammalu-tex.com"
+        payload = _json.dumps({
+            "personalizations": [{"to": [{"email": target}]}],
+            "from": {"email": from_email, "name": "Vijey Textile"},
+            "subject": "✅ Vijey Textile — Email Test (SendGrid)",
+            "content": [{
+                "type": "text/html",
+                "value": (
+                    "<h2 style='color:#7c1d2e'>Email delivery is working! ✅</h2>"
+                    "<p>This test email was sent from the Vijey Textile backend on Render "
+                    "using SendGrid. If you're reading this, emails (OTPs, order confirmations, etc.) "
+                    "are now working correctly.</p>"
+                    "<p style='color:#888;font-size:12px;'>Sent from vijey-textile.onrender.com</p>"
+                ),
+            }],
+        }).encode()
+        try:
+            request = _req.Request(
+                "https://api.sendgrid.com/v3/mail/send",
+                data=payload,
+                headers={"Authorization": f"Bearer {sg_key}", "Content-Type": "application/json"},
+            )
+            with _req.urlopen(request, timeout=15) as resp:
+                return {
+                    "status":  "success",
+                    "method":  "SendGrid",
+                    "message": f"Test email sent to {target}. Check inbox + spam folder.",
+                    "from":    from_email,
+                    "to":      target,
+                    "http_status": resp.status,
+                }
+        except _uerr.HTTPError as e:
+            body = e.read().decode(errors="ignore")
+            return {
+                "status":  "error",
+                "method":  "SendGrid",
+                "type":    f"HTTP {e.code}",
+                "message": body,
+                "hint":    (
+                    "Common causes: (1) API key is wrong/expired — regenerate at app.sendgrid.com/settings/api_keys, "
+                    "(2) Sender email not verified — go to app.sendgrid.com → Settings → Sender Authentication."
+                ),
+            }
+        except Exception as e:
+            return {"status": "error", "method": "SendGrid", "type": type(e).__name__, "message": str(e)}
+
+    # ── No SendGrid key — report setup instructions ────────────────────────────
+    return {
+        "status":  "not_configured",
+        "message": (
+            "SENDGRID_API_KEY is not set. "
+            "Render free tier blocks SMTP ports, so SendGrid is required. "
+            "Steps: (1) Sign up free at sendgrid.com, "
+            "(2) Settings → Sender Authentication → Single Sender → verify your Gmail, "
+            "(3) Settings → API Keys → Create API Key → Full Access, "
+            "(4) Add SENDGRID_API_KEY to Render environment variables."
+        ),
+        "smtp_email_set": bool(smtp_email),
+    }

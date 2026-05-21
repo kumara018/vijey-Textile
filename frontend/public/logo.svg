@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300">
+  <defs>
+    <!-- Gold shimmer gradient -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#A67318"/>
+      <stop offset="35%"  stop-color="#E2B83C"/>
+      <stop offset="60%"  stop-color="#F5D060"/>
+      <stop offset="100%" stop-color="#A67318"/>
+    </linearGradient>
+    <!-- Deep maroon gradient for brand name -->
+    <linearGradient id="maroon" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#8B1A1A"/>
+      <stop offset="100%" stop-color="#4A0A0A"/>
+    </linearGradient>
+    <!-- Subtle warm paper background -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#FFFCF7"/>
+      <stop offset="100%" stop-color="#FFF5E8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Warm background -->
+  <rect width="680" height="300" fill="url(#bg)" rx="4"/>
+
+  <!-- ══ CROWN EMBLEM ═══════════════════════════════════════════════ -->
+  <!-- Crown body (filled, slightly transparent) -->
+  <path d="M256,104 L256,90
+            L272,90 L280,65 L290,90
+            L316,90 L340,46 L364,90
+            L390,90 L400,65 L408,90
+            L424,90 L424,104 Z"
+        fill="#FFF6E4" stroke="url(#gold)" stroke-width="2.2"
+        stroke-linejoin="round"/>
+
+  <!-- Decorative inner line on crown base -->
+  <line x1="256" y1="98" x2="424" y2="98" stroke="url(#gold)" stroke-width="1" opacity="0.5"/>
+
+  <!-- Crown peak gems — left peak -->
+  <circle cx="280" cy="65"  r="6"   fill="url(#gold)"/>
+  <circle cx="280" cy="65"  r="3"   fill="#6B0000"/>
+  <!-- Crown peak gems — center peak (taller, bigger gem) -->
+  <circle cx="340" cy="46"  r="8"   fill="url(#gold)"/>
+  <circle cx="340" cy="46"  r="4"   fill="#6B0000"/>
+  <!-- Crown peak gems — right peak -->
+  <circle cx="400" cy="65"  r="6"   fill="url(#gold)"/>
+  <circle cx="400" cy="65"  r="3"   fill="#6B0000"/>
+
+  <!-- Small diamond ornaments at crown base corners -->
+  <polygon points="248,104 256,112 264,104 256,96" fill="url(#gold)" opacity="0.8"/>
+  <polygon points="416,104 424,112 432,104 424,96" fill="url(#gold)" opacity="0.8"/>
+
+  <!-- Three tiny dots along crown base (fabric stitch motif) -->
+  <circle cx="310" cy="97" r="2.2" fill="url(#gold)" opacity="0.7"/>
+  <circle cx="340" cy="97" r="2.2" fill="url(#gold)" opacity="0.7"/>
+  <circle cx="370" cy="97" r="2.2" fill="url(#gold)" opacity="0.7"/>
+
+
+  <!-- ══ BRAND NAME ═════════════════════════════════════════════════ -->
+  <!-- Subtle shadow/depth layer -->
+  <text x="342" y="176"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
+        font-size="58"
+        font-weight="bold"
+        fill="#C09070"
+        letter-spacing="5"
+        opacity="0.25">AMMALU TEX</text>
+  <!-- Main brand text -->
+  <text x="340" y="174"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
+        font-size="58"
+        font-weight="bold"
+        fill="url(#maroon)"
+        letter-spacing="5">AMMALU TEX</text>
+
+
+  <!-- ══ DECORATIVE RULE ════════════════════════════════════════════ -->
+  <!-- Left line + right line with center diamond -->
+  <line x1="80"  y1="194" x2="296" y2="194" stroke="url(#gold)" stroke-width="1.2"/>
+  <!-- Center diamond ornament -->
+  <polygon points="340,186 348,194 340,202 332,194" fill="url(#gold)"/>
+  <!-- Small flanking dots -->
+  <circle cx="318" cy="194" r="2.5" fill="url(#gold)" opacity="0.7"/>
+  <circle cx="362" cy="194" r="2.5" fill="url(#gold)" opacity="0.7"/>
+  <line x1="384" y1="194" x2="600" y2="194" stroke="url(#gold)" stroke-width="1.2"/>
+
+
+  <!-- ══ TAGLINE ════════════════════════════════════════════════════ -->
+  <text x="340" y="224"
+        text-anchor="middle"
+        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
+        font-size="15.5"
+        fill="#B8820C"
+        letter-spacing="6">PREMIUM WOMEN'S TEXTILES</text>
+
+
+  <!-- ══ LOCATION BYLINE ════════════════════════════════════════════ -->
+  <!-- Left short rule -->
+  <line x1="175" y1="249" x2="250" y2="249" stroke="#CCBBA0" stroke-width="0.8"/>
+  <text x="340" y="252"
+        text-anchor="middle"
+        font-family="Georgia, Times New Roman, serif"
+        font-size="10.5"
+        fill="#B0A090"
+        letter-spacing="3.5">TEXVALLEY GANGAPURAM  ·  ERODE</text>
+  <!-- Right short rule -->
+  <line x1="430" y1="249" x2="505" y2="249" stroke="#CCBBA0" stroke-width="0.8"/>
+
+
+  <!-- ══ OUTER BORDER FRAME ════════════════════════════════════════ -->
+  <rect x="12" y="12" width="656" height="276"
+        fill="none" stroke="url(#gold)" stroke-width="1.5" rx="3" opacity="0.4"/>
+  <rect x="18" y="18" width="644" height="264"
+        fill="none" stroke="url(#gold)" stroke-width="0.6" rx="2" opacity="0.25"/>
+
+  <!-- Corner ornaments (diamond at each corner) -->
+  <polygon points="12,24 20,12 28,24 20,36" fill="url(#gold)" opacity="0.5"/>
+  <polygon points="652,24 660,12 668,24 660,36" fill="url(#gold)" opacity="0.5"/>
+  <polygon points="12,276 20,264 28,276 20,288" fill="url(#gold)" opacity="0.5"/>
+  <polygon points="652,276 660,264 668,276 660,288" fill="url(#gold)" opacity="0.5"/>
+</svg>
