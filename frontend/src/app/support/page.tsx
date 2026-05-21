@@ -9,34 +9,26 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-// ── Size data — Girls' clothing 3 Months to 16 Years ─────────────────────────
-const INFANT_SIZES = [
-  { size: '3M',   height: '56–62 cm',   chest: '41 cm',  waist: '41 cm' },
-  { size: '6M',   height: '62–68 cm',   chest: '43 cm',  waist: '43 cm' },
-  { size: '9M',   height: '68–74 cm',   chest: '45 cm',  waist: '44 cm' },
-  { size: '12M',  height: '74–80 cm',   chest: '47 cm',  waist: '46 cm' },
-  { size: '18M',  height: '80–86 cm',   chest: '49 cm',  waist: '48 cm' },
-  { size: '24M',  height: '86–92 cm',   chest: '51 cm',  waist: '50 cm' },
-];
-const TODDLER_SIZES = [
-  { size: '2-3Y',  height: '92–98 cm',    chest: '53 cm',  waist: '52 cm' },
-  { size: '3-4Y',  height: '98–104 cm',   chest: '55 cm',  waist: '53 cm' },
-  { size: '4-5Y',  height: '104–110 cm',  chest: '57 cm',  waist: '54 cm' },
-  { size: '5-6Y',  height: '110–116 cm',  chest: '59 cm',  waist: '55 cm' },
+// ── Size data — Baby, Kids & Girls clothing (sizes 14–40) ────────────────────
+const BABY_SIZES = [
+  { size: '14', chest: '35 cm', waist: '34 cm', hip: '37 cm' },
+  { size: '16', chest: '37 cm', waist: '36 cm', hip: '39 cm' },
+  { size: '18', chest: '39 cm', waist: '38 cm', hip: '41 cm' },
+  { size: '20', chest: '41 cm', waist: '40 cm', hip: '43 cm' },
+  { size: '22', chest: '43 cm', waist: '42 cm', hip: '45 cm' },
+  { size: '24', chest: '45 cm', waist: '44 cm', hip: '47 cm' },
 ];
 const KIDS_SIZES = [
-  { size: '6-7Y',   height: '116–122 cm',  chest: '62 cm',  waist: '57 cm' },
-  { size: '7-8Y',   height: '122–128 cm',  chest: '64 cm',  waist: '58 cm' },
-  { size: '8-9Y',   height: '128–134 cm',  chest: '67 cm',  waist: '60 cm' },
-  { size: '9-10Y',  height: '134–140 cm',  chest: '70 cm',  waist: '62 cm' },
-  { size: '10-11Y', height: '140–146 cm',  chest: '74 cm',  waist: '64 cm' },
-  { size: '11-12Y', height: '146–152 cm',  chest: '78 cm',  waist: '67 cm' },
+  { size: '26', chest: '48 cm', waist: '46 cm', hip: '50 cm' },
+  { size: '28', chest: '51 cm', waist: '49 cm', hip: '53 cm' },
+  { size: '30', chest: '54 cm', waist: '52 cm', hip: '56 cm' },
+  { size: '32', chest: '57 cm', waist: '55 cm', hip: '59 cm' },
 ];
-const TEEN_SIZES = [
-  { size: '12-13Y', height: '152–158 cm',  chest: '82 cm',  waist: '70 cm' },
-  { size: '13-14Y', height: '158–163 cm',  chest: '86 cm',  waist: '73 cm' },
-  { size: '14-15Y', height: '163–168 cm',  chest: '90 cm',  waist: '75 cm' },
-  { size: '15-16Y', height: '168–173 cm',  chest: '92 cm',  waist: '77 cm' },
+const GIRLS_SIZES = [
+  { size: '34', chest: '61 cm', waist: '58 cm', hip: '63 cm' },
+  { size: '36', chest: '65 cm', waist: '62 cm', hip: '67 cm' },
+  { size: '38', chest: '69 cm', waist: '66 cm', hip: '71 cm' },
+  { size: '40', chest: '73 cm', waist: '70 cm', hip: '75 cm' },
 ];
 
 // ── Accordion component ──────────────────────────────────────────────────────
@@ -185,15 +177,14 @@ export default function SupportPage() {
       {/* ── Size Guide ─────────────────────────────────────────────────── */}
       <Accordion id="size-guide" title="Size Guide" icon={Ruler} defaultOpen>
         <p className="text-sm text-gray-500 mb-5">
-          Our sizes are based on age and body measurements for girls from 3 months to 16 years.
-          Measure height and chest in a relaxed position for the best fit.
+          We follow standard Indian clothing sizes from 14 to 40.
+          Measure chest, waist and hip in a relaxed position and match with the chart below.
         </p>
 
         {[
-          { label: '👶 Infant — 3 Months to 24 Months', rows: INFANT_SIZES },
-          { label: '🧒 Toddler — 2 Years to 6 Years',   rows: TODDLER_SIZES },
-          { label: '👧 Kids — 6 Years to 12 Years',      rows: KIDS_SIZES },
-          { label: '🌸 Teens — 12 Years to 16 Years',    rows: TEEN_SIZES },
+          { label: '👶 Baby — Sizes 14 to 24', rows: BABY_SIZES },
+          { label: '👧 Kids — Sizes 26 to 32',  rows: KIDS_SIZES },
+          { label: '🌸 Girls — Sizes 34 to 40', rows: GIRLS_SIZES },
         ].map(({ label, rows }) => (
           <div className="mb-5" key={label}>
             <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">{label}</p>
@@ -202,18 +193,18 @@ export default function SupportPage() {
                 <thead className="bg-maroon-50">
                   <tr className="text-maroon-800 font-semibold text-xs uppercase tracking-wide">
                     <th className="px-4 py-3 text-left">Size</th>
-                    <th className="px-4 py-3 text-left">Height</th>
                     <th className="px-4 py-3 text-left">Chest</th>
                     <th className="px-4 py-3 text-left">Waist</th>
+                    <th className="px-4 py-3 text-left">Hip</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-orange-50">
                   {rows.map((row) => (
                     <tr key={row.size} className="hover:bg-orange-50 transition-colors">
                       <td className="px-4 py-3 font-bold text-maroon-900">{row.size}</td>
-                      <td className="px-4 py-3 text-gray-700">{row.height}</td>
                       <td className="px-4 py-3 text-gray-700">{row.chest}</td>
                       <td className="px-4 py-3 text-gray-700">{row.waist}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.hip}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -223,10 +214,10 @@ export default function SupportPage() {
         ))}
 
         <div className="p-4 bg-amber-50 rounded-xl text-xs text-gray-600 border border-amber-100">
-          💡 <b>Measurement Tips:</b> Use a soft measuring tape to measure height and chest.
-          If your child is between sizes, size up for comfortable room to grow.
-          For flowing styles (Lehenga, Frocks), the larger size is always a better choice.
-          When in doubt, contact us on WhatsApp — we&apos;ll help you pick the right fit!
+          💡 <b>Measurement Tips:</b> Use a soft measuring tape. Measure chest at the fullest
+          part, waist at the narrowest, and hip at the widest point.
+          For flowing styles (Lehenga, Frocks), one size up gives a comfortable fit.
+          Not sure? WhatsApp us — we&apos;ll help you pick the right size!
         </div>
       </Accordion>
 
@@ -409,7 +400,7 @@ export default function SupportPage() {
           },
           {
             q: 'How do I choose the right size?',
-            a: 'Check the Size Guide above. Our sizes go from 3 Months (infant) to 15-16Y (teens) based on age and body measurements. Measure your child\'s height and chest, then compare with the chart. When in doubt, size up — children grow fast!',
+            a: 'Check the Size Guide above. We use standard Indian clothing sizes from 14 to 40 — Baby (14–24), Kids (26–32), and Girls (34–40). Measure chest, waist and hip, then compare with the chart. When in doubt, size up!',
           },
           {
             q: 'Can I change or cancel my order after placing it?',

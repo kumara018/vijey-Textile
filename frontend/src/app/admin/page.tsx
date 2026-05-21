@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 const ORDER_STATUSES = ['pending','confirmed','processing','shipped','out_for_delivery','delivered','cancelled'];
-const SIZE_OPTIONS   = ['3M','6M','9M','12M','18M','24M','2-3Y','3-4Y','4-5Y','5-6Y','6-7Y','7-8Y','8-9Y','9-10Y','10-11Y','11-12Y','12-13Y','13-14Y','14-15Y','15-16Y'];
+const SIZE_OPTIONS   = ['14','16','18','20','22','24','26','28','30','32','34','36','38','40'];
 
 interface DashData { total_products: number; active_products: number; total_users: number; total_orders: number; pending_orders: number; total_revenue: number; recent_orders: any[]; }
 

@@ -6,7 +6,7 @@ STORE DETAILS
 ================================================================
 Store Name    : Vijey Textile
 Products      : Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga, Party Wear
-               (Girls 3 months to 16 years)
+               (Baby, Kids & Girls — Sizes 14 to 40)
 Phone 1       : +91 99941 68839
 Phone 2       : +91 94439 47853
 Admin Email   : kumaragurubaran27102@gmail.com
@@ -135,11 +135,10 @@ Categories:
   - Lehenga        (festive & bridal)
   - Party Wear     (sequin gowns, tutu, velvet)
 
-Size Options:
-  Infant : 3M, 6M, 9M, 12M, 18M, 24M
-  Toddler: 2-3Y, 3-4Y, 4-5Y, 5-6Y
-  Kids   : 6-7Y, 7-8Y, 8-9Y, 9-10Y, 10-11Y, 11-12Y
-  Teens  : 12-13Y, 13-14Y, 14-15Y, 15-16Y
+Size Options (standard Indian clothing sizes):
+  Baby  : 14, 16, 18, 20, 22, 24
+  Kids  : 26, 28, 30, 32
+  Girls : 34, 36, 38, 40
 
 ================================================================
 PRIMARY ADMIN ACCOUNT (PROTECTED)

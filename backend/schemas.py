@@ -5,16 +5,11 @@ import re
 
 VALID_CATEGORIES = ["Baby Frocks", "Chudithar", "Frocks", "Western Dresses", "Lehenga", "Party Wear"]
 
-# Size range: 3 months to 16 years
+# Clothing sizes 14 to 40 — Baby, Kids & Girls
 VALID_SIZES = [
-    # Infants
-    "3M", "6M", "9M", "12M", "18M", "24M",
-    # Toddlers
-    "2-3Y", "3-4Y", "4-5Y", "5-6Y",
-    # Kids
-    "6-7Y", "7-8Y", "8-9Y", "9-10Y", "10-11Y", "11-12Y",
-    # Teens
-    "12-13Y", "13-14Y", "14-15Y", "15-16Y",
+    "14", "16", "18", "20", "22", "24",   # Baby
+    "26", "28", "30", "32",               # Kids
+    "34", "36", "38", "40",               # Girls
 ]
 
 

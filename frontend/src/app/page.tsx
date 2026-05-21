@@ -11,7 +11,7 @@ const OFFERS = [
     emoji: '👶',
     tag: 'Adorable Picks',
     title: 'Baby Frocks',
-    desc: 'Soft, gentle & cute baby frocks for infant girls — 3 months to 24 months.',
+    desc: 'Soft, gentle & cute baby frocks in sizes 14 to 24 — perfect for little ones.',
     btn: 'Shop Baby Frocks',
     href: '/products?category=Baby+Frocks',
     bg: 'from-maroon-900 via-maroon-800 to-rose-900',
@@ -21,7 +21,7 @@ const OFFERS = [
     emoji: '👘',
     tag: 'Traditional Elegance',
     title: 'Chudithar Sets',
-    desc: 'Premium cotton & silk chudithar sets for girls — classic style, modern comfort.',
+    desc: 'Premium cotton & silk chudithar sets — classic style, modern comfort. Sizes 14–40.',
     btn: 'Shop Chudithar',
     href: '/products?category=Chudithar',
     bg: 'from-maroon-950 via-maroon-800 to-indigo-900',
@@ -70,7 +70,7 @@ const OFFERS = [
 ];
 
 const CATEGORIES = [
-  { name: 'Baby Frocks',      emoji: '👶', desc: '3 Months – 24 Months',   gradient: 'from-violet-100 to-purple-200',  border: 'border-violet-300' },
+  { name: 'Baby Frocks',      emoji: '👶', desc: 'Soft & Cute Baby Wear',   gradient: 'from-violet-100 to-purple-200',  border: 'border-violet-300' },
   { name: 'Chudithar',        emoji: '👘', desc: 'Traditional Elegance',    gradient: 'from-indigo-100 to-violet-200',  border: 'border-indigo-300' },
   { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-purple-100 to-violet-200',  border: 'border-purple-300' },
   { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-fuchsia-100 to-purple-200', border: 'border-fuchsia-300'},
@@ -144,12 +144,12 @@ export default function HomePage() {
               <Sparkles size={14} /> New Collection 2026 — Now Available
             </a>
             <h1 className="text-4xl md:text-6xl font-display font-bold leading-tight mb-4">
-              Luxury Girls&apos; &amp;<br />
-              <span className="text-gold-400">Baby Fashion</span>
+              Luxury Baby, Kids<br />
+              <span className="text-gold-400">&amp; Girls Fashion</span>
             </h1>
             <p className="text-maroon-200 text-lg md:text-xl mb-8 leading-relaxed">
               Shop premium Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga &amp; Party Wear
-              for girls 3 months to 16 years — at Vijey Textile, Texvalley Gangapuram.
+              for Baby, Kids &amp; Girls — at Vijey Textile, Texvalley Gangapuram.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/products" className="btn-gold inline-flex items-center gap-2">

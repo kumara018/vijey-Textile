@@ -12,17 +12,19 @@ load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
-# ─── Size groups (3 months → 16 years) ───────────────────────────────────────
-INFANT_SIZES  = ["3M", "6M", "9M", "12M", "18M", "24M"]
-TODDLER_SIZES = ["2-3Y", "3-4Y", "4-5Y", "5-6Y"]
-KIDS_SIZES    = ["6-7Y", "7-8Y", "8-9Y", "9-10Y", "10-11Y", "11-12Y"]
-TEEN_SIZES    = ["12-13Y", "13-14Y", "14-15Y", "15-16Y"]
-ALL_SIZES     = INFANT_SIZES + TODDLER_SIZES + KIDS_SIZES + TEEN_SIZES
-OLDER_SIZES   = TODDLER_SIZES + KIDS_SIZES + TEEN_SIZES
+# ─── Size groups — standard Indian clothing sizes 14–40 ──────────────────────
+BABY_SIZES    = ["14", "16", "18", "20", "22", "24"]
+KIDS_SIZES    = ["26", "28", "30", "32"]
+GIRLS_SIZES   = ["34", "36", "38", "40"]
+ALL_SIZES     = BABY_SIZES + KIDS_SIZES + GIRLS_SIZES
+OLDER_SIZES   = KIDS_SIZES + GIRLS_SIZES
+# aliases kept for readability
+INFANT_SIZES  = BABY_SIZES
+TODDLER_SIZES = BABY_SIZES
 
 PRODUCTS = [
     # ────────────────────────────────────────────────────────
-    # BABY FROCKS  (3M – 24M)
+    # BABY FROCKS  (Sizes 14–24)
     # ────────────────────────────────────────────────────────
     {"name": "Luxury Floral Organic Baby Frock",
      "description": "100% soft organic cotton baby frock with delicate floral embroidery. Snap buttons at back for easy dressing. Gentle on baby skin — perfect for everyday luxury wear.",
@@ -85,7 +87,7 @@ PRODUCTS = [
      "description": "Trendy georgette chudithar with vibrant digital prints. Light, flowy and fashionable — perfect for parties, functions and casual outings for older girls.",
      "price": 1299.0, "compare_price": 1799.0,
      "category": "Chudithar", "fabric": "Georgette",
-     "size_options": KIDS_SIZES + TEEN_SIZES,
+     "size_options": OLDER_SIZES,
      "colors": ["Multicolor", "Pink", "Peach"],
      "images": ["/images/placeholder-chudithar.jpg"],
      "stock": 55, "sku": "CH-003", "is_featured": False},
@@ -94,19 +96,19 @@ PRODUCTS = [
      "description": "Designer kurthi with matching palazzo pants. Traditional Indian look with modern cut — perfect for Tamil festivals, school annual days and family functions.",
      "price": 999.0, "compare_price": 1399.0,
      "category": "Chudithar", "fabric": "Rayon",
-     "size_options": TODDLER_SIZES + KIDS_SIZES + TEEN_SIZES,
+     "size_options": OLDER_SIZES,
      "colors": ["Yellow", "Orange", "Pink", "Mint"],
      "images": ["/images/placeholder-chudithar.jpg"],
      "stock": 60, "sku": "CH-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
-    # FROCKS  (18M – 16Y)
+    # FROCKS  (Sizes 18–40)
     # ────────────────────────────────────────────────────────
     {"name": "Classic Puff Sleeve Cotton Frock",
-     "description": "Timeless cotton frock with puffed sleeves and gathered skirt. A wardrobe essential for every girl — breathable, easy-care and available 18M to 16Y.",
+     "description": "Timeless cotton frock with puffed sleeves and gathered skirt. A wardrobe essential for every girl — breathable, easy-care. Available in sizes 18 to 40.",
      "price": 599.0, "compare_price": 849.0,
      "category": "Frocks", "fabric": "Pure Cotton",
-     "size_options": INFANT_SIZES[4:] + OLDER_SIZES,
+     "size_options": ALL_SIZES,
      "colors": ["Pink", "Blue", "Yellow", "White", "Red"],
      "images": ["/images/placeholder-frock.jpg"],
      "stock": 100, "sku": "FR-001", "is_featured": True},
@@ -121,7 +123,7 @@ PRODUCTS = [
      "stock": 75, "sku": "FR-002", "is_featured": True},
 
     {"name": "Twirl Umbrella Frock",
-     "description": "Girls love to spin in this gorgeous umbrella-cut frock! Vibrant prints, wide flared silhouette — the perfect birthday frock for toddlers to teens.",
+     "description": "Girls love to spin in this gorgeous umbrella-cut frock! Vibrant prints, wide flared silhouette — the perfect birthday frock for Baby, Kids & Girls.",
      "price": 699.0, "compare_price": 999.0,
      "category": "Frocks", "fabric": "Polyester",
      "size_options": OLDER_SIZES,
@@ -139,10 +141,10 @@ PRODUCTS = [
      "stock": 55, "sku": "FR-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
-    # WESTERN DRESSES  (12M – 16Y)
+    # WESTERN DRESSES  (Sizes 14–40)
     # ────────────────────────────────────────────────────────
     {"name": "Floral A-Line Western Dress",
-     "description": "Trendy floral A-line dress with a flared skirt for toddlers to teens. Cotton-polyester blend — comfortable for daily wear, playdates and school outings.",
+     "description": "Trendy floral A-line dress with a flared skirt for Baby, Kids & Girls. Cotton-polyester blend — comfortable for daily wear, playdates and school outings.",
      "price": 699.0, "compare_price": 999.0,
      "category": "Western Dresses", "fabric": "Cotton Blend",
      "size_options": OLDER_SIZES,
@@ -154,16 +156,16 @@ PRODUCTS = [
      "description": "Stylish denim pinafore with adjustable straps and front pockets. A versatile western staple — pair with T-shirt or wear standalone for school and casual outings.",
      "price": 849.0, "compare_price": 1199.0,
      "category": "Western Dresses", "fabric": "Denim",
-     "size_options": KIDS_SIZES + TEEN_SIZES,
+     "size_options": OLDER_SIZES,
      "colors": ["Light Blue", "Dark Blue", "Black"],
      "images": ["/images/placeholder-western.jpg"],
      "stock": 50, "sku": "WD-002", "is_featured": True},
 
     {"name": "Striped Jersey T-Shirt Dress",
-     "description": "Fun striped jersey dress for active girls. Elasticated waist, machine washable — perfect for every day from 12 months to 16 years.",
+     "description": "Fun striped jersey dress for active girls. Elasticated waist, machine washable — available in sizes 14 to 40 for Baby, Kids & Girls.",
      "price": 499.0, "compare_price": 699.0,
      "category": "Western Dresses", "fabric": "Jersey Cotton",
-     "size_options": INFANT_SIZES[3:] + OLDER_SIZES,
+     "size_options": ALL_SIZES,
      "colors": ["Pink Stripe", "Blue Stripe", "Rainbow", "Red Stripe"],
      "images": ["/images/placeholder-western.jpg"],
      "stock": 90, "sku": "WD-003", "is_featured": False},
@@ -178,13 +180,13 @@ PRODUCTS = [
      "stock": 55, "sku": "WD-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
-    # LEHENGA  (24M – 16Y)
+    # LEHENGA  (Sizes 20–40)
     # ────────────────────────────────────────────────────────
     {"name": "Silk Festive Girls Lehenga Set",
      "description": "Luxury art silk lehenga set with rich zari border. Includes stitched choli and matching dupatta. A showstopper at weddings, Diwali and all festive occasions.",
      "price": 2499.0, "compare_price": 3499.0,
      "category": "Lehenga", "fabric": "Art Silk",
-     "size_options": INFANT_SIZES[5:] + OLDER_SIZES,
+     "size_options": ALL_SIZES,
      "colors": ["Red & Gold", "Pink & Gold", "Green & Gold", "Purple & Gold"],
      "images": ["/images/placeholder-lehenga.jpg"],
      "stock": 40, "sku": "LH-001", "is_featured": True},
@@ -199,10 +201,10 @@ PRODUCTS = [
      "stock": 30, "sku": "LH-002", "is_featured": True},
 
     {"name": "Teen Bridal Lehenga Set",
-     "description": "Stunning bridal-style lehenga for teen girls (12–16Y). Heavy embroidery, velvet blouse and net dupatta — the ultimate festive look for weddings and receptions.",
+     "description": "Stunning bridal-style lehenga for girls (sizes 34–40). Heavy embroidery, velvet blouse and net dupatta — the ultimate festive look for weddings and receptions.",
      "price": 4999.0, "compare_price": 6999.0,
      "category": "Lehenga", "fabric": "Velvet & Net",
-     "size_options": TEEN_SIZES,
+     "size_options": GIRLS_SIZES,
      "colors": ["Red & Gold", "Maroon & Gold", "Navy & Gold"],
      "images": ["/images/placeholder-lehenga.jpg"],
      "stock": 20, "sku": "LH-003", "is_featured": False},
@@ -217,22 +219,22 @@ PRODUCTS = [
      "stock": 55, "sku": "LH-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
-    # PARTY WEAR  (18M – 16Y)
+    # PARTY WEAR  (Sizes 18–40)
     # ────────────────────────────────────────────────────────
     {"name": "Sequin Princess Party Gown",
-     "description": "Dazzling sequin gown — every girl feels like a princess. Soft mesh lining for comfort. The ultimate birthday gown from toddlers to teens (18M to 16Y).",
+     "description": "Dazzling sequin gown — every girl feels like a princess. Soft mesh lining for comfort. The ultimate birthday gown for Baby, Kids & Girls (sizes 18–40).",
      "price": 2199.0, "compare_price": 2999.0,
      "category": "Party Wear", "fabric": "Sequin Net",
-     "size_options": INFANT_SIZES[4:] + OLDER_SIZES,
+     "size_options": ALL_SIZES,
      "colors": ["Gold", "Silver", "Pink", "Purple"],
      "images": ["/images/placeholder-party.jpg"],
      "stock": 35, "sku": "PW-001", "is_featured": True},
 
     {"name": "Tutu Ruffle Birthday Dress",
-     "description": "Magical layered tulle tutu dress with satin bodice and gold bow. The dream birthday dress — every girl will love twirling in this! Available 18M to 16Y.",
+     "description": "Magical layered tulle tutu dress with satin bodice and gold bow. The dream birthday dress — every girl will love twirling in this! Sizes 18 to 40.",
      "price": 1799.0, "compare_price": 2499.0,
      "category": "Party Wear", "fabric": "Tulle & Satin",
-     "size_options": INFANT_SIZES[4:] + OLDER_SIZES,
+     "size_options": ALL_SIZES,
      "colors": ["Pink", "White", "Lavender", "Teal"],
      "images": ["/images/placeholder-party.jpg"],
      "stock": 45, "sku": "PW-002", "is_featured": True},
@@ -247,10 +249,10 @@ PRODUCTS = [
      "stock": 40, "sku": "PW-003", "is_featured": False},
 
     {"name": "Floral Organza Teen Party Gown",
-     "description": "Dreamy organza gown with 3D floral applique and flared skirt. For teen girls 12–16Y — a showstopper at any party, wedding or reception.",
+     "description": "Dreamy organza gown with 3D floral applique and flared skirt. For girls (sizes 34–40) — a showstopper at any party, wedding or reception.",
      "price": 3499.0, "compare_price": 4799.0,
      "category": "Party Wear", "fabric": "Organza",
-     "size_options": TEEN_SIZES,
+     "size_options": GIRLS_SIZES,
      "colors": ["Pink", "White", "Gold", "Purple"],
      "images": ["/images/placeholder-party.jpg"],
      "stock": 25, "sku": "PW-004", "is_featured": True},
