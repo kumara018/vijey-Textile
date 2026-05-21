@@ -3,7 +3,19 @@ from typing import Optional, List, Any
 from datetime import datetime
 import re
 
-VALID_CATEGORIES = ["Baby Frocks", "Western Dresses", "Frocks", "Lehenga", "Party Wear"]
+VALID_CATEGORIES = ["Baby Frocks", "Chudithar", "Frocks", "Western Dresses", "Lehenga", "Party Wear"]
+
+# Size range: 3 months to 16 years
+VALID_SIZES = [
+    # Infants
+    "3M", "6M", "9M", "12M", "18M", "24M",
+    # Toddlers
+    "2-3Y", "3-4Y", "4-5Y", "5-6Y",
+    # Kids
+    "6-7Y", "7-8Y", "8-9Y", "9-10Y", "10-11Y", "11-12Y",
+    # Teens
+    "12-13Y", "13-14Y", "14-15Y", "15-16Y",
+]
 
 
 # ─── AUTH SCHEMAS ─────────────────────────────────────────────────────────────

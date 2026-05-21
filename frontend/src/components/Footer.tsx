@@ -12,7 +12,7 @@ function XIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-const SHOP_CATEGORIES = ['Baby Frocks', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
+const SHOP_CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 
 export default function Footer() {
   const router = useRouter();
@@ -27,13 +27,13 @@ export default function Footer() {
             {/* Logo image in footer */}
             <Link href="/">
               <img
-                src="/logo-dark.svg"
+                src="/logo_vijey.png"
                 alt="Vijey Textile"
-                className="h-20 w-auto mb-4 opacity-95 hover:opacity-100 transition-opacity"
+                className="h-16 w-auto mb-4 opacity-95 hover:opacity-100 transition-opacity"
               />
             </Link>
             <p className="text-sm text-maroon-300 leading-relaxed mb-5">
-              Your trusted destination for premium quality women&apos;s ethnic and contemporary wear at Texvalley Gangapuram.
+              Luxury girls&apos; &amp; baby fashion — Chudithar, Frocks, Lehenga &amp; more for 3 months to 16 years. At Texvalley Gangapuram, Erode.
             </p>
             <div className="flex gap-2 flex-wrap">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"

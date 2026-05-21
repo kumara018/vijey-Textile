@@ -9,14 +9,34 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-// ── Size data ────────────────────────────────────────────────────────────────
-const SIZE_ROWS = [
-  { size: 'S',    chest: '32–34" / 81–86 cm',    waist: '26–28" / 66–71 cm',   hip: '35–37" / 89–94 cm'    },
-  { size: 'M',    chest: '34–36" / 86–91 cm',    waist: '28–30" / 71–76 cm',   hip: '37–39" / 94–99 cm'    },
-  { size: 'L',    chest: '36–38" / 91–97 cm',    waist: '30–32" / 76–81 cm',   hip: '39–41" / 99–104 cm'   },
-  { size: 'XL',   chest: '38–40" / 97–102 cm',   waist: '32–34" / 81–86 cm',   hip: '41–43" / 104–109 cm'  },
-  { size: 'XXL',  chest: '40–42" / 102–107 cm',  waist: '34–36" / 86–91 cm',   hip: '43–45" / 109–114 cm'  },
-  { size: 'XXXL', chest: '42–44" / 107–112 cm',  waist: '36–38" / 91–97 cm',   hip: '45–47" / 114–119 cm'  },
+// ── Size data — Girls' clothing 3 Months to 16 Years ─────────────────────────
+const INFANT_SIZES = [
+  { size: '3M',   height: '56–62 cm',   chest: '41 cm',  waist: '41 cm' },
+  { size: '6M',   height: '62–68 cm',   chest: '43 cm',  waist: '43 cm' },
+  { size: '9M',   height: '68–74 cm',   chest: '45 cm',  waist: '44 cm' },
+  { size: '12M',  height: '74–80 cm',   chest: '47 cm',  waist: '46 cm' },
+  { size: '18M',  height: '80–86 cm',   chest: '49 cm',  waist: '48 cm' },
+  { size: '24M',  height: '86–92 cm',   chest: '51 cm',  waist: '50 cm' },
+];
+const TODDLER_SIZES = [
+  { size: '2-3Y',  height: '92–98 cm',    chest: '53 cm',  waist: '52 cm' },
+  { size: '3-4Y',  height: '98–104 cm',   chest: '55 cm',  waist: '53 cm' },
+  { size: '4-5Y',  height: '104–110 cm',  chest: '57 cm',  waist: '54 cm' },
+  { size: '5-6Y',  height: '110–116 cm',  chest: '59 cm',  waist: '55 cm' },
+];
+const KIDS_SIZES = [
+  { size: '6-7Y',   height: '116–122 cm',  chest: '62 cm',  waist: '57 cm' },
+  { size: '7-8Y',   height: '122–128 cm',  chest: '64 cm',  waist: '58 cm' },
+  { size: '8-9Y',   height: '128–134 cm',  chest: '67 cm',  waist: '60 cm' },
+  { size: '9-10Y',  height: '134–140 cm',  chest: '70 cm',  waist: '62 cm' },
+  { size: '10-11Y', height: '140–146 cm',  chest: '74 cm',  waist: '64 cm' },
+  { size: '11-12Y', height: '146–152 cm',  chest: '78 cm',  waist: '67 cm' },
+];
+const TEEN_SIZES = [
+  { size: '12-13Y', height: '152–158 cm',  chest: '82 cm',  waist: '70 cm' },
+  { size: '13-14Y', height: '158–163 cm',  chest: '86 cm',  waist: '73 cm' },
+  { size: '14-15Y', height: '163–168 cm',  chest: '90 cm',  waist: '75 cm' },
+  { size: '15-16Y', height: '168–173 cm',  chest: '92 cm',  waist: '77 cm' },
 ];
 
 // ── Accordion component ──────────────────────────────────────────────────────
@@ -165,71 +185,48 @@ export default function SupportPage() {
       {/* ── Size Guide ─────────────────────────────────────────────────── */}
       <Accordion id="size-guide" title="Size Guide" icon={Ruler} defaultOpen>
         <p className="text-sm text-gray-500 mb-5">
-          Take your body measurements (chest, waist, hips) in a relaxed position and compare
-          with the chart below for the perfect fit.
+          Our sizes are based on age and body measurements for girls from 3 months to 16 years.
+          Measure height and chest in a relaxed position for the best fit.
         </p>
 
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">
-            Tops &amp; Crop Tops — S to XXXL
-          </p>
-          <div className="overflow-x-auto rounded-xl border border-orange-100">
-            <table className="w-full text-sm">
-              <thead className="bg-maroon-50">
-                <tr className="text-maroon-800 font-semibold text-xs uppercase tracking-wide">
-                  <th className="px-4 py-3 text-left">Size</th>
-                  <th className="px-4 py-3 text-left">Chest</th>
-                  <th className="px-4 py-3 text-left">Waist</th>
-                  <th className="px-4 py-3 text-left">Hip</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-orange-50">
-                {SIZE_ROWS.map((row) => (
-                  <tr key={row.size} className="hover:bg-orange-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-maroon-900">{row.size}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.chest}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.waist}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.hip}</td>
+        {[
+          { label: '👶 Infant — 3 Months to 24 Months', rows: INFANT_SIZES },
+          { label: '🧒 Toddler — 2 Years to 6 Years',   rows: TODDLER_SIZES },
+          { label: '👧 Kids — 6 Years to 12 Years',      rows: KIDS_SIZES },
+          { label: '🌸 Teens — 12 Years to 16 Years',    rows: TEEN_SIZES },
+        ].map(({ label, rows }) => (
+          <div className="mb-5" key={label}>
+            <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">{label}</p>
+            <div className="overflow-x-auto rounded-xl border border-orange-100">
+              <table className="w-full text-sm">
+                <thead className="bg-maroon-50">
+                  <tr className="text-maroon-800 font-semibold text-xs uppercase tracking-wide">
+                    <th className="px-4 py-3 text-left">Size</th>
+                    <th className="px-4 py-3 text-left">Height</th>
+                    <th className="px-4 py-3 text-left">Chest</th>
+                    <th className="px-4 py-3 text-left">Waist</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-orange-50">
+                  {rows.map((row) => (
+                    <tr key={row.size} className="hover:bg-orange-50 transition-colors">
+                      <td className="px-4 py-3 font-bold text-maroon-900">{row.size}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.height}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.chest}</td>
+                      <td className="px-4 py-3 text-gray-700">{row.waist}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">
-            Chudithar, Lehenga, Half Saree &amp; Party Wears — L to XXXL
-          </p>
-          <div className="overflow-x-auto rounded-xl border border-orange-100">
-            <table className="w-full text-sm">
-              <thead className="bg-maroon-50">
-                <tr className="text-maroon-800 font-semibold text-xs uppercase tracking-wide">
-                  <th className="px-4 py-3 text-left">Size</th>
-                  <th className="px-4 py-3 text-left">Chest</th>
-                  <th className="px-4 py-3 text-left">Waist</th>
-                  <th className="px-4 py-3 text-left">Hip</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-orange-50">
-                {SIZE_ROWS.filter((r) => ['L', 'XL', 'XXL', 'XXXL'].includes(r.size)).map((row) => (
-                  <tr key={row.size} className="hover:bg-orange-50 transition-colors">
-                    <td className="px-4 py-3 font-bold text-maroon-900">{row.size}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.chest}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.waist}</td>
-                    <td className="px-4 py-3 text-gray-700">{row.hip}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        ))}
 
         <div className="p-4 bg-amber-50 rounded-xl text-xs text-gray-600 border border-amber-100">
-          💡 <b>Measurement Tips:</b> Use a soft measuring tape. Measure chest at the fullest
-          part, waist at the narrowest, and hips at the widest. For fitted styles (bodycon),
-          choose your exact size. For flowing styles (lehenga, half saree), you can go one size
-          down. When in doubt, size up.
+          💡 <b>Measurement Tips:</b> Use a soft measuring tape to measure height and chest.
+          If your child is between sizes, size up for comfortable room to grow.
+          For flowing styles (Lehenga, Frocks), the larger size is always a better choice.
+          When in doubt, contact us on WhatsApp — we&apos;ll help you pick the right fit!
         </div>
       </Accordion>
 
@@ -412,7 +409,7 @@ export default function SupportPage() {
           },
           {
             q: 'How do I choose the right size?',
-            a: 'Check the Size Guide above. Measure your chest, waist, and hips and compare with the chart. For Tops/Crop Tops we offer S–XXXL; for Chudithar/Lehenga/Half Saree/Party Wears we offer L–XXXL. When in doubt, size up.',
+            a: 'Check the Size Guide above. Our sizes go from 3 Months (infant) to 15-16Y (teens) based on age and body measurements. Measure your child\'s height and chest, then compare with the chart. When in doubt, size up — children grow fast!',
           },
           {
             q: 'Can I change or cancel my order after placing it?',

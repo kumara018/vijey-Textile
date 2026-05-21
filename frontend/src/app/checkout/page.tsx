@@ -233,7 +233,7 @@ export default function CheckoutPage() {
           contact: addr.phone,
           email:   user?.email,
         },
-        theme: { color: '#8b1538' },
+        theme: { color: '#7c3aed' },
         handler: async (response: any) => {
           try {
             await api.post('/api/payments/verify', {

@@ -18,6 +18,16 @@ const OFFERS = [
     accent: '🌸',
   },
   {
+    emoji: '👘',
+    tag: 'Traditional Elegance',
+    title: 'Chudithar Sets',
+    desc: 'Premium cotton & silk chudithar sets for girls — classic style, modern comfort.',
+    btn: 'Shop Chudithar',
+    href: '/products?category=Chudithar',
+    bg: 'from-maroon-950 via-maroon-800 to-indigo-900',
+    accent: '🪷',
+  },
+  {
     emoji: '👗',
     tag: 'New Arrival',
     title: 'Frocks Collection',
@@ -60,11 +70,12 @@ const OFFERS = [
 ];
 
 const CATEGORIES = [
-  { name: 'Baby Frocks',      emoji: '👶', desc: '3 Months – 24 Months',   gradient: 'from-rose-100 to-pink-200',    border: 'border-rose-300'   },
-  { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-fuchsia-100 to-pink-200', border: 'border-fuchsia-300'},
-  { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-orange-100 to-amber-200', border: 'border-orange-300' },
-  { name: 'Lehenga',          emoji: '💃', desc: 'Festive & Bridal',        gradient: 'from-purple-100 to-pink-200',  border: 'border-purple-300' },
-  { name: 'Party Wear',       emoji: '✨', desc: 'Glam & Celebrations',     gradient: 'from-yellow-100 to-amber-200', border: 'border-yellow-300' },
+  { name: 'Baby Frocks',      emoji: '👶', desc: '3 Months – 24 Months',   gradient: 'from-violet-100 to-purple-200',  border: 'border-violet-300' },
+  { name: 'Chudithar',        emoji: '👘', desc: 'Traditional Elegance',    gradient: 'from-indigo-100 to-violet-200',  border: 'border-indigo-300' },
+  { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-purple-100 to-violet-200',  border: 'border-purple-300' },
+  { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-fuchsia-100 to-purple-200', border: 'border-fuchsia-300'},
+  { name: 'Lehenga',          emoji: '💃', desc: 'Festive & Bridal',        gradient: 'from-violet-100 to-indigo-200',  border: 'border-violet-400' },
+  { name: 'Party Wear',       emoji: '✨', desc: 'Glam & Celebrations',     gradient: 'from-yellow-100 to-amber-200',   border: 'border-yellow-400' },
 ];
 
 const FEATURES = [
@@ -133,12 +144,12 @@ export default function HomePage() {
               <Sparkles size={14} /> New Collection 2026 — Now Available
             </a>
             <h1 className="text-4xl md:text-6xl font-display font-bold leading-tight mb-4">
-              Discover Premium<br />
-              <span className="text-gold-400">Women&apos;s Textiles</span>
+              Luxury Girls&apos; &amp;<br />
+              <span className="text-gold-400">Baby Fashion</span>
             </h1>
             <p className="text-maroon-200 text-lg md:text-xl mb-8 leading-relaxed">
-              Shop the finest Baby Frocks, Western Dresses, Frocks, Lehenga & Party Wears at
-              Vijey Textile — Texvalley Gangapuram.
+              Shop premium Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga &amp; Party Wear
+              for girls 3 months to 16 years — at Vijey Textile, Texvalley Gangapuram.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/products" className="btn-gold inline-flex items-center gap-2">

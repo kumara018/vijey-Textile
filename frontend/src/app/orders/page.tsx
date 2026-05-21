@@ -24,13 +24,14 @@ function getDeliveryLine(status: string): string {
 }
 
 function getCategoryEmoji(category?: string): string {
-  if (!category) return '👚';
-  if (category === 'Lehenga') return '👗';
+  if (!category) return '👗';
+  if (category === 'Baby Frocks') return '👶';
   if (category === 'Chudithar') return '👘';
-  if (category === 'Half Saree') return '🥻';
-  if (category === 'Crop Tops') return '🎽';
-  if (category === 'Party Wears') return '✨';
-  return '👚';
+  if (category === 'Frocks') return '👗';
+  if (category === 'Western Dresses') return '👒';
+  if (category === 'Lehenga') return '💃';
+  if (category === 'Party Wear') return '✨';
+  return '👗';
 }
 
 export default function OrdersPage() {

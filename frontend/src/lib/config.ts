@@ -4,7 +4,7 @@
 
 export const STORE = {
   name:        'Vijey Textile',
-  tagline:     "Premium Girls' & Baby Fashion",
+  tagline:     "Luxury Girls' & Baby Fashion — 3 Months to 16 Years",
 
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 99941 68839',
@@ -37,7 +37,7 @@ export const STORE = {
   googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Texvalley+Gangapuram+Erode+Tamil+Nadu',
 
   // ── SEO / Meta ────────────────────────────────────
-  description: "Shop premium Baby Frocks, Western Dresses, Frocks, Lehenga & Party Wears for girls (3 months to M size) at Vijey Textile. Located at Shop Ground Floor No 131, Texvalley Gangapuram, Erode.",
+  description: "Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for girls 3 months to 16 years at Vijey Textile. Located at Shop Ground Floor No 131, Texvalley Gangapuram, Erode.",
 };
 
 export const FULL_ADDRESS  = `${STORE.shopNo}, ${STORE.area}, ${STORE.city}, ${STORE.state} – ${STORE.pincode}`;

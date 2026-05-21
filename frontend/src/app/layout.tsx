@@ -12,17 +12,17 @@ import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
 export const metadata: Metadata = {
-  title: `${STORE.name} — Premium Girls' & Baby Fashion | Texvalley Erode`,
-  description: 'Shop premium Baby Frocks, Western Dresses, Frocks, Lehenga & Party Wears at Vijey Textile. Located at Texvalley Gangapuram, Erode. Fast delivery across India. 100% authentic products.',
-  keywords: 'Vijey Textile, vijey textile, ammalutex, textile shop Erode, Texvalley Gangapuram, chudithar, lehenga, tops, crop tops, party wear, women fashion, Erode textile, buy chudithar online, women clothing India',
+  title: `${STORE.name} — Luxury Girls' & Baby Fashion | Texvalley Erode`,
+  description: 'Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for girls 3 months to 16 years at Vijey Textile. Located at Texvalley Gangapuram, Erode. Fast delivery across India.',
+  keywords: 'Vijey Textile, vijey textile, baby frocks Erode, chudithar girls, lehenga kids, frocks online, party wear girls, western dresses, textile shop Erode, Texvalley Gangapuram, girls clothing India, baby fashion, kids fashion Erode',
   authors: [{ name: 'Vijey Textile' }],
   creator: 'Vijey Textile',
   publisher: 'Vijey Textile',
   metadataBase: new URL('https://vijeytextile.com'),
   alternates: { canonical: 'https://vijeytextile.com' },
   openGraph: {
-    title: 'Vijey Textile — Premium Women\'s Textiles',
-    description: 'Shop Baby Frocks, Western Dresses, Frocks, Lehenga & Party Wears at Vijey Textile, Texvalley Gangapuram, Erode.',
+    title: "Vijey Textile — Luxury Girls' & Baby Fashion",
+    description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for girls 3 months to 16 years at Vijey Textile, Texvalley Gangapuram, Erode.',
     url: 'https://vijeytextile.com',
     siteName: 'Vijey Textile',
     locale: 'en_IN',
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Vijey Textile — Premium Women\'s Textiles',
-    description: 'Shop Baby Frocks, Frocks, Western Dresses, Lehenga & more at Vijey Textile, Texvalley Erode.',
+    title: "Vijey Textile — Luxury Girls' & Baby Fashion",
+    description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for girls 3M–16Y at Vijey Textile, Texvalley Erode.',
   },
   robots: {
     index: true,
@@ -83,7 +83,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     padding: '12px 16px',
                     boxShadow: '0 4px 20px rgba(139,21,56,0.12)',
                   },
-                  success: { iconTheme: { primary: '#8b1538', secondary: '#fff' } },
+                  success: { iconTheme: { primary: '#7c3aed', secondary: '#fff' } },
                   error:   { iconTheme: { primary: '#c62828', secondary: '#fff' } },
                 }}
               />

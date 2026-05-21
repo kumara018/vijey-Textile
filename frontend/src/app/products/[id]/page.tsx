@@ -161,7 +161,7 @@ export default function ProductDetailPage() {
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-8xl">
-                {product.category === 'Lehenga' ? '👗' : product.category === 'Chudithar' ? '👘' : product.category === 'Party Wears' ? '✨' : product.category === 'Crop Tops' ? '👚' : '👕'}
+                {product.category === 'Baby Frocks' ? '👶' : product.category === 'Chudithar' ? '👘' : product.category === 'Frocks' ? '👗' : product.category === 'Western Dresses' ? '👒' : product.category === 'Lehenga' ? '💃' : product.category === 'Party Wear' ? '✨' : '👗'}
               </div>
             )}
             {discount && (

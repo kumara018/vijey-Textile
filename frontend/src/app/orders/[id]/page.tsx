@@ -442,7 +442,7 @@ function OrderDetailContent() {
             <h3 className="font-bold text-maroon-900 mb-4">Ordered Items</h3>
             <div className="space-y-4">
               {(order.items_snapshot as any[]).map((item, i) => {
-                const emoji = item.category === 'Lehenga' ? '👗' : item.category === 'Chudithar' ? '👘' : item.category === 'Half Saree' ? '🥻' : item.category === 'Crop Tops' ? '🎽' : item.category === 'Party Wears' ? '✨' : '👚';
+                const emoji = item.category === 'Baby Frocks' ? '👶' : item.category === 'Chudithar' ? '👘' : item.category === 'Frocks' ? '👗' : item.category === 'Western Dresses' ? '👒' : item.category === 'Lehenga' ? '💃' : item.category === 'Party Wear' ? '✨' : '👗';
                 const imgSrc = item.image ? (item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL}${item.image}`) : null;
                 return (
                   <div key={i} className="flex items-start gap-4 pb-4 border-b border-orange-50 last:border-0 last:pb-0">

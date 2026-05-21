@@ -165,7 +165,7 @@ function InvoiceContent() {
                   const imgSrc = item.image
                     ? (item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL}${item.image}`)
                     : null;
-                  const emoji = item.category === 'Lehenga' ? '👗' : item.category === 'Chudithar' ? '👘' : item.category === 'Half Saree' ? '🥻' : '👚';
+                  const emoji = item.category === 'Baby Frocks' ? '👶' : item.category === 'Chudithar' ? '👘' : item.category === 'Frocks' ? '👗' : item.category === 'Western Dresses' ? '👒' : item.category === 'Lehenga' ? '💃' : item.category === 'Party Wear' ? '✨' : '👗';
                   return (
                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-orange-50/40'}>
                       <td className="px-4 py-4">

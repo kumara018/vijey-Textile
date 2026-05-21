@@ -62,10 +62,12 @@ export default function ProductCard({ product }: Props) {
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-maroon-200">
               <div className="text-6xl mb-2">
-                {product.category === 'Lehenga' ? '👗' :
+                {product.category === 'Baby Frocks' ? '👶' :
                  product.category === 'Chudithar' ? '👘' :
-                 product.category === 'Party Wears' ? '✨' :
-                 product.category === 'Crop Tops' ? '👚' : '👕'}
+                 product.category === 'Frocks' ? '👗' :
+                 product.category === 'Western Dresses' ? '👒' :
+                 product.category === 'Lehenga' ? '💃' :
+                 product.category === 'Party Wear' ? '✨' : '👗'}
               </div>
               <span className="text-xs font-medium text-maroon-300">{product.category}</span>
             </div>

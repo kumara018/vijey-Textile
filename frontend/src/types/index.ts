@@ -108,7 +108,7 @@ export interface Review {
   user: User;
 }
 
-export type Category = 'Chudithar' | 'Tops' | 'Lehenga' | 'Crop Tops' | 'Party Wears';
+export type Category = 'Baby Frocks' | 'Chudithar' | 'Frocks' | 'Western Dresses' | 'Lehenga' | 'Party Wear';
 
 export interface ReturnRequest {
   id: number;

@@ -16,7 +16,7 @@ import { performLogout } from '@/lib/auth';
 import { productsAPI } from '@/lib/api';
 
 const CATEGORIES = [
-  'Chudithar', 'Tops', 'Lehenga', 'Half Saree', 'Crop Tops', 'Party Wears',
+  'Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear',
 ];
 
 export default function Navbar() {
@@ -57,7 +57,7 @@ export default function Navbar() {
   /* Load search history from localStorage */
   useEffect(() => {
     try {
-      const h = JSON.parse(localStorage.getItem('ammalu_search_history') || '[]');
+      const h = JSON.parse(localStorage.getItem('vijey_search_history') || '[]');
       setSearchHistory(Array.isArray(h) ? h : []);
     } catch { setSearchHistory([]); }
   }, []);
@@ -121,18 +121,18 @@ export default function Navbar() {
     if (!trimmed) return;
     const updated = [trimmed, ...searchHistory.filter(h => h.toLowerCase() !== trimmed.toLowerCase())].slice(0, 8);
     setSearchHistory(updated);
-    try { localStorage.setItem('ammalu_search_history', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('vijey_search_history', JSON.stringify(updated)); } catch {}
   };
 
   const removeHistory = (term: string) => {
     const updated = searchHistory.filter(h => h !== term);
     setSearchHistory(updated);
-    try { localStorage.setItem('ammalu_search_history', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('vijey_search_history', JSON.stringify(updated)); } catch {}
   };
 
   const clearHistory = () => {
     setSearchHistory([]);
-    try { localStorage.removeItem('ammalu_search_history'); } catch {}
+    try { localStorage.removeItem('vijey_search_history'); } catch {}
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -196,11 +196,7 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <img src="/crown.svg" alt="Vijey Textile Crown" className="w-9 h-7 drop-shadow-sm" />
-                <div className="flex flex-col leading-tight">
-                  <span className="text-xl font-display font-bold text-white tracking-wide">{STORE.name}</span>
-                  <span className="text-gold-300 text-[10px] font-medium tracking-widest uppercase">{STORE.tagline}</span>
-                </div>
+                <img src="/logo_vijey.png" alt="Vijey Textile" className="h-10 w-auto drop-shadow-sm" />
               </div>
             </Link>
 
@@ -216,7 +212,7 @@ export default function Navbar() {
                       if (search.trim().length >= 2 && searchResults.length > 0) { setShowDrop(true); }
                       else if (!search.trim() && searchHistory.length > 0) { setShowHistory(true); }
                     }}
-                    placeholder="Search chudithar, tops, lehenga, half saree..."
+                    placeholder="Search baby frocks, chudithar, lehenga, party wear..."
                     className="flex-1 px-4 py-2.5 text-gray-900 text-sm outline-none"
                     autoComplete="off"
                   />

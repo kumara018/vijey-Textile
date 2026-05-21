@@ -9,9 +9,9 @@ import api, { adminAPI, adminReturnsAPI, supportAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
-const CATEGORIES = ['Baby Frocks', 'Tops', 'Lehenga', 'Western Dresses', 'Party Wear'];
+const CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 const ORDER_STATUSES = ['pending','confirmed','processing','shipped','out_for_delivery','delivered','cancelled'];
-const SIZE_OPTIONS   = ['XS','S','M','L','XL','XXL','XXXL','Free Size'];
+const SIZE_OPTIONS   = ['3M','6M','9M','12M','18M','24M','2-3Y','3-4Y','4-5Y','5-6Y','6-7Y','7-8Y','8-9Y','9-10Y','10-11Y','11-12Y','12-13Y','13-14Y','14-15Y','15-16Y'];
 
 interface DashData { total_products: number; active_products: number; total_users: number; total_orders: number; pending_orders: number; total_revenue: number; recent_orders: any[]; }
 
@@ -673,8 +673,8 @@ export default function AdminPage() {
                     ? (p.images[0].startsWith('http') ? p.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${p.images[0]}`)
                     : null;
                   const catEmoji: Record<string,string> = {
-                    'Lehenga':'👗','Baby Frocks':'👘','Frocks':'🥻',
-                    'Western Dresses':'🎽','Tops':'👕','Party Wear':'✨',
+                    'Baby Frocks':'👶','Chudithar':'👘','Frocks':'👗',
+                    'Western Dresses':'👒','Lehenga':'💃','Party Wear':'✨',
                   };
                   return (
                   <tr key={p.id} className={`hover:bg-orange-50 ${!p.is_active ? 'opacity-50' : ''}`}>

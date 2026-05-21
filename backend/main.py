@@ -492,7 +492,7 @@ def test_email(to: str = ""):
             "content": [{
                 "type": "text/html",
                 "value": (
-                    "<h2 style='color:#7c1d2e'>Email delivery is working! ✅</h2>"
+                    "<h2 style='color:#6d28d9'>Email delivery is working! ✅</h2>"
                     "<p>This test email was sent from the Vijey Textile backend on Render "
                     "using SendGrid. If you're reading this, emails (OTPs, order confirmations, etc.) "
                     "are now working correctly.</p>"

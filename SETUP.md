@@ -5,8 +5,8 @@
 STORE DETAILS
 ================================================================
 Store Name    : Vijey Textile
-Products      : Baby Frocks, Western Dresses, Frocks, Lehenga, Party Wear
-               (Girls 3 months to M size)
+Products      : Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga, Party Wear
+               (Girls 3 months to 16 years)
 Phone 1       : +91 99941 68839
 Phone 2       : +91 94439 47853
 Admin Email   : kumaragurubaran27102@gmail.com
@@ -128,16 +128,18 @@ Hostinger   : https://hostinger.in  (Domain — vijeytextile.com)
 PRODUCT CATEGORIES & SIZES
 ================================================================
 Categories:
-  - Baby Frocks    (infant girls, soft fabrics)
+  - Baby Frocks    (infant girls, soft fabrics, 3M–24M)
+  - Chudithar      (traditional sets, all ages)
   - Frocks         (classic & printed frocks)
   - Western Dresses (A-line, denim, shirt dresses)
   - Lehenga        (festive & bridal)
   - Party Wear     (sequin gowns, tutu, velvet)
 
 Size Options:
-  Baby   : 3M, 6M, 9M, 12M, 18M, 24M
+  Infant : 3M, 6M, 9M, 12M, 18M, 24M
   Toddler: 2-3Y, 3-4Y, 4-5Y, 5-6Y
-  Kids   : 6-7Y, 7-8Y, S, M
+  Kids   : 6-7Y, 7-8Y, 8-9Y, 9-10Y, 10-11Y, 11-12Y
+  Teens  : 12-13Y, 13-14Y, 14-15Y, 15-16Y
 
 ================================================================
 PRIMARY ADMIN ACCOUNT (PROTECTED)
@@ -156,5 +158,5 @@ NOTES
 - Render free tier sleeps after 15 min inactivity (first request ~30s)
 - Auto-deploy: every git push to main branch deploys automatically
 - Refund webhook auto-updates payment status when Razorpay processes
-- All email/WhatsApp colors use pink theme (#be185d primary)
+- All email/WhatsApp colors use pink theme (#7c3aed primary)
 - Crown logo files are in frontend/public/ — replace with Vijey Textile logo
