@@ -26,11 +26,13 @@ export default function Footer() {
           <div>
             {/* Logo image in footer */}
             <Link href="/">
-              <img
-                src="/logo.svg"
-                alt="Vijey Textile"
-                className="h-14 w-auto mb-4 opacity-90 hover:opacity-100 transition-opacity brightness-0 invert"
-              />
+              <div className="inline-block bg-white rounded-2xl p-3 mb-4 shadow-lg hover:shadow-xl transition-shadow">
+                <img
+                  src="/logo.png"
+                  alt="Vijey Textile"
+                  className="h-20 w-auto"
+                />
+              </div>
             </Link>
             <p className="text-sm text-maroon-300 leading-relaxed mb-5">
               Luxury Baby, Kids &amp; Girls fashion — Chudithar, Frocks, Lehenga &amp; more in sizes 14–40. At Texvalley Gangapuram, Erode.

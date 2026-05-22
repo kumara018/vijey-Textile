@@ -196,7 +196,7 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.svg" alt="Vijey Textile" className="h-12 w-auto drop-shadow-sm" />
+                <img src="/logo.png" alt="Vijey Textile" className="h-14 w-auto drop-shadow-sm" />
               </div>
             </Link>
 

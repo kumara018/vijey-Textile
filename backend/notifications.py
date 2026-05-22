@@ -124,30 +124,18 @@ def _bg(to: str, subject: str, html: str):
 _HEADER_HTML = f"""\
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
            style="border-collapse:collapse;
-                  background:linear-gradient(135deg,#e11d48 0%,#9f1239 100%);">
+                  background:linear-gradient(135deg,#9f1239 0%,#e11d48 100%);">
       <tr>
-        <td align="center" style="padding:16px 24px 14px;">
-          <!-- Logo + brand -->
-          <table cellpadding="0" cellspacing="0" border="0"
-                 style="border-collapse:collapse;">
-            <tr>
-              <td valign="middle" style="padding-right:14px;font-size:0;line-height:0;">
-                <img src="{STORE_URL}/logo_vijey.png"
-                     width="120" height="40"
-                     alt="Vijey Textile"
-                     style="display:block;border:0;width:120px;height:40px;" />
-              </td>
-              <td valign="middle" style="text-align:left;">
-                <p style="margin:0 0 3px 0;padding:0;
-                          font-family:Arial,Helvetica,sans-serif;
-                          font-size:10px;color:#fde047;letter-spacing:3px;
-                          text-transform:uppercase;line-height:1.4;
-                          mso-line-height-rule:exactly;">
-                  Luxury Girls&#8217; &amp; Baby Fashion
-                </p>
-              </td>
-            </tr>
-          </table>
+        <td align="center" style="padding:18px 24px 16px;">
+          <!-- Logo centred on rose gradient -->
+          <div style="display:inline-block;background:#ffffff;
+                      border-radius:14px;padding:10px 18px;
+                      box-shadow:0 2px 12px rgba(0,0,0,0.18);">
+            <img src="{STORE_URL}/logo.png"
+                 width="180" height="auto"
+                 alt="Vijey Textile"
+                 style="display:block;border:0;width:180px;height:auto;" />
+          </div>
         </td>
       </tr>
     </table>"""
