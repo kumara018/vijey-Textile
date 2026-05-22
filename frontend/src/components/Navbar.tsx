@@ -195,8 +195,25 @@ export default function Navbar() {
 
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
-              <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="Vijey Textile" className="h-20 w-auto drop-shadow-sm" />
+              <div className="flex items-center gap-3">
+                {/* Logo illustration — mix-blend-mode removes white bg */}
+                <img
+                  src="/logo.png"
+                  alt="Vijey Textile"
+                  className="h-20 w-auto"
+                  style={{ mixBlendMode: 'multiply' }}
+                />
+                {/* Brand name text */}
+                <div className="hidden sm:block">
+                  <p className="font-bold text-maroon-900 leading-tight"
+                     style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px' }}>
+                    VIJEY TEXTILE
+                  </p>
+                  <p className="text-maroon-500 leading-tight mt-0.5"
+                     style={{ fontSize: '10px', letterSpacing: '1.5px' }}>
+                    Luxury Baby's &amp; Girls Clothing
+                  </p>
+                </div>
               </div>
             </Link>
 
