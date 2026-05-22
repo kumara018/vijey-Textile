@@ -1064,81 +1064,77 @@ export default function AdminPage() {
           </div>
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading…</div>
+          ) : orders.filter(o => o.status === 'cancelled').length === 0 ? (
+            <div className="text-center py-12 text-gray-400">No cancelled orders</div>
           ) : (
-            (() => {
-              const cancelled = orders.filter(o => o.status === 'cancelled');
-              if (!cancelled.length) return <div className="text-center py-12 text-gray-400">No cancelled orders</div>;
-              return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-500 border-b border-orange-100 text-xs uppercase tracking-wide">
-                        <th className="pb-3 pr-4">Order #</th>
-                        <th className="pb-3 pr-4">Customer</th>
-                        <th className="pb-3 pr-4">Date</th>
-                        <th className="pb-3 pr-4">Amount</th>
-                        <th className="pb-3 pr-4">Payment</th>
-                        <th className="pb-3 pr-4">Reason</th>
-                        <th className="pb-3">Action</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b border-orange-100 text-xs uppercase tracking-wide">
+                    <th className="pb-3 pr-4">Order #</th>
+                    <th className="pb-3 pr-4">Customer</th>
+                    <th className="pb-3 pr-4">Date</th>
+                    <th className="pb-3 pr-4">Amount</th>
+                    <th className="pb-3 pr-4">Payment</th>
+                    <th className="pb-3 pr-4">Reason</th>
+                    <th className="pb-3">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-orange-50">
+                  {orders.filter(o => o.status === 'cancelled').map(o => {
+                    const addr = o.shipping_address || {};
+                    const needsRefund = o.payment_method !== 'cod' && o.payment_status === 'paid';
+                    const refundDone  = ['refund_initiated','refunded'].includes(o.payment_status);
+                    return (
+                      <tr key={o.id} className="hover:bg-rose-50 transition-colors">
+                        <td className="py-3 pr-4 font-mono font-semibold text-maroon-800">{o.order_number}</td>
+                        <td className="py-3 pr-4">
+                          <p className="font-medium text-gray-900">{addr.full_name || '—'}</p>
+                          <p className="text-xs text-gray-400">{addr.phone}</p>
+                        </td>
+                        <td className="py-3 pr-4 text-gray-500 text-xs">
+                          {new Date(o.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                        </td>
+                        <td className="py-3 pr-4 font-bold text-gray-900">&#8377;{o.total?.toLocaleString()}</td>
+                        <td className="py-3 pr-4">
+                          <span className="text-xs uppercase font-semibold text-gray-600">{o.payment_method}</span>
+                          <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${refundDone ? 'bg-purple-100 text-purple-700' : needsRefund ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {o.payment_status?.replace(/_/g,' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-gray-500 text-xs max-w-[180px] truncate">{o.cancel_reason || '—'}</td>
+                        <td className="py-3">
+                          {needsRefund && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await adminAPI.initiateRefund(o.id);
+                                  toast.success(`Refund initiated for ${o.order_number}`);
+                                  loadOrders();
+                                } catch (e: any) {
+                                  toast.error(e.response?.data?.detail || 'Refund failed');
+                                }
+                              }}
+                              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                            >
+                              <RotateCcw size={12} /> Initiate Refund
+                            </button>
+                          )}
+                          {refundDone && (
+                            <span className="flex items-center gap-1 text-xs text-purple-700 font-semibold">
+                              <CheckCircle size={13} /> {o.payment_status === 'refunded' ? 'Refunded' : 'Refund Initiated'}
+                            </span>
+                          )}
+                          {o.payment_method === 'cod' && (
+                            <span className="text-xs text-gray-400">COD — no refund needed</span>
+                          )}
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-orange-50">
-                      {cancelled.map(o => {
-                        const addr = o.shipping_address || {};
-                        const needsRefund = o.payment_method !== 'cod' && o.payment_status === 'paid';
-                        const refundDone  = ['refund_initiated','refunded'].includes(o.payment_status);
-                        return (
-                          <tr key={o.id} className="hover:bg-rose-50 transition-colors">
-                            <td className="py-3 pr-4 font-mono font-semibold text-maroon-800">{o.order_number}</td>
-                            <td className="py-3 pr-4">
-                              <p className="font-medium text-gray-900">{addr.full_name || '—'}</p>
-                              <p className="text-xs text-gray-400">{addr.phone}</p>
-                            </td>
-                            <td className="py-3 pr-4 text-gray-500 text-xs">
-                              {new Date(o.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
-                            </td>
-                            <td className="py-3 pr-4 font-bold text-gray-900">₹{o.total?.toLocaleString()}</td>
-                            <td className="py-3 pr-4">
-                              <span className="text-xs uppercase font-semibold text-gray-600">{o.payment_method}</span>
-                              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${refundDone ? 'bg-purple-100 text-purple-700' : needsRefund ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                                {o.payment_status?.replace(/_/g,' ')}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4 text-gray-500 text-xs max-w-[180px] truncate">{o.cancel_reason || '—'}</td>
-                            <td className="py-3">
-                              {needsRefund && (
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      await adminAPI.initiateRefund(o.id);
-                                      toast.success(`Refund initiated for ${o.order_number}`);
-                                      loadOrders();
-                                    } catch (e: any) {
-                                      toast.error(e.response?.data?.detail || 'Refund failed');
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                                >
-                                  <RotateCcw size={12} /> Initiate Refund
-                                </button>
-                              )}
-                              {refundDone && (
-                                <span className="flex items-center gap-1 text-xs text-purple-700 font-semibold">
-                                  <CheckCircle size={13} /> {o.payment_status === 'refunded' ? 'Refunded' : 'Refund Initiated'}
-                                </span>
-                              )}
-                              {o.payment_method === 'cod' && (
-                                <span className="text-xs text-gray-400">COD — no refund needed</span>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
