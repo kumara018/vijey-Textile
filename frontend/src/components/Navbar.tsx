@@ -191,12 +191,12 @@ export default function Navbar() {
       {/* Main navbar */}
       <nav className="bg-maroon-50 border-b border-maroon-100 shadow-sm text-maroon-900">
         <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-center gap-4 h-16">
+          <div className="flex items-center gap-4 h-24">
 
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <img src="/logo.png" alt="Vijey Textile" className="h-14 w-auto drop-shadow-sm" />
+                <img src="/logo.png" alt="Vijey Textile" className="h-20 w-auto drop-shadow-sm" />
               </div>
             </Link>
 
