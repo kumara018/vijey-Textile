@@ -1218,7 +1218,24 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
           <a href="{STORE_URL}/orders" style="background:#e11d48;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:14px">View My Orders</a>
         </div>
 
-        <p style="color:#888;font-size:13px;text-align:center">Questions? <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48">{SUPPORT_EMAIL}</a></p>
+        <!-- Support Section -->
+        <div style="background:#fdf2f8;border:1px solid #fecdd3;border-radius:10px;padding:18px;margin:20px 0">
+          <p style="margin:0 0 12px;font-weight:bold;color:#9f1239;font-size:14px;text-align:center">🙋 Need Help?</p>
+          <table width="100%" style="border-collapse:collapse;font-size:13px">
+            <tr>
+              <td style="padding:6px 0;vertical-align:top;width:50%">
+                <p style="margin:0 0 2px;font-weight:bold;color:#111">🏪 Vijey Textile Support</p>
+                <p style="margin:0;color:#555">📞 <a href="tel:+919994168839" style="color:#e11d48;text-decoration:none">+91 99941 68839</a></p>
+                <p style="margin:0;color:#555">✉️ <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;text-decoration:none">{SUPPORT_EMAIL}</a></p>
+              </td>
+              <td style="padding:6px 0;vertical-align:top;padding-left:16px;border-left:1px solid #fecdd3">
+                <p style="margin:0 0 2px;font-weight:bold;color:#111">💳 Razorpay Support</p>
+                <p style="margin:0;color:#555">📞 <a href="tel:18001231272" style="color:#e11d48;text-decoration:none">1800-123-1272</a> (Toll-free)</p>
+                <p style="margin:0;color:#555">✉️ <a href="mailto:support@razorpay.com" style="color:#e11d48;text-decoration:none">support@razorpay.com</a></p>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0"
              style="border-collapse:collapse;background:#f8f4f0;border-top:1px solid #ede8e3;">
@@ -1226,6 +1243,8 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
           <p style="margin:0 0 5px;color:#888;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;text-decoration:none;">Contact Support</a>
+            &nbsp;&middot;&nbsp;
+            <a href="tel:+919994168839" style="color:#e11d48;text-decoration:none;">+91 99941 68839</a>
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}" style="color:#e11d48;text-decoration:none;">Visit Store</a>
           </p>
