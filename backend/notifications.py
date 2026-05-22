@@ -124,19 +124,47 @@ def _bg(to: str, subject: str, html: str):
 _HEADER_HTML = f"""\
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
            style="border-collapse:collapse;
-                  background:linear-gradient(135deg,#9f1239 0%,#e11d48 100%);">
+                  background:linear-gradient(135deg,#881337 0%,#9f1239 60%,#be185d 100%);">
       <tr>
-        <td align="center" style="padding:18px 24px 16px;">
-          <!-- Logo centred on rose gradient -->
-          <div style="display:inline-block;background:#ffffff;
-                      border-radius:14px;padding:10px 18px;
-                      box-shadow:0 2px 12px rgba(0,0,0,0.18);">
-            <img src="{STORE_URL}/logo.png"
-                 width="180" height="auto"
-                 alt="Vijey Textile"
-                 style="display:block;border:0;width:180px;height:auto;" />
-          </div>
+        <td style="padding:20px 28px;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                 style="border-collapse:collapse;">
+            <tr>
+              <!-- Logo in white card -->
+              <td valign="middle" width="120" style="padding-right:20px;">
+                <div style="background:#ffffff;border-radius:12px;
+                            padding:8px 10px;display:inline-block;
+                            box-shadow:0 2px 10px rgba(0,0,0,0.20);">
+                  <img src="{STORE_URL}/logo.png"
+                       width="100" height="auto"
+                       alt="Vijey Textile"
+                       style="display:block;border:0;width:100px;height:auto;" />
+                </div>
+              </td>
+              <!-- Brand text -->
+              <td valign="middle" style="text-align:left;">
+                <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;
+                          font-size:22px;font-weight:bold;color:#ffffff;
+                          letter-spacing:2px;line-height:1.2;">
+                  VIJEY TEXTILE
+                </p>
+                <p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;
+                          font-size:11px;color:#fecdd3;letter-spacing:2px;
+                          text-transform:uppercase;">
+                  Luxury Baby's &amp; Girls Clothing
+                </p>
+                <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
+                          font-size:10px;color:#fda4af;letter-spacing:1px;">
+                  📍 Texvalley Gangapuram, Erode &nbsp;|&nbsp; 📞 +91 99941 68839
+                </p>
+              </td>
+            </tr>
+          </table>
         </td>
+      </tr>
+      <!-- Thin rose-gold accent strip -->
+      <tr>
+        <td style="height:3px;background:linear-gradient(90deg,#fda4af,#fecdd3,#fda4af);"></td>
       </tr>
     </table>"""
 
