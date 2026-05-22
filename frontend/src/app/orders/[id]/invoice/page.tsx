@@ -52,7 +52,7 @@ function InvoiceContent() {
   const handleWhatsApp = () => {
     const url = encodeURIComponent(`${window.location.origin}/orders/${id}/invoice`);
     const msg = encodeURIComponent(
-      `📄 *Invoice — ${order?.order_number}*\nVijey Textile · Premium Girls' & Baby Fashion\nView invoice: ${window.location.origin}/orders/${id}/invoice`
+      `📄 *Invoice — ${order?.order_number}*\nVijey Textile · Luxury Baby's & Girls Clothing\nView invoice: ${window.location.origin}/orders/${id}/invoice`
     );
     window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
   };
@@ -276,9 +276,12 @@ function InvoiceContent() {
         <div className="bg-gradient-to-r from-maroon-900 to-maroon-800 px-8 py-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <img src="/crown.svg" alt="Vijey Textile" className="h-9 w-auto opacity-90" />
+              <div style={{ background: '#881337', display: 'inline-block', lineHeight: 0, borderRadius: '8px' }}>
+                <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
+              </div>
               <div>
-                <p className="text-white font-bold tracking-wide">Vijey Textile</p>
+                <p className="text-white font-bold tracking-widest" style={{ fontFamily: 'Georgia, serif', fontSize: '14px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</p>
+                <p className="text-maroon-300 text-[9px] tracking-widest uppercase mb-1">Luxury Baby&apos;s &amp; Girls Clothing</p>
                 <p className="text-white/60 text-xs">Shop Ground Floor No 131, Texvalley Gangapuram</p>
                 <p className="text-white/60 text-xs">vijeytextile.com · support@vijeytextile.com</p>
               </div>
