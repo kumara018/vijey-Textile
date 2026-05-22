@@ -39,12 +39,12 @@ export default function Footer() {
                 </p>
                 <p className="text-maroon-300 leading-tight mt-1"
                    style={{ fontSize: '10px', letterSpacing: '1.5px' }}>
-                  Luxury Baby's &amp; Girls Clothing
+                  Luxury Kid&apos;s &amp; Girls Clothing
                 </p>
               </div>
             </Link>
             <p className="text-sm text-maroon-300 leading-relaxed mb-5">
-              Luxury Baby, Kids &amp; Girls fashion — Chudithar, Frocks, Lehenga &amp; more in sizes 14–40. At Texvalley Gangapuram, Erode.
+              Luxury Kid&apos;s &amp; Girls Clothing — Chudithar, Frocks, Lehenga &amp; more in sizes 14–40. At Texvalley Gangapuram, Erode.
             </p>
             <div className="flex gap-2 flex-wrap">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"

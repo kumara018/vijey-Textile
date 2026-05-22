@@ -52,7 +52,7 @@ function InvoiceContent() {
   const handleWhatsApp = () => {
     const url = encodeURIComponent(`${window.location.origin}/orders/${id}/invoice`);
     const msg = encodeURIComponent(
-      `📄 *Invoice — ${order?.order_number}*\nVijey Textile · Luxury Baby's & Girls Clothing\nView invoice: ${window.location.origin}/orders/${id}/invoice`
+      `📄 *Invoice — ${order?.order_number}*\nVijey Textile · Luxury Kid's & Girls Clothing\nView invoice: ${window.location.origin}/orders/${id}/invoice`
     );
     window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
   };
@@ -279,7 +279,7 @@ function InvoiceContent() {
               <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
               <div>
                 <p className="text-white font-bold tracking-widest" style={{ fontFamily: 'Georgia, serif', fontSize: '14px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</p>
-                <p className="text-maroon-300 text-[9px] tracking-widest uppercase mb-1">Luxury Baby&apos;s &amp; Girls Clothing</p>
+                <p className="text-maroon-300 text-[9px] tracking-widest uppercase mb-1">Luxury Kid&apos;s &amp; Girls Clothing</p>
                 <p className="text-white/60 text-xs">Shop Ground Floor No 131, Texvalley Gangapuram</p>
                 <p className="text-white/60 text-xs">vijeytextile.com · support@vijeytextile.com</p>
               </div>

@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
             <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
             <div className="flex flex-col text-left">
               <span className="font-bold text-maroon-900 leading-tight" style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</span>
-              <span className="text-maroon-500 leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>Luxury Baby&apos;s &amp; Girls Clothing</span>
+              <span className="text-maroon-500 leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
             </div>
           </Link>
           <h2 className="text-2xl font-bold text-gray-900">

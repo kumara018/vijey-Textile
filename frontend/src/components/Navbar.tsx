@@ -210,7 +210,7 @@ export default function Navbar() {
                   </p>
                   <p className="text-maroon-500 leading-tight mt-0.5"
                      style={{ fontSize: '10px', letterSpacing: '1.5px' }}>
-                    Luxury Baby's &amp; Girls Clothing
+                    Luxury Kid&apos;s &amp; Girls Clothing
                   </p>
                 </div>
               </div>
