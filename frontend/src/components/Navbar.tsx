@@ -196,13 +196,15 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <div className="flex items-center gap-3">
-                {/* Logo illustration — mix-blend-mode removes white bg */}
-                <img
-                  src="/logo.png"
-                  alt="Vijey Textile"
-                  className="h-20 w-auto"
-                  style={{ mixBlendMode: 'multiply' }}
-                />
+                {/* Logo: container bg matches navbar #fff1f2 so white bg disappears */}
+                <div style={{ background: '#fff1f2', display: 'inline-block', lineHeight: 0 }}>
+                  <img
+                    src="/logo.png"
+                    alt="Vijey Textile"
+                    className="h-20 w-auto"
+                    style={{ mixBlendMode: 'multiply', display: 'block' }}
+                  />
+                </div>
                 {/* Brand name text */}
                 <div className="hidden sm:block">
                   <p className="font-bold text-maroon-900 leading-tight"
