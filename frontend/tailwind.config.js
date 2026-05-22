@@ -4,19 +4,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Vijey Textile — Rose Gold Blush luxury palette
+        // Vijey Textile — Deep Teal & Gold luxury palette
         maroon: {
-          50:  '#fff0f6',
-          100: '#ffe4f0',
-          200: '#fecdd3',
-          300: '#fda4af',
-          400: '#fb7185',
-          500: '#f43f5e',
-          600: '#e11d48',
-          700: '#be185d',
-          800: '#9f1239',
-          900: '#881337',
-          950: '#4c0519',
+          50:  '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          950: '#042f2e',
         },
         gold: {
           50:  '#fffbeb',
@@ -36,9 +36,9 @@ module.exports = {
         display: ['Georgia', 'serif'],
       },
       backgroundImage: {
-        'brand-gradient': 'linear-gradient(135deg, #be185d 0%, #9f1239 100%)',
+        'brand-gradient': 'linear-gradient(135deg, #0f766e 0%, #134e4a 100%)',
         'gold-gradient':  'linear-gradient(135deg, #f59e0b 0%, #fcd34d 100%)',
-        'luxury-gradient': 'linear-gradient(135deg, #9f1239 0%, #be185d 50%, #e11d48 100%)',
+        'luxury-gradient': 'linear-gradient(135deg, #042f2e 0%, #0f766e 50%, #0d9488 100%)',
       },
     },
   },
