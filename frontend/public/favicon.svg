@@ -1,37 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
   <defs>
-    <linearGradient id="rosebg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%"   stop-color="#f43f5e"/>
       <stop offset="100%" stop-color="#9f1239"/>
     </linearGradient>
-    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#94a3b8"/>
+    <radialGradient id="uw" cx="50%" cy="45%" r="60%">
+      <stop offset="0%"   stop-color="#fff1f2"/>
+      <stop offset="55%"  stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#f43f5e" stop-opacity="0.85"/>
+    </radialGradient>
+    <radialGradient id="lw" cx="50%" cy="60%" r="55%">
+      <stop offset="0%"   stop-color="#fecdd3"/>
+      <stop offset="100%" stop-color="#be185d" stop-opacity="0.9"/>
+    </radialGradient>
+    <linearGradient id="bG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#cbd5e1"/>
       <stop offset="50%"  stop-color="#f1f5f9"/>
       <stop offset="100%" stop-color="#94a3b8"/>
     </linearGradient>
   </defs>
 
-  <!-- Rose circular background -->
-  <circle cx="100" cy="100" r="98" fill="url(#rosebg)"/>
-  <circle cx="100" cy="100" r="94" fill="none" stroke="url(#silver)" stroke-width="1.5" opacity="0.7"/>
-  <circle cx="100" cy="100" r="88" fill="none" stroke="url(#silver)" stroke-width="0.6" opacity="0.3"/>
+  <!-- Rose circle background -->
+  <circle cx="100" cy="100" r="98" fill="url(#bgG)"/>
+  <circle cx="100" cy="100" r="93" fill="none" stroke="#fecdd3" stroke-width="1.2" opacity="0.4"/>
 
-  <!-- Crown -->
-  <path d="M52,95 L52,84 L62,84 L68,64 L76,84 L90,84 L100,52 L110,84 L124,84 L132,64 L138,84 L148,84 L148,95 Z"
-        fill="none" stroke="url(#silver)" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- UPPER LEFT WING -->
+  <path d="M 96,100 C 80,68 40,54 34,76 C 28,97 56,118 96,108 Z"
+        fill="url(#uw)" opacity="0.94"/>
+  <path d="M 96,100 C 76,78 52,65 40,78"
+        fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
 
-  <!-- Crown gems — silver outer, white center -->
-  <circle cx="100" cy="52" r="6"   fill="url(#silver)"/>
-  <circle cx="100" cy="52" r="2.8" fill="#ffffff"/>
-  <circle cx="68"  cy="64" r="4.5" fill="url(#silver)"/>
-  <circle cx="68"  cy="64" r="2"   fill="#ffffff"/>
-  <circle cx="132" cy="64" r="4.5" fill="url(#silver)"/>
-  <circle cx="132" cy="64" r="2"   fill="#ffffff"/>
+  <!-- UPPER RIGHT WING -->
+  <path d="M 104,100 C 120,68 160,54 166,76 C 172,97 144,118 104,108 Z"
+        fill="url(#uw)" opacity="0.94"/>
+  <path d="M 104,100 C 124,78 148,65 160,78"
+        fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- LOWER LEFT WING -->
+  <path d="M 96,108 C 72,116 46,130 50,144 C 62,158 90,146 100,128 Z"
+        fill="url(#lw)" opacity="0.88"/>
+
+  <!-- LOWER RIGHT WING -->
+  <path d="M 104,108 C 128,116 154,130 150,144 C 138,158 110,146 100,128 Z"
+        fill="url(#lw)" opacity="0.88"/>
+
+  <!-- BODY -->
+  <ellipse cx="100" cy="108" rx="5.5" ry="26" fill="url(#bG)"/>
+  <!-- HEAD -->
+  <circle cx="100" cy="80"  r="9"   fill="url(#bG)"/>
+  <circle cx="100" cy="80"  r="4"   fill="#f43f5e"/>
+  <circle cx="100" cy="80"  r="1.5" fill="#ffffff"/>
+
+  <!-- ANTENNAE -->
+  <path d="M 97,73 Q 82,56 74,42"
+        stroke="#fecdd3" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <circle cx="74" cy="42" r="5"   fill="#fda4af" stroke="#fecdd3" stroke-width="1"/>
+  <circle cx="74" cy="42" r="2"   fill="#ffffff"/>
+
+  <path d="M 103,73 Q 118,56 126,42"
+        stroke="#fecdd3" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <circle cx="126" cy="42" r="5"   fill="#fda4af" stroke="#fecdd3" stroke-width="1"/>
+  <circle cx="126" cy="42" r="2"   fill="#ffffff"/>
 
   <!-- VIJEY TEXTILE text -->
-  <text x="100" y="148"
+  <text x="100" y="178"
         text-anchor="middle"
         font-family="Palatino Linotype, Palatino, Georgia, serif"
-        font-size="13" font-weight="bold"
-        fill="url(#silver)" letter-spacing="1.5">VIJEY TEXTILE</text>
+        font-size="12" font-weight="bold"
+        fill="#fecdd3" letter-spacing="1.5">VIJEY TEXTILE</text>
 </svg>

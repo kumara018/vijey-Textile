@@ -1,88 +1,122 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" width="680" height="300">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 92" width="320" height="92">
   <defs>
-    <!-- Silver shimmer gradient -->
-    <linearGradient id="silver" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#94a3b8"/>
-      <stop offset="35%"  stop-color="#e2e8f0"/>
-      <stop offset="65%"  stop-color="#f1f5f9"/>
+    <!-- Upper wing: radial — white centre, rose edges (light-through-dupatta effect) -->
+    <radialGradient id="uwL" cx="36%" cy="40%" r="68%">
+      <stop offset="0%"   stop-color="#fff1f2"/>
+      <stop offset="40%"  stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </radialGradient>
+    <radialGradient id="uwR" cx="64%" cy="40%" r="68%">
+      <stop offset="0%"   stop-color="#fff1f2"/>
+      <stop offset="40%"  stop-color="#fda4af"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </radialGradient>
+    <!-- Lower wing: deeper rose -->
+    <radialGradient id="lwL" cx="33%" cy="58%" r="62%">
+      <stop offset="0%"   stop-color="#fecdd3"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </radialGradient>
+    <radialGradient id="lwR" cx="67%" cy="58%" r="62%">
+      <stop offset="0%"   stop-color="#fecdd3"/>
+      <stop offset="100%" stop-color="#be185d"/>
+    </radialGradient>
+    <!-- Body: silver shimmer -->
+    <linearGradient id="bodyG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#cbd5e1"/>
+      <stop offset="50%"  stop-color="#f8fafc"/>
       <stop offset="100%" stop-color="#94a3b8"/>
     </linearGradient>
-    <!-- Rose gradient for brand name -->
-    <linearGradient id="rose" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#f43f5e"/>
-      <stop offset="100%" stop-color="#9f1239"/>
+    <!-- Brand text -->
+    <linearGradient id="brandG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#9f1239"/>
+      <stop offset="100%" stop-color="#e11d48"/>
     </linearGradient>
-    <!-- Soft background -->
-    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%"   stop-color="#ffffff"/>
-      <stop offset="100%" stop-color="#fff1f2"/>
+    <!-- Silver divider line -->
+    <linearGradient id="divLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#fecdd3" stop-opacity="0"/>
+      <stop offset="25%"  stop-color="#94a3b8"/>
+      <stop offset="75%"  stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#fecdd3" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
-  <!-- Background -->
-  <rect width="680" height="300" fill="url(#bg)" rx="4"/>
+  <!-- ════ BUTTERFLY ════ -->
 
-  <!-- CROWN EMBLEM -->
-  <path d="M256,104 L256,90 L272,90 L280,65 L290,90 L316,90 L340,46 L364,90 L390,90 L400,65 L408,90 L424,90 L424,104 Z"
-        fill="#fff1f2" stroke="url(#silver)" stroke-width="2.2" stroke-linejoin="round"/>
-  <line x1="256" y1="98" x2="424" y2="98" stroke="url(#silver)" stroke-width="1" opacity="0.5"/>
+  <!-- UPPER LEFT WING — flowing dupatta curve -->
+  <path d="M 63,43 C 50,14 10,0 4,22 C -1,43 26,64 63,57 Z"
+        fill="url(#uwL)" opacity="0.96"/>
+  <!-- Dupatta fabric fold lines -->
+  <path d="M 63,43 C 46,24 26,13 12,24"
+        fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 63,43 C 52,30 38,20 24,27"
+        fill="none" stroke="#fecdd3" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
+  <!-- Wing tip jewel -->
+  <circle cx="5" cy="23"  r="2.4" fill="#fda4af" opacity="0.85"/>
+  <circle cx="5" cy="23"  r="1"   fill="#ffffff"  opacity="0.9"/>
 
-  <!-- Crown peak gems — silver outer, rose inner -->
-  <circle cx="280" cy="65" r="6"   fill="url(#silver)"/>
-  <circle cx="280" cy="65" r="3"   fill="#e11d48"/>
-  <circle cx="340" cy="46" r="8"   fill="url(#silver)"/>
-  <circle cx="340" cy="46" r="4"   fill="#e11d48"/>
-  <circle cx="400" cy="65" r="6"   fill="url(#silver)"/>
-  <circle cx="400" cy="65" r="3"   fill="#e11d48"/>
+  <!-- UPPER RIGHT WING — mirror -->
+  <path d="M 71,43 C 84,14 124,0 130,22 C 135,43 108,64 71,57 Z"
+        fill="url(#uwR)" opacity="0.96"/>
+  <path d="M 71,43 C 88,24 108,13 122,24"
+        fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 71,43 C 82,30 96,20 110,27"
+        fill="none" stroke="#fecdd3" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="129" cy="23" r="2.4" fill="#fda4af" opacity="0.85"/>
+  <circle cx="129" cy="23" r="1"   fill="#ffffff"  opacity="0.9"/>
 
-  <!-- Diamond ornaments at base corners -->
-  <polygon points="248,104 256,112 264,104 256,96" fill="url(#silver)" opacity="0.8"/>
-  <polygon points="416,104 424,112 432,104 424,96" fill="url(#silver)" opacity="0.8"/>
+  <!-- LOWER LEFT WING — smaller, rounded -->
+  <path d="M 63,57 C 44,64 20,76 22,87 C 33,97 60,87 67,70 Z"
+        fill="url(#lwL)" opacity="0.88"/>
+  <!-- Lower wing fold -->
+  <path d="M 63,57 C 46,65 32,73 33,83"
+        fill="none" stroke="#ffffff" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
+  <!-- Lower tip jewel -->
+  <circle cx="22" cy="87" r="1.8" fill="#fecdd3" opacity="0.7"/>
 
-  <!-- Three dots along crown base -->
-  <circle cx="310" cy="97" r="2.2" fill="url(#silver)" opacity="0.7"/>
-  <circle cx="340" cy="97" r="2.2" fill="url(#silver)" opacity="0.7"/>
-  <circle cx="370" cy="97" r="2.2" fill="url(#silver)" opacity="0.7"/>
+  <!-- LOWER RIGHT WING — mirror -->
+  <path d="M 71,57 C 90,64 114,76 112,87 C 101,97 74,87 67,70 Z"
+        fill="url(#lwR)" opacity="0.88"/>
+  <path d="M 71,57 C 88,65 102,73 101,83"
+        fill="none" stroke="#ffffff" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
+  <circle cx="112" cy="87" r="1.8" fill="#fecdd3" opacity="0.7"/>
 
-  <!-- BRAND NAME shadow -->
-  <text x="342" y="176" text-anchor="middle"
-        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
-        font-size="54" font-weight="bold"
-        fill="#fda4af" letter-spacing="4" opacity="0.3">VIJEY TEXTILE</text>
-  <!-- BRAND NAME main -->
-  <text x="340" y="174" text-anchor="middle"
-        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
-        font-size="54" font-weight="bold"
-        fill="url(#rose)" letter-spacing="4">VIJEY TEXTILE</text>
+  <!-- BODY — silver tapered elegant shape -->
+  <ellipse cx="67" cy="56" rx="3.2" ry="21" fill="url(#bodyG)"/>
+  <!-- Head -->
+  <circle cx="67" cy="33"  r="5"   fill="url(#bodyG)"/>
+  <!-- Head gem -->
+  <circle cx="67" cy="33"  r="2.2" fill="#f43f5e"/>
+  <circle cx="67" cy="33"  r="0.9" fill="#ffffff"/>
 
-  <!-- DECORATIVE RULE -->
-  <line x1="80"  y1="194" x2="296" y2="194" stroke="url(#silver)" stroke-width="1.2"/>
-  <polygon points="340,186 348,194 340,202 332,194" fill="url(#silver)"/>
-  <circle cx="318" cy="194" r="2.5" fill="url(#silver)" opacity="0.7"/>
-  <circle cx="362" cy="194" r="2.5" fill="url(#silver)" opacity="0.7"/>
-  <line x1="384" y1="194" x2="600" y2="194" stroke="url(#silver)" stroke-width="1.2"/>
+  <!-- ANTENNAE — curved silver with pink tips -->
+  <path d="M 65,29 Q 55,18 49,8"
+        stroke="#94a3b8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  <circle cx="49" cy="8"  r="2.8" fill="#fda4af" stroke="#94a3b8" stroke-width="0.7"/>
+  <circle cx="49" cy="8"  r="1.1" fill="#ffffff"/>
 
-  <!-- TAGLINE -->
-  <text x="340" y="224" text-anchor="middle"
-        font-family="Palatino Linotype, Palatino, Book Antiqua, Georgia, serif"
-        font-size="14" fill="#64748b" letter-spacing="6">LUXURY GIRLS&#39; &amp; BABY FASHION</text>
+  <path d="M 69,29 Q 79,18 85,8"
+        stroke="#94a3b8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  <circle cx="85" cy="8"  r="2.8" fill="#fda4af" stroke="#94a3b8" stroke-width="0.7"/>
+  <circle cx="85" cy="8"  r="1.1" fill="#ffffff"/>
 
-  <!-- LOCATION BYLINE -->
-  <line x1="175" y1="249" x2="250" y2="249" stroke="#94a3b8" stroke-width="0.8"/>
-  <text x="340" y="252" text-anchor="middle"
-        font-family="Georgia, Times New Roman, serif"
-        font-size="10.5" fill="#94a3b8" letter-spacing="3.5">TEXVALLEY GANGAPURAM  ·  ERODE</text>
-  <line x1="430" y1="249" x2="505" y2="249" stroke="#94a3b8" stroke-width="0.8"/>
+  <!-- ════ BRAND TEXT ════ -->
 
-  <!-- BORDER FRAME -->
-  <rect x="12" y="12" width="656" height="276"
-        fill="none" stroke="url(#silver)" stroke-width="1.5" rx="3" opacity="0.4"/>
-  <rect x="18" y="18" width="644" height="264"
-        fill="none" stroke="url(#silver)" stroke-width="0.6" rx="2" opacity="0.25"/>
+  <!-- VIJEY TEXTILE — rose gradient, serif -->
+  <text x="152" y="44"
+        font-family="Palatino Linotype, Palatino, Georgia, serif"
+        font-size="23" font-weight="bold"
+        fill="url(#brandG)" letter-spacing="2.5">VIJEY TEXTILE</text>
 
-  <!-- Corner ornaments -->
-  <polygon points="12,24 20,12 28,24 20,36"   fill="url(#silver)" opacity="0.6"/>
-  <polygon points="652,24 660,12 668,24 660,36" fill="url(#silver)" opacity="0.6"/>
-  <polygon points="12,276 20,264 28,276 20,288" fill="url(#silver)" opacity="0.6"/>
-  <polygon points="652,276 660,264 668,276 660,288" fill="url(#silver)" opacity="0.6"/>
+  <!-- Silver shimmer divider -->
+  <rect x="152" y="50" width="160" height="0.8" fill="url(#divLine)"/>
+
+  <!-- Tagline — silver -->
+  <text x="153" y="62"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="8" fill="#94a3b8" letter-spacing="2.8">LUXURY GIRLS' &amp; BABY FASHION</text>
+
+  <!-- Location -->
+  <text x="153" y="74"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="7.5" fill="#cbd5e1" letter-spacing="1.8">TEXVALLEY GANGAPURAM · ERODE</text>
 </svg>

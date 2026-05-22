@@ -174,7 +174,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 shadow-md">
 
       {/* Top bar */}
-      <div className="bg-maroon-950 text-maroon-100 text-xs py-1.5 px-4 flex justify-between items-center">
+      <div className="bg-maroon-800 text-white text-xs py-1.5 px-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
           <a href={STORE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
             <MapPin size={11} /> {SHORT_ADDRESS}
@@ -189,14 +189,14 @@ export default function Navbar() {
       </div>
 
       {/* Main navbar */}
-      <nav className="bg-brand-gradient text-white">
+      <nav className="bg-white border-b border-maroon-100 shadow-sm text-maroon-900">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-4 h-16">
 
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
               <div className="flex items-center gap-2.5">
-                <img src="/logo_vijey.png" alt="Vijey Textile" className="h-10 w-auto drop-shadow-sm" />
+                <img src="/logo.svg" alt="Vijey Textile" className="h-12 w-auto drop-shadow-sm" />
               </div>
             </Link>
 
@@ -297,7 +297,7 @@ export default function Navbar() {
                 <div className="hidden sm:flex items-center gap-2">
                   <Link
                     href="/auth/login"
-                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white border border-white/40 hover:bg-maroon-700 rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-maroon-800 border border-maroon-200 hover:bg-maroon-50 rounded-lg transition-colors"
                   >
                     <LogIn size={15} /> Sign In
                   </Link>
@@ -316,7 +316,7 @@ export default function Navbar() {
                   {/* Avatar button */}
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex flex-col items-center px-3 py-1 hover:bg-maroon-700 rounded-lg transition-colors"
+                    className="flex flex-col items-center px-3 py-1 hover:bg-maroon-50 rounded-lg transition-colors"
                   >
                     <div className="w-7 h-7 rounded-full bg-gold-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {user.full_name.charAt(0).toUpperCase()}
@@ -442,7 +442,7 @@ export default function Navbar() {
               {user && (
                 <Link
                   href="/wishlist"
-                  className="relative flex flex-col items-center px-3 py-1 hover:bg-maroon-700 rounded-lg transition-colors"
+                  className="relative flex flex-col items-center px-3 py-1 hover:bg-maroon-50 rounded-lg transition-colors"
                 >
                   <div className="relative">
                     <Heart size={20} fill={wishCount > 0 ? '#ef4444' : 'none'} className={wishCount > 0 ? 'text-red-400' : ''} />
@@ -459,7 +459,7 @@ export default function Navbar() {
               {/* Cart */}
               <Link
                 href={user ? '/cart' : '/auth/login'}
-                className="relative flex flex-col items-center px-3 py-1 hover:bg-maroon-700 rounded-lg transition-colors"
+                className="relative flex flex-col items-center px-3 py-1 hover:bg-maroon-50 rounded-lg transition-colors"
               >
                 <div className="relative">
                   <ShoppingCart size={20} />
@@ -488,14 +488,14 @@ export default function Navbar() {
         </div>
 
         {/* Category bar — desktop */}
-        <div className="bg-maroon-900 hidden md:block">
+        <div className="bg-maroon-700 hidden md:block">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex items-center gap-1 h-10">
 
               {/* Home */}
               <Link
                 href="/"
-                className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-700 transition-colors"
+                className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-600 transition-colors"
               >
                 <Home size={15} /> Home
               </Link>
@@ -504,7 +504,7 @@ export default function Navbar() {
               <div className="relative h-full" ref={catMenuRef}>
                 <button
                   onClick={() => setCatMenuOpen(v => !v)}
-                  className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-700 transition-colors"
+                  className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-600 transition-colors"
                 >
                   <Menu size={16} /> All Categories
                   <ChevronDown size={14} className={`transition-transform duration-200 ${catMenuOpen ? 'rotate-180' : ''}`} />
