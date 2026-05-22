@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
   Trash2, X, AlertCircle, CheckCircle, Star, Upload, ImagePlus,
-  Bell, BanIcon, RefreshCw, RotateCcw,
+  Bell, Ban, RotateCcw,
 } from 'lucide-react';
 import api, { adminAPI, adminReturnsAPI, adminNotifAPI, supportAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -1058,7 +1058,7 @@ export default function AdminPage() {
       {tab === 'cancellations' && (
         <div>
           <div className="mb-4 flex items-center gap-3 flex-wrap">
-            <BanIcon size={20} className="text-red-500" />
+            <Ban size={20} className="text-red-500" />
             <h2 className="font-bold text-gray-800 text-lg">Cancelled Orders</h2>
             <button onClick={loadOrders} className="ml-auto text-xs text-maroon-700 hover:underline">Refresh</button>
           </div>
