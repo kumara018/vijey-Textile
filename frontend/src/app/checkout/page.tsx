@@ -233,7 +233,7 @@ export default function CheckoutPage() {
           contact: addr.phone,
           email:   user?.email,
         },
-        theme: { color: '#7c3aed' },
+        theme: { color: '#e11d48' },
         handler: async (response: any) => {
           try {
             await api.post('/api/payments/verify', {
@@ -257,8 +257,10 @@ export default function CheckoutPage() {
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch {
-      await placeDirectOrder(isEmi ? 'emi' : 'card');
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || 'Payment gateway error. Please try again.';
+      toast.error(Array.isArray(msg) ? msg.map((x: any) => x.msg).join('. ') : msg);
+      setPlacing(false);
     }
   };
 
