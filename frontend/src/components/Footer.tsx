@@ -18,7 +18,7 @@ export default function Footer() {
   const router = useRouter();
 
   return (
-    <footer className="bg-maroon-950 text-maroon-100 mt-16">
+    <footer className="bg-maroon-900 text-maroon-100 mt-16">
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 

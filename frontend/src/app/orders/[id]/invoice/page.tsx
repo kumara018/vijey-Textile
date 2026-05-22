@@ -102,26 +102,21 @@ function InvoiceContent() {
       <div id="invoice" className="bg-white rounded-2xl shadow-lg print:shadow-none border border-gray-100 overflow-hidden">
 
         {/* ── Header ── */}
-        <div className="bg-gradient-to-r from-maroon-900 via-maroon-800 to-red-800 px-8 py-8">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <img src="/crown.svg" alt="Vijey Textile" className="h-14 w-auto drop-shadow-md" />
-                <div>
-                  <h1 className="text-2xl font-bold text-white tracking-wide">Vijey Textile</h1>
-                  <p className="text-gold-300 text-xs tracking-widest uppercase font-medium">Premium Girls' & Baby Fashion</p>
-                </div>
-              </div>
-              <p className="text-white/70 text-xs mt-3">Shop Ground Floor No 131</p>
-              <p className="text-white/70 text-xs">Texvalley Gangapuram, Tamil Nadu</p>
-              <p className="text-white/70 text-xs">GSTIN: — &nbsp;|&nbsp; vijeytextile.com</p>
+        <div className="bg-gradient-to-r from-maroon-900 via-maroon-800 to-maroon-700 px-8 py-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            {/* Logo on white card */}
+            <div className="bg-white rounded-2xl px-4 py-3 shadow-lg">
+              <img src="/logo.png" alt="Vijey Textile" className="h-20 w-auto" />
             </div>
+            {/* Invoice details */}
             <div className="text-right">
               <div className="bg-white/15 rounded-xl px-5 py-4 inline-block">
                 <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Tax Invoice</p>
                 <p className="text-white text-xl font-bold">{order.order_number}</p>
                 <p className="text-white/70 text-xs mt-1">{date}</p>
               </div>
+              <p className="text-white/60 text-xs mt-3">Shop Ground Floor No 131, Texvalley Gangapuram</p>
+              <p className="text-white/60 text-xs">vijeytextile.com &nbsp;|&nbsp; +91 99941 68839</p>
             </div>
           </div>
         </div>

@@ -878,7 +878,14 @@ def _send_sms(to_phone: str, message: str):
 
 def _send_whatsapp(to_phone: str, message: str):
     """Send WhatsApp message via Twilio. Runs in a daemon thread."""
-    _brand = f"\n\n━━━━━━━━━━━━━━━\n👑 *Vijey Textile* — Premium Girls' & Baby Fashion\n🌐 {STORE_URL}"
+    _brand = (
+        f"\n\n━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"👗 *VIJEY TEXTILE*\n"
+        f"_Luxury Baby's & Girls Clothing_\n"
+        f"📍 Texvalley Gangapuram, Erode\n"
+        f"📞 +91 99941 68839\n"
+        f"🌐 {STORE_URL}"
+    )
     def _do():
         to = "whatsapp:" + _normalize_phone(to_phone)
         client, _, wa_from = _twilio_client()
