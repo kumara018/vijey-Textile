@@ -228,30 +228,42 @@ export default function RegisterPage() {
 
       {/* Standalone header */}
       <div className="bg-brand-gradient text-white py-4 px-6 flex items-center shadow-md gap-3">
-        {/* Back to Login — always shown; ?add=1 prevents auto-redirect on login page */}
-        <Link
-          href="/auth/login?add=1"
-          className="flex flex-col items-start text-sm text-white/80 hover:text-white transition-colors leading-tight flex-shrink-0"
-        >
-          <span className="text-xs">← Back to</span>
-          <span className="font-semibold text-white">Login</span>
-        </Link>
-
-        {/* Back to existing account — whenever a user is already logged in */}
-        {user && (
-          <>
-            <span className="text-white/30 text-lg">|</span>
-            <Link
-              href="/"
-              className="flex flex-col items-start text-sm text-white/80 hover:text-white transition-colors leading-tight flex-shrink-0"
-            >
-              <span className="text-xs">← Back to</span>
-              <span className="font-semibold text-white truncate max-w-[110px]">
-                {user.full_name?.split(' ')[0] || 'Account'}
-              </span>
-            </Link>
-          </>
-        )}
+        {/* Left — Back to Login always; also Home when no account logged in */}
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Link
+            href="/auth/login?add=1"
+            className="flex flex-col items-start text-sm text-white/80 hover:text-white transition-colors leading-tight"
+          >
+            <span className="text-xs">← Back to</span>
+            <span className="font-semibold text-white">Login</span>
+          </Link>
+          {!user && (
+            <>
+              <span className="text-white/30 text-lg">|</span>
+              <Link
+                href="/"
+                className="flex flex-col items-start text-sm text-white/80 hover:text-white transition-colors leading-tight"
+              >
+                <span className="text-xs">←</span>
+                <span className="font-semibold text-white">Home</span>
+              </Link>
+            </>
+          )}
+          {user && (
+            <>
+              <span className="text-white/30 text-lg">|</span>
+              <Link
+                href="/"
+                className="flex flex-col items-start text-sm text-white/80 hover:text-white transition-colors leading-tight"
+              >
+                <span className="text-xs">← Back to</span>
+                <span className="font-semibold text-white truncate max-w-[110px]">
+                  {user.full_name?.split(' ')[0] || 'Account'}
+                </span>
+              </Link>
+            </>
+          )}
+        </div>
 
         <div className="flex-1 flex flex-col items-center leading-tight">
           <Link href="/" className="flex items-center gap-2.5 leading-tight">
@@ -263,8 +275,8 @@ export default function RegisterPage() {
           </Link>
         </div>
 
-        {/* Spacer to keep logo centered */}
-        <div className={user ? 'w-48' : 'w-20'} />
+        {/* Right spacer to keep logo centered */}
+        <div className="w-14" />
       </div>
 
       <div className="flex-1 flex items-center justify-center px-4 py-12">
