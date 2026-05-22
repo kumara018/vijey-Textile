@@ -189,7 +189,7 @@ export default function Navbar() {
       </div>
 
       {/* Main navbar */}
-      <nav className="bg-white border-b border-maroon-100 shadow-sm text-maroon-900">
+      <nav className="bg-maroon-50 border-b border-maroon-100 shadow-sm text-maroon-900">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center gap-4 h-16">
 

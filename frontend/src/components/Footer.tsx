@@ -27,9 +27,9 @@ export default function Footer() {
             {/* Logo image in footer */}
             <Link href="/">
               <img
-                src="/logo_vijey.png"
+                src="/logo.svg"
                 alt="Vijey Textile"
-                className="h-16 w-auto mb-4 opacity-95 hover:opacity-100 transition-opacity"
+                className="h-14 w-auto mb-4 opacity-90 hover:opacity-100 transition-opacity brightness-0 invert"
               />
             </Link>
             <p className="text-sm text-maroon-300 leading-relaxed mb-5">

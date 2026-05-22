@@ -1,122 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 92" width="320" height="92">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 88" width="380" height="88">
   <defs>
-    <!-- Upper wing: radial — white centre, rose edges (light-through-dupatta effect) -->
-    <radialGradient id="uwL" cx="36%" cy="40%" r="68%">
-      <stop offset="0%"   stop-color="#fff1f2"/>
-      <stop offset="40%"  stop-color="#fda4af"/>
-      <stop offset="100%" stop-color="#e11d48"/>
-    </radialGradient>
-    <radialGradient id="uwR" cx="64%" cy="40%" r="68%">
-      <stop offset="0%"   stop-color="#fff1f2"/>
-      <stop offset="40%"  stop-color="#fda4af"/>
-      <stop offset="100%" stop-color="#e11d48"/>
-    </radialGradient>
-    <!-- Lower wing: deeper rose -->
-    <radialGradient id="lwL" cx="33%" cy="58%" r="62%">
-      <stop offset="0%"   stop-color="#fecdd3"/>
-      <stop offset="100%" stop-color="#be185d"/>
-    </radialGradient>
-    <radialGradient id="lwR" cx="67%" cy="58%" r="62%">
-      <stop offset="0%"   stop-color="#fecdd3"/>
-      <stop offset="100%" stop-color="#be185d"/>
-    </radialGradient>
-    <!-- Body: silver shimmer -->
-    <linearGradient id="bodyG" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#cbd5e1"/>
-      <stop offset="50%"  stop-color="#f8fafc"/>
-      <stop offset="100%" stop-color="#94a3b8"/>
+    <!-- Feather barbs: teal → deep blue -->
+    <linearGradient id="bL" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#0d9488"/>
+      <stop offset="60%"  stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
     </linearGradient>
-    <!-- Brand text -->
-    <linearGradient id="brandG" x1="0%" y1="0%" x2="100%" y2="0%">
+    <linearGradient id="bR" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#0d9488"/>
+      <stop offset="60%"  stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <!-- Shaft: gold shimmer -->
+    <linearGradient id="shaft" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#b45309"/>
+      <stop offset="50%"  stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <!-- Brand text: rose gradient -->
+    <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%"   stop-color="#9f1239"/>
       <stop offset="100%" stop-color="#e11d48"/>
     </linearGradient>
-    <!-- Silver divider line -->
-    <linearGradient id="divLine" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#fecdd3" stop-opacity="0"/>
+    <!-- Silver divider -->
+    <linearGradient id="div" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#94a3b8" stop-opacity="0"/>
       <stop offset="25%"  stop-color="#94a3b8"/>
       <stop offset="75%"  stop-color="#94a3b8"/>
-      <stop offset="100%" stop-color="#fecdd3" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#94a3b8" stop-opacity="0"/>
     </linearGradient>
   </defs>
 
-  <!-- ════ BUTTERFLY ════ -->
+  <!-- ════ PEACOCK FEATHER ════ -->
 
-  <!-- UPPER LEFT WING — flowing dupatta curve -->
-  <path d="M 63,43 C 50,14 10,0 4,22 C -1,43 26,64 63,57 Z"
-        fill="url(#uwL)" opacity="0.96"/>
-  <!-- Dupatta fabric fold lines -->
-  <path d="M 63,43 C 46,24 26,13 12,24"
-        fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
-  <path d="M 63,43 C 52,30 38,20 24,27"
-        fill="none" stroke="#fecdd3" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
-  <!-- Wing tip jewel -->
-  <circle cx="5" cy="23"  r="2.4" fill="#fda4af" opacity="0.85"/>
-  <circle cx="5" cy="23"  r="1"   fill="#ffffff"  opacity="0.9"/>
+  <!-- WISPY OUTER BARBS (thin strands beyond main plume) -->
+  <!-- Left outer wisps -->
+  <path d="M 53,32 C 34,42 14,58  8,76" fill="none" stroke="#0ea5e9" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 53,38 C 36,50 20,65 16,80" fill="none" stroke="#0d9488" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
+  <path d="M 53,26 C 30,32 12,42  6,58" fill="none" stroke="#3b82f6" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
+  <!-- Right outer wisps -->
+  <path d="M 57,32 C 76,42 96,58 102,76" fill="none" stroke="#0ea5e9" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 57,38 C 74,50 90,65  94,80" fill="none" stroke="#0d9488" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
+  <path d="M 57,26 C 80,32 98,42 104,58" fill="none" stroke="#3b82f6" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
 
-  <!-- UPPER RIGHT WING — mirror -->
-  <path d="M 71,43 C 84,14 124,0 130,22 C 135,43 108,64 71,57 Z"
-        fill="url(#uwR)" opacity="0.96"/>
-  <path d="M 71,43 C 88,24 108,13 122,24"
-        fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
-  <path d="M 71,43 C 82,30 96,20 110,27"
-        fill="none" stroke="#fecdd3" stroke-width="0.6" stroke-linecap="round" opacity="0.5"/>
-  <circle cx="129" cy="23" r="2.4" fill="#fda4af" opacity="0.85"/>
-  <circle cx="129" cy="23" r="1"   fill="#ffffff"  opacity="0.9"/>
+  <!-- MAIN LEFT PLUME (filled fan shape) -->
+  <path d="M 53,30 C 40,40 26,56 20,74 C 30,82 42,84 53,82 Z"
+        fill="url(#bL)" opacity="0.82"/>
+  <!-- Left plume inner barb lines -->
+  <path d="M 53,30 C 44,42 36,58 32,74" fill="none" stroke="#7dd3fc" stroke-width="0.7" opacity="0.5" stroke-linecap="round"/>
+  <path d="M 53,36 C 46,48 40,62 38,76" fill="none" stroke="#a5f3fc" stroke-width="0.6" opacity="0.4" stroke-linecap="round"/>
+  <path d="M 53,44 C 47,54 44,66 43,78" fill="none" stroke="#ffffff"  stroke-width="0.5" opacity="0.35" stroke-linecap="round"/>
 
-  <!-- LOWER LEFT WING — smaller, rounded -->
-  <path d="M 63,57 C 44,64 20,76 22,87 C 33,97 60,87 67,70 Z"
-        fill="url(#lwL)" opacity="0.88"/>
-  <!-- Lower wing fold -->
-  <path d="M 63,57 C 46,65 32,73 33,83"
-        fill="none" stroke="#ffffff" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
-  <!-- Lower tip jewel -->
-  <circle cx="22" cy="87" r="1.8" fill="#fecdd3" opacity="0.7"/>
+  <!-- MAIN RIGHT PLUME (mirror) -->
+  <path d="M 57,30 C 70,40 84,56 90,74 C 80,82 68,84 57,82 Z"
+        fill="url(#bR)" opacity="0.82"/>
+  <!-- Right plume inner barb lines -->
+  <path d="M 57,30 C 66,42 74,58 78,74" fill="none" stroke="#7dd3fc" stroke-width="0.7" opacity="0.5" stroke-linecap="round"/>
+  <path d="M 57,36 C 64,48 70,62 72,76" fill="none" stroke="#a5f3fc" stroke-width="0.6" opacity="0.4" stroke-linecap="round"/>
+  <path d="M 57,44 C 63,54 66,66 67,78" fill="none" stroke="#ffffff"  stroke-width="0.5" opacity="0.35" stroke-linecap="round"/>
 
-  <!-- LOWER RIGHT WING — mirror -->
-  <path d="M 71,57 C 90,64 114,76 112,87 C 101,97 74,87 67,70 Z"
-        fill="url(#lwR)" opacity="0.88"/>
-  <path d="M 71,57 C 88,65 102,73 101,83"
-        fill="none" stroke="#ffffff" stroke-width="0.7" stroke-linecap="round" opacity="0.4"/>
-  <circle cx="112" cy="87" r="1.8" fill="#fecdd3" opacity="0.7"/>
+  <!-- SHAFT (gold, centre spine) -->
+  <line x1="55" y1="25" x2="55" y2="85"
+        stroke="url(#shaft)" stroke-width="1.6" stroke-linecap="round"/>
 
-  <!-- BODY — silver tapered elegant shape -->
-  <ellipse cx="67" cy="56" rx="3.2" ry="21" fill="url(#bodyG)"/>
-  <!-- Head -->
-  <circle cx="67" cy="33"  r="5"   fill="url(#bodyG)"/>
-  <!-- Head gem -->
-  <circle cx="67" cy="33"  r="2.2" fill="#f43f5e"/>
-  <circle cx="67" cy="33"  r="0.9" fill="#ffffff"/>
-
-  <!-- ANTENNAE — curved silver with pink tips -->
-  <path d="M 65,29 Q 55,18 49,8"
-        stroke="#94a3b8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-  <circle cx="49" cy="8"  r="2.8" fill="#fda4af" stroke="#94a3b8" stroke-width="0.7"/>
-  <circle cx="49" cy="8"  r="1.1" fill="#ffffff"/>
-
-  <path d="M 69,29 Q 79,18 85,8"
-        stroke="#94a3b8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
-  <circle cx="85" cy="8"  r="2.8" fill="#fda4af" stroke="#94a3b8" stroke-width="0.7"/>
-  <circle cx="85" cy="8"  r="1.1" fill="#ffffff"/>
+  <!-- ══ FEATHER EYE (stacked concentric ovals) ══ -->
+  <!-- Outermost: deep navy blue -->
+  <ellipse cx="55" cy="23" rx="20" ry="23" fill="#1e3a8a"/>
+  <!-- Dark teal ring -->
+  <ellipse cx="55" cy="23" rx="14.5" ry="17" fill="#0f766e"/>
+  <!-- Bright teal ring -->
+  <ellipse cx="55" cy="23" rx="9.5"  ry="11.5" fill="#2dd4bf"/>
+  <!-- Deep teal ring -->
+  <ellipse cx="55" cy="23" rx="6"    ry="7.5"  fill="#0d9488"/>
+  <!-- Rose gem centre -->
+  <ellipse cx="55" cy="23" rx="3.2"  ry="4"    fill="#f43f5e"/>
+  <!-- White highlight -->
+  <circle  cx="53" cy="20.5" r="1.4" fill="#ffffff" opacity="0.8"/>
 
   <!-- ════ BRAND TEXT ════ -->
 
-  <!-- VIJEY TEXTILE — rose gradient, serif -->
-  <text x="152" y="44"
+  <!-- VIJEY TEXTILE — rose serif -->
+  <text x="130" y="37"
         font-family="Palatino Linotype, Palatino, Georgia, serif"
         font-size="23" font-weight="bold"
-        fill="url(#brandG)" letter-spacing="2.5">VIJEY TEXTILE</text>
+        fill="url(#brand)" letter-spacing="2.5">VIJEY TEXTILE</text>
 
   <!-- Silver shimmer divider -->
-  <rect x="152" y="50" width="160" height="0.8" fill="url(#divLine)"/>
+  <rect x="130" y="43" width="240" height="0.8" fill="url(#div)"/>
 
-  <!-- Tagline — silver -->
-  <text x="153" y="62"
+  <!-- Tagline -->
+  <text x="131" y="56"
         font-family="Arial, Helvetica, sans-serif"
-        font-size="8" fill="#94a3b8" letter-spacing="2.8">LUXURY GIRLS' &amp; BABY FASHION</text>
+        font-size="8.2" fill="#94a3b8" letter-spacing="2.6">LUXURY GIRLS' &amp; BABY FASHION</text>
 
   <!-- Location -->
-  <text x="153" y="74"
+  <text x="131" y="68"
         font-family="Arial, Helvetica, sans-serif"
         font-size="7.5" fill="#cbd5e1" letter-spacing="1.8">TEXVALLEY GANGAPURAM · ERODE</text>
 </svg>
