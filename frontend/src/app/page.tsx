@@ -144,12 +144,12 @@ export default function HomePage() {
               <Sparkles size={14} /> New Collection 2026 — Now Available
             </a>
             <h1 className="text-4xl md:text-6xl font-display font-bold leading-tight mb-4">
-              Luxury Kid&apos;s<br />
+              Luxury Baby, Kids<br />
               <span className="text-gold-400">&amp; Girls Fashion</span>
             </h1>
             <p className="text-maroon-200 text-lg md:text-xl mb-8 leading-relaxed">
-              Shop premium Frocks, Chudithar, Western Dresses, Lehenga &amp; Party Wear
-              for Kids &amp; Girls — at Vijey Textile, Texvalley Gangapuram.
+              Shop premium Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga &amp; Party Wear
+              for Baby, Kids &amp; Girls — at Vijey Textile, Texvalley Gangapuram.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/products" className="btn-gold inline-flex items-center gap-2">
