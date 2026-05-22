@@ -168,4 +168,10 @@ export const adminReturnsAPI = {
   updateStatus: (id: number, data: object) => api.put(`/api/admin/returns/${id}/status`, data),
 };
 
+export const adminNotifAPI = {
+  getAll:    ()           => api.get('/api/admin/notifications'),
+  readOne:   (id: number) => api.put(`/api/admin/notifications/${id}/read`),
+  readAll:   ()           => api.put('/api/admin/notifications/read-all'),
+};
+
 export default api;

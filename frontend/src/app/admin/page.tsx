@@ -4,8 +4,9 @@ import { useRouter } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
   Trash2, X, AlertCircle, CheckCircle, Star, Upload, ImagePlus,
+  Bell, BanIcon, RefreshCw, RotateCcw,
 } from 'lucide-react';
-import api, { adminAPI, adminReturnsAPI, supportAPI } from '@/lib/api';
+import api, { adminAPI, adminReturnsAPI, adminNotifAPI, supportAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -204,15 +205,32 @@ const emptyProduct = {
 export default function AdminPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  type TabKey = 'dash'|'products'|'orders'|'users'|'ratings'|'returns'|'admins';
+  type TabKey = 'dash'|'products'|'orders'|'cancellations'|'users'|'ratings'|'returns'|'admins';
   const [tab, setTab] = useState<TabKey>('dash');
 
   // Restore last-used tab from localStorage after mount (avoids SSR mismatch)
   useEffect(() => {
     const saved = localStorage.getItem('admin_tab') as TabKey | null;
-    const valid: TabKey[] = ['dash','products','orders','users','ratings','returns','admins'];
+    const valid: TabKey[] = ['dash','products','orders','cancellations','users','ratings','returns','admins'];
     if (saved && valid.includes(saved)) setTab(saved);
   }, []);
+
+  // Notifications state
+  const [notifications, setNotifications]   = useState<any[]>([]);
+  const [notifOpen, setNotifOpen]           = useState(false);
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const loadNotifications = async () => {
+    try { const r = await adminNotifAPI.getAll(); setNotifications(r.data); }
+    catch {}
+  };
+
+  const markAllRead = async () => {
+    try {
+      await adminNotifAPI.readAll();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch {}
+  };
   const [dash, setDash] = useState<DashData | null>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
@@ -249,6 +267,7 @@ export default function AdminPage() {
     if (!user) return;                  // middleware already blocked non-users
     if (!user.is_admin) { router.push('/'); return; }  // block non-admins
     loadDash();
+    loadNotifications();
   }, [user, authLoading]);
 
   const loadDash = async () => {
@@ -565,14 +584,22 @@ export default function AdminPage() {
   };
 
   const TABS = [
-    { key: 'dash',     label: 'Dashboard'        },
-    { key: 'products', label: 'Products'          },
-    { key: 'orders',   label: 'Orders'            },
-    { key: 'users',    label: 'Customers'         },
-    { key: 'ratings',  label: 'Support Ratings'   },
-    { key: 'returns',  label: 'Returns'           },
-    { key: 'admins',   label: '🔐 Admin Accounts' },
+    { key: 'dash',          label: 'Dashboard'        },
+    { key: 'products',      label: 'Products'          },
+    { key: 'orders',        label: 'Orders'            },
+    { key: 'cancellations', label: 'Cancellations'     },
+    { key: 'returns',       label: 'Returns & Exchange'},
+    { key: 'users',         label: 'Customers'         },
+    { key: 'ratings',       label: 'Support Ratings'   },
+    { key: 'admins',        label: '🔐 Admin Accounts' },
   ] as const;
+
+  const NOTIF_ICONS: Record<string, string> = {
+    cancellation: '🚫',
+    return:       '↩️',
+    exchange:     '🔄',
+    replace:      '📦',
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -581,24 +608,103 @@ export default function AdminPage() {
           <h1 className="section-title">Admin Panel</h1>
           <p className="text-sm text-gray-500">Vijey Textile Store Management</p>
         </div>
-        {tab === 'products' && (
-          <button onClick={openAdd} className="btn-primary flex items-center gap-2">
-            <Plus size={18} /> Add Product
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {tab === 'products' && (
+            <button onClick={openAdd} className="btn-primary flex items-center gap-2">
+              <Plus size={18} /> Add Product
+            </button>
+          )}
+
+          {/* ── Notification Bell ── */}
+          <div className="relative">
+            <button
+              onClick={() => { setNotifOpen(o => !o); if (!notifOpen) loadNotifications(); }}
+              className="relative p-2.5 rounded-xl bg-maroon-50 hover:bg-maroon-100 border border-maroon-200 transition-colors"
+            >
+              <Bell size={20} className="text-maroon-700" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {/* Notification Dropdown */}
+            {notifOpen && (
+              <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-orange-100 z-50 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-maroon-800">
+                  <span className="text-white font-bold text-sm">Notifications</span>
+                  <div className="flex items-center gap-2">
+                    {unreadCount > 0 && (
+                      <button onClick={markAllRead} className="text-maroon-200 hover:text-white text-xs">
+                        Mark all read
+                      </button>
+                    )}
+                    <button onClick={() => setNotifOpen(false)} className="text-maroon-200 hover:text-white">
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-96 overflow-y-auto divide-y divide-orange-50">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-gray-400 text-sm">No notifications yet</div>
+                  ) : notifications.map(n => (
+                    <div
+                      key={n.id}
+                      onClick={async () => {
+                        if (!n.is_read) { await adminNotifAPI.readOne(n.id); setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, is_read: true } : x)); }
+                        setNotifOpen(false);
+                        const dest = n.type === 'cancellation' ? 'cancellations' : 'returns';
+                        setTab(dest as TabKey);
+                        localStorage.setItem('admin_tab', dest);
+                        if (dest === 'cancellations') loadOrders();
+                        else loadReturns();
+                      }}
+                      className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-orange-50 transition-colors ${!n.is_read ? 'bg-rose-50' : ''}`}
+                    >
+                      <span className="text-xl flex-shrink-0 mt-0.5">{NOTIF_ICONS[n.type] || '📋'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold text-gray-900 ${!n.is_read ? 'text-maroon-800' : ''}`}>{n.title}</p>
+                        <p className="text-xs text-gray-500 truncate">{n.message}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {n.created_at ? new Date(n.created_at).toLocaleString('en-IN', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : ''}
+                        </p>
+                      </div>
+                      {!n.is_read && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-2" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex border-b border-orange-200 mb-6 gap-1 overflow-x-auto">
-        {TABS.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => { setTab(key); localStorage.setItem('admin_tab', key); }}
-            className={`px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === key ? 'border-maroon-800 text-maroon-800 bg-maroon-50' : 'border-transparent text-gray-500 hover:text-maroon-700'}`}
-          >
-            {label}
-          </button>
-        ))}
+        {TABS.map(({ key, label }) => {
+          const isCancel = key === 'cancellations';
+          const isReturn = key === 'returns';
+          const badge = isCancel
+            ? notifications.filter(n => n.type === 'cancellation' && !n.is_read).length
+            : isReturn
+            ? notifications.filter(n => ['return','exchange','replace'].includes(n.type) && !n.is_read).length
+            : 0;
+          return (
+            <button
+              key={key}
+              onClick={() => { setTab(key as TabKey); localStorage.setItem('admin_tab', key); if(key==='cancellations') loadOrders(); if(key==='returns') loadReturns(); }}
+              className={`relative px-5 py-3 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${tab === key ? 'border-maroon-800 text-maroon-800 bg-maroon-50' : 'border-transparent text-gray-500 hover:text-maroon-700'}`}
+            >
+              {label}
+              {badge > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Dashboard */}
@@ -946,6 +1052,95 @@ export default function AdminPage() {
       {/* Support Ratings — CS Interactions */}
       {tab === 'ratings' && (
         <CSInteractionsTab />
+      )}
+
+      {/* Cancellations */}
+      {tab === 'cancellations' && (
+        <div>
+          <div className="mb-4 flex items-center gap-3 flex-wrap">
+            <BanIcon size={20} className="text-red-500" />
+            <h2 className="font-bold text-gray-800 text-lg">Cancelled Orders</h2>
+            <button onClick={loadOrders} className="ml-auto text-xs text-maroon-700 hover:underline">Refresh</button>
+          </div>
+          {loading ? (
+            <div className="text-center py-12 text-gray-400">Loading…</div>
+          ) : (
+            (() => {
+              const cancelled = orders.filter(o => o.status === 'cancelled');
+              if (!cancelled.length) return <div className="text-center py-12 text-gray-400">No cancelled orders</div>;
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500 border-b border-orange-100 text-xs uppercase tracking-wide">
+                        <th className="pb-3 pr-4">Order #</th>
+                        <th className="pb-3 pr-4">Customer</th>
+                        <th className="pb-3 pr-4">Date</th>
+                        <th className="pb-3 pr-4">Amount</th>
+                        <th className="pb-3 pr-4">Payment</th>
+                        <th className="pb-3 pr-4">Reason</th>
+                        <th className="pb-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-orange-50">
+                      {cancelled.map(o => {
+                        const addr = o.shipping_address || {};
+                        const needsRefund = o.payment_method !== 'cod' && o.payment_status === 'paid';
+                        const refundDone  = ['refund_initiated','refunded'].includes(o.payment_status);
+                        return (
+                          <tr key={o.id} className="hover:bg-rose-50 transition-colors">
+                            <td className="py-3 pr-4 font-mono font-semibold text-maroon-800">{o.order_number}</td>
+                            <td className="py-3 pr-4">
+                              <p className="font-medium text-gray-900">{addr.full_name || '—'}</p>
+                              <p className="text-xs text-gray-400">{addr.phone}</p>
+                            </td>
+                            <td className="py-3 pr-4 text-gray-500 text-xs">
+                              {new Date(o.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                            </td>
+                            <td className="py-3 pr-4 font-bold text-gray-900">₹{o.total?.toLocaleString()}</td>
+                            <td className="py-3 pr-4">
+                              <span className="text-xs uppercase font-semibold text-gray-600">{o.payment_method}</span>
+                              <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-semibold ${refundDone ? 'bg-purple-100 text-purple-700' : needsRefund ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {o.payment_status?.replace(/_/g,' ')}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 text-gray-500 text-xs max-w-[180px] truncate">{o.cancel_reason || '—'}</td>
+                            <td className="py-3">
+                              {needsRefund && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await adminAPI.initiateRefund(o.id);
+                                      toast.success(`Refund initiated for ${o.order_number}`);
+                                      loadOrders();
+                                    } catch (e: any) {
+                                      toast.error(e.response?.data?.detail || 'Refund failed');
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                                >
+                                  <RotateCcw size={12} /> Initiate Refund
+                                </button>
+                              )}
+                              {refundDone && (
+                                <span className="flex items-center gap-1 text-xs text-purple-700 font-semibold">
+                                  <CheckCircle size={13} /> {o.payment_status === 'refunded' ? 'Refunded' : 'Refund Initiated'}
+                                </span>
+                              )}
+                              {o.payment_method === 'cod' && (
+                                <span className="text-xs text-gray-400">COD — no refund needed</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()
+          )}
+        </div>
       )}
 
       {/* Returns */}

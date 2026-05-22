@@ -74,6 +74,23 @@ def create_return_request(
     except Exception as e:
         print(f"[Return] Notification error: {e}")
 
+    # Notify admin — new return/exchange/replace request
+    try:
+        admin_notif = models.AdminNotification(
+            type=rr.request_type,
+            order_id=rr.order_id,
+            return_request_id=rr.id,
+            user_id=current_user.id,
+            title=f"New {rr.request_type.title()} Request — {order.order_number}",
+            message=f"{current_user.full_name} submitted a {rr.request_type} for order {order.order_number}. Reason: {rr.reason}",
+        )
+        db.add(admin_notif)
+        db.commit()
+        notifications.send_admin_return_email(rr, order, current_user)
+        notifications.send_admin_return_whatsapp(rr, order, current_user)
+    except Exception as e:
+        print(f"[Admin notify return error] {e}")
+
     return rr
 
 

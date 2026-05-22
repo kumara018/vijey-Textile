@@ -227,6 +227,23 @@ class WishlistItem(Base):
     product = relationship("Product")
 
 
+class AdminNotification(Base):
+    """Admin alert for customer cancellations, returns, exchanges, replacements."""
+    __tablename__ = "admin_notifications"
+    id                = Column(Integer, primary_key=True, index=True)
+    type              = Column(String(30),  nullable=False)   # "cancellation"|"return"|"exchange"|"replace"
+    order_id          = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=True)
+    return_request_id = Column(Integer, nullable=True)        # ReturnRequest.id (no FK to avoid circular)
+    user_id           = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    title             = Column(String(200), nullable=False)
+    message           = Column(Text,       nullable=False)
+    is_read           = Column(Boolean, default=False)
+    created_at        = Column(DateTime(timezone=True), server_default=func.now())
+
+    order = relationship("Order", foreign_keys=[order_id])
+    user  = relationship("User",  foreign_keys=[user_id])
+
+
 class ReturnRequest(Base):
     __tablename__ = "return_requests"
     id            = Column(Integer, primary_key=True, index=True)

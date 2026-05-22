@@ -1890,3 +1890,197 @@ def send_admin_revoked_email(email: str, name: str):
       </p>
     """)
     _bg(email, f"🔒 Your Admin Access Has Been Removed — {STORE_NAME}", html)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Admin Alert: Order Cancellation ───────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+def send_admin_cancellation_email(order, user):
+    """Alert admin by email when a customer cancels an order."""
+    admin_email = os.getenv("ADMIN_EMAIL", SMTP_EMAIL or SUPPORT_EMAIL)
+    if not admin_email:
+        return
+    addr = order.shipping_address or {}
+    needs_refund = (
+        order.payment_method != "cod"
+        and order.payment_status in ("paid", "refund_initiated")
+    )
+    refund_block = (
+        f"<div style='background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;"
+        f"padding:12px 16px;margin:16px 0;'>"
+        f"<p style='margin:0;color:#dc2626;font-weight:bold;font-size:14px;'>"
+        f"Refund Required — {order.payment_method.upper()} payment of Rs.{order.total:.0f} needs to be refunded.</p></div>"
+        if needs_refund else ""
+    )
+    html = _wrap(f"""
+      <h2 style="color:#dc2626;margin-top:0;font-size:22px;">Order Cancelled by Customer</h2>
+      {refund_block}
+      <table style="width:100%;font-size:14px;border-collapse:collapse;margin:16px 0;">
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;width:140px;">Order #</td>
+          <td style="color:#111;font-weight:bold;">{order.order_number}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Customer</td>
+          <td style="color:#444;">{user.full_name}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Phone</td>
+          <td style="color:#444;">{user.phone}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Email</td>
+          <td style="color:#444;">{user.email}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Amount</td>
+          <td style="color:#444;font-weight:bold;">Rs.{order.total:.0f}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Payment</td>
+          <td style="color:#444;">{order.payment_method.upper()} — {order.payment_status.replace('_',' ').title()}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Cancel Reason</td>
+          <td style="color:#444;">{order.cancel_reason or 'Not specified'}</td>
+        </tr>
+        <tr>
+          <td style="color:#888;padding:8px 0;">Ship To</td>
+          <td style="color:#444;">{addr.get('city','')}, {addr.get('state','')}</td>
+        </tr>
+      </table>
+      {_btn("Open Admin Dashboard", f"{STORE_URL}/admin")}
+      <p style="color:#888;font-size:12px;margin-top:20px;">
+        Go to Orders tab and filter by Cancelled to see and process this order.
+      </p>
+    """)
+    _bg(admin_email, f"Order Cancelled — {order.order_number} — {STORE_NAME}", html)
+
+
+def send_admin_cancellation_whatsapp(order, user):
+    """Alert admin via WhatsApp when a customer cancels an order."""
+    admin_phone = os.getenv("ADMIN_PHONE", "")
+    if not admin_phone:
+        return
+    needs_refund = (
+        order.payment_method != "cod"
+        and order.payment_status in ("paid", "refund_initiated")
+    )
+    refund_note = (
+        f"\n*Refund Required* — {order.payment_method.upper()} Rs.{order.total:.0f}"
+        if needs_refund else ""
+    )
+    msg = (
+        f"*Order Cancelled — {STORE_NAME}*\n\n"
+        f"Order: *{order.order_number}*\n"
+        f"Customer: {user.full_name}\n"
+        f"Phone: {user.phone}\n"
+        f"Amount: Rs.{order.total:.0f}\n"
+        f"Payment: {order.payment_method.upper()} — {order.payment_status}\n"
+        f"Reason: {order.cancel_reason or 'Not specified'}"
+        f"{refund_note}\n\n"
+        f"Admin Dashboard: {STORE_URL}/admin"
+    )
+    _send_whatsapp(admin_phone, msg)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ── Admin Alert: Return / Exchange / Replace Request ──────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+
+def send_admin_return_email(rr, order, user):
+    """Alert admin by email when a customer submits a return/exchange/replace request."""
+    admin_email = os.getenv("ADMIN_EMAIL", SMTP_EMAIL or SUPPORT_EMAIL)
+    if not admin_email:
+        return
+    type_labels = {"return": "Return Request", "exchange": "Exchange Request", "replace": "Replacement Request"}
+    type_colors = {"return": "#dc2626", "exchange": "#2563eb", "replace": "#16a34a"}
+    label = type_labels.get(rr.request_type, rr.request_type.title() + " Request")
+    color = type_colors.get(rr.request_type, "#9f1239")
+    img_links = ""
+    if rr.images:
+        img_links = (
+            "<p style='margin:8px 0;color:#888;font-size:13px;'>Customer photos: "
+            + " | ".join(
+                f"<a href='{url}' style='color:{color};'>Photo {i+1}</a>"
+                for i, url in enumerate(rr.images)
+            )
+            + "</p>"
+        )
+    desc_block = (
+        f"<div style='background:#f8f4f0;border-radius:8px;padding:14px;margin:16px 0;'>"
+        f"<p style='margin:0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:1px;'>Description</p>"
+        f"<p style='margin:8px 0 0;color:#444;font-size:14px;line-height:1.6;'>{rr.description}</p></div>"
+        if rr.description else ""
+    )
+    html = _wrap(f"""
+      <h2 style="color:{color};margin-top:0;font-size:22px;">New {label}</h2>
+      <table style="width:100%;font-size:14px;border-collapse:collapse;margin:16px 0;">
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;width:140px;">Request #</td>
+          <td style="color:#111;font-weight:bold;">RET-{rr.id:04d}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Type</td>
+          <td style="color:{color};font-weight:bold;">{label}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Order #</td>
+          <td style="color:#444;">{order.order_number}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Customer</td>
+          <td style="color:#444;">{user.full_name}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Phone</td>
+          <td style="color:#444;">{user.phone}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Email</td>
+          <td style="color:#444;">{user.email}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Reason</td>
+          <td style="color:#444;">{rr.reason}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0e8e3;">
+          <td style="color:#888;padding:8px 0;">Order Amount</td>
+          <td style="color:#444;font-weight:bold;">Rs.{order.total:.0f}</td>
+        </tr>
+        <tr>
+          <td style="color:#888;padding:8px 0;">Payment Method</td>
+          <td style="color:#444;">{order.payment_method.upper()}</td>
+        </tr>
+      </table>
+      {desc_block}
+      {img_links}
+      {_btn("Review in Admin Dashboard", f"{STORE_URL}/admin")}
+      <p style="color:#888;font-size:12px;margin-top:20px;">
+        Go to the Returns tab in Admin Dashboard to approve, reject or update this request.
+      </p>
+    """)
+    _bg(admin_email, f"New {label} — {order.order_number} — {STORE_NAME}", html)
+
+
+def send_admin_return_whatsapp(rr, order, user):
+    """Alert admin via WhatsApp when a customer submits a return/exchange/replace request."""
+    admin_phone = os.getenv("ADMIN_PHONE", "")
+    if not admin_phone:
+        return
+    type_labels = {"return": "Return", "exchange": "Exchange", "replace": "Replacement"}
+    label = type_labels.get(rr.request_type, rr.request_type.title())
+    msg = (
+        f"*New {label} Request — {STORE_NAME}*\n\n"
+        f"Request #: RET-{rr.id:04d}\n"
+        f"Order: *{order.order_number}*\n"
+        f"Type: *{label}*\n"
+        f"Customer: {user.full_name}\n"
+        f"Phone: {user.phone}\n"
+        f"Amount: Rs.{order.total:.0f}\n"
+        f"Reason: {rr.reason}\n"
+        f"Status: Pending Review\n\n"
+        f"Admin Dashboard: {STORE_URL}/admin"
+    )
+    _send_whatsapp(admin_phone, msg)

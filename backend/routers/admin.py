@@ -648,6 +648,63 @@ def update_return_status(
     return {"message": f"Return request updated to {payload.status}", "return_id": return_id}
 
 
+@router.get("/notifications")
+def get_admin_notifications(
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """Return last 50 admin notifications newest-first."""
+    from sqlalchemy import desc
+    notifs = (
+        db.query(models.AdminNotification)
+        .order_by(desc(models.AdminNotification.created_at))
+        .limit(50)
+        .all()
+    )
+    return [
+        {
+            "id": n.id,
+            "type": n.type,
+            "order_id": n.order_id,
+            "return_request_id": n.return_request_id,
+            "title": n.title,
+            "message": n.message,
+            "is_read": n.is_read,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+            "user": {"full_name": n.user.full_name, "phone": n.user.phone} if n.user else None,
+        }
+        for n in notifs
+    ]
+
+
+@router.put("/notifications/read-all")
+def mark_all_notifications_read(
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    db.query(models.AdminNotification).filter(
+        models.AdminNotification.is_read == False
+    ).update({"is_read": True})
+    db.commit()
+    return {"message": "All notifications marked as read"}
+
+
+@router.put("/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    n = db.query(models.AdminNotification).filter(
+        models.AdminNotification.id == notification_id
+    ).first()
+    if not n:
+        raise HTTPException(404, "Notification not found")
+    n.is_read = True
+    db.commit()
+    return {"message": "Marked as read"}
+
+
 @router.get("/support-ratings")
 def get_support_ratings(
     db: Session = Depends(get_db),

@@ -244,6 +244,22 @@ def cancel_order(
     except Exception as e:
         print(f"[Cancel WhatsApp error] {e}")
 
+    # Notify admin — new cancellation alert
+    try:
+        admin_notif = models.AdminNotification(
+            type="cancellation",
+            order_id=order.id,
+            user_id=current_user.id,
+            title=f"Order {order.order_number} Cancelled",
+            message=f"{current_user.full_name} cancelled order {order.order_number}. Reason: {order.cancel_reason}",
+        )
+        db.add(admin_notif)
+        db.commit()
+        notifications.send_admin_cancellation_email(order, current_user)
+        notifications.send_admin_cancellation_whatsapp(order, current_user)
+    except Exception as e:
+        print(f"[Admin notify cancel error] {e}")
+
     # Notify customer — refund (if refund was triggered)
     if refund_status:
         try:
