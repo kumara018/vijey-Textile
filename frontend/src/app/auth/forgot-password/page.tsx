@@ -55,9 +55,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-4">
-            <div style={{ background: '#fff1f2', display: 'inline-block', lineHeight: 0, borderRadius: '8px' }}>
-              <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
-            </div>
+            <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
             <div className="flex flex-col text-left">
               <span className="font-bold text-maroon-900 leading-tight" style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</span>
               <span className="text-maroon-500 leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>Luxury Baby&apos;s &amp; Girls Clothing</span>

@@ -276,9 +276,7 @@ function InvoiceContent() {
         <div className="bg-gradient-to-r from-maroon-900 to-maroon-800 px-8 py-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <div style={{ background: '#881337', display: 'inline-block', lineHeight: 0, borderRadius: '8px' }}>
-                <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
-              </div>
+              <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
               <div>
                 <p className="text-white font-bold tracking-widest" style={{ fontFamily: 'Georgia, serif', fontSize: '14px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</p>
                 <p className="text-maroon-300 text-[9px] tracking-widest uppercase mb-1">Luxury Baby&apos;s &amp; Girls Clothing</p>

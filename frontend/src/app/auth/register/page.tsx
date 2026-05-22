@@ -255,9 +255,7 @@ export default function RegisterPage() {
 
         <div className="flex-1 flex flex-col items-center leading-tight">
           <Link href="/" className="flex items-center gap-2.5 leading-tight">
-            <div style={{ background: '#881337', display: 'inline-block', lineHeight: 0, borderRadius: '8px' }}>
-              <img src="/logo.png" alt="Vijey Textile" style={{ height: '50px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
-            </div>
+            <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
             <div className="flex flex-col">
               <span className="text-white font-bold tracking-widest leading-tight" style={{ fontFamily: 'Georgia, serif', fontSize: '17px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</span>
               <span className="text-maroon-300 leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>Luxury Baby&apos;s &amp; Girls Clothing</span>

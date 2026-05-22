@@ -26,14 +26,12 @@ export default function Footer() {
           <div>
             {/* Logo in footer — dark rose bg on logo so white disappears, brand text visible */}
             <Link href="/" className="flex items-center gap-3 mb-4">
-              <div style={{ background: '#881337', display: 'inline-block', lineHeight: 0 }}>
-                <img
-                  src="/logo.png"
-                  alt="Vijey Textile"
-                  className="h-20 w-auto"
-                  style={{ mixBlendMode: 'multiply', display: 'block' }}
-                />
-              </div>
+              <img
+                src="/logo.png"
+                alt="Vijey Textile"
+                className="h-20 w-auto"
+                style={{ mixBlendMode: 'multiply', display: 'block' }}
+              />
               <div>
                 <p style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px', fontWeight: 'bold' }}
                    className="text-white leading-tight">
