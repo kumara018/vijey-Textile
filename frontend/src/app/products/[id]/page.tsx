@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ShoppingCart, Star, Truck, RotateCcw, Shield, XCircle,
   AlertCircle, CheckCircle, ChevronRight, Send,
-  ChevronLeft, Play, Heart,
+  ChevronLeft, Play, Pause, Heart,
 } from 'lucide-react';
 import { productsAPI } from '@/lib/api';
 import { Product, Review } from '@/types';
@@ -27,6 +27,73 @@ function resolveUrl(url: string) {
   return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
 }
 
+// ── Custom MP4 player (centered Play/Pause like Amazon) ──────────────────────
+function CustomVideoPlayer({ url }: { url: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [playing, setPlaying]   = useState(false);
+  const [showBtn, setShowBtn]   = useState(true);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scheduleHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setShowBtn(false), 2000);
+  };
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) { v.play(); scheduleHide(); }
+    else          { v.pause(); }
+  };
+
+  const handleInteraction = () => {
+    setShowBtn(true);
+    if (!videoRef.current?.paused) scheduleHide();
+  };
+
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+
+  return (
+    <div
+      className="relative w-full h-full bg-black cursor-pointer"
+      onClick={togglePlay}
+      onMouseMove={handleInteraction}
+      onTouchStart={handleInteraction}
+    >
+      <video
+        ref={videoRef}
+        src={url}
+        className="w-full h-full object-contain"
+        playsInline
+        onPlay={() => setPlaying(true)}
+        onPause={() => { setPlaying(false); setShowBtn(true); if (hideTimer.current) clearTimeout(hideTimer.current); }}
+        onEnded={() => { setPlaying(false); setShowBtn(true); if (hideTimer.current) clearTimeout(hideTimer.current); }}
+      />
+      {/* Centered Play / Pause button */}
+      <div
+        className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showBtn ? 'opacity-100' : 'opacity-0'}`}
+      >
+        <div
+          className={`rounded-full flex items-center justify-center transition-transform duration-200 ${playing ? 'scale-90' : 'scale-100'}`}
+          style={{
+            width: 72, height: 72,
+            background: 'rgba(0,0,0,0.52)',
+            backdropFilter: 'blur(4px)',
+            border: '2.5px solid rgba(255,255,255,0.75)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+          }}
+        >
+          {playing
+            ? <Pause size={30} className="text-white" fill="white" />
+            : <Play  size={30} className="text-white" style={{ marginLeft: 4 }} fill="white" />
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Video slide ───────────────────────────────────────────────────────────────
 function VideoSlide({ url }: { url: string }) {
   const ytId = getYouTubeId(url);
@@ -40,14 +107,7 @@ function VideoSlide({ url }: { url: string }) {
       />
     );
   }
-  return (
-    <video
-      src={url}
-      className="w-full h-full object-contain bg-black"
-      controls
-      playsInline
-    />
-  );
+  return <CustomVideoPlayer url={url} />;
 }
 
 // ── Carousel ──────────────────────────────────────────────────────────────────
