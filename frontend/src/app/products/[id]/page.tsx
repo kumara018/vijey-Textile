@@ -383,14 +383,31 @@ export default function ProductDetailPage() {
 
           <hr className="border-maroon-100 mb-5" />
 
-          {product.fabric && (
-            <div className="flex gap-3 mb-3 text-sm"><span className="text-gray-500 w-20 flex-shrink-0">Fabric</span><span className="font-medium text-gray-800">{product.fabric}</span></div>
-          )}
-          {product.fit && (
-            <div className="flex gap-3 mb-3 text-sm"><span className="text-gray-500 w-20 flex-shrink-0">Fit</span><span className="font-medium text-gray-800">{product.fit}</span></div>
-          )}
-          {product.material && (
-            <div className="flex gap-3 mb-4 text-sm"><span className="text-gray-500 w-20 flex-shrink-0">Material</span><span className="font-medium text-gray-800">{product.material}</span></div>
+          {/* Fabric / Fit / Material — visual highlight badges */}
+          {(product.fabric || product.fit || product.material) && (
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              {product.fabric ? (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-amber-50 to-orange-50 border border-amber-200 rounded-2xl py-3 px-2 text-center">
+                  <span className="text-xl leading-none">🧵</span>
+                  <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest mt-0.5">Fabric</span>
+                  <span className="text-xs font-bold text-gray-800 leading-tight">{product.fabric}</span>
+                </div>
+              ) : <div />}
+              {product.fit ? (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-violet-50 to-purple-50 border border-violet-200 rounded-2xl py-3 px-2 text-center">
+                  <span className="text-xl leading-none">✂️</span>
+                  <span className="text-[10px] font-bold text-violet-500 uppercase tracking-widest mt-0.5">Fit</span>
+                  <span className="text-xs font-bold text-gray-800 leading-tight">{product.fit}</span>
+                </div>
+              ) : <div />}
+              {product.material ? (
+                <div className="flex flex-col items-center justify-center gap-1 bg-gradient-to-b from-teal-50 to-emerald-50 border border-teal-200 rounded-2xl py-3 px-2 text-center">
+                  <span className="text-xl leading-none">🌿</span>
+                  <span className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mt-0.5">Material</span>
+                  <span className="text-xs font-bold text-gray-800 leading-tight">{product.material}</span>
+                </div>
+              ) : <div />}
+            </div>
           )}
 
           {/* Size */}
