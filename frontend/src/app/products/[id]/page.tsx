@@ -30,8 +30,8 @@ function resolveUrl(url: string) {
 // ── Custom MP4 player (centered Play/Pause like Amazon) ──────────────────────
 function CustomVideoPlayer({ url }: { url: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying]   = useState(false);
-  const [showBtn, setShowBtn]   = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [showBtn, setShowBtn] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleHide = () => {
@@ -39,56 +39,57 @@ function CustomVideoPlayer({ url }: { url: string }) {
     hideTimer.current = setTimeout(() => setShowBtn(false), 2000);
   };
 
+  const revealBtn = () => {
+    setShowBtn(true);
+    if (!videoRef.current?.paused) scheduleHide();
+  };
+
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     const v = videoRef.current;
     if (!v) return;
-    if (v.paused) { v.play(); scheduleHide(); }
-    else          { v.pause(); }
-  };
-
-  const handleInteraction = () => {
-    setShowBtn(true);
-    if (!videoRef.current?.paused) scheduleHide();
+    if (v.paused) v.play(); else v.pause();
   };
 
   useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
 
   return (
-    <div
-      className="relative w-full h-full bg-black cursor-pointer"
-      onClick={togglePlay}
-      onMouseMove={handleInteraction}
-      onTouchStart={handleInteraction}
-    >
+    // relative wrapper — video + controls bar stack naturally inside
+    <div className="relative w-full h-full bg-black" onMouseMove={revealBtn} onTouchStart={revealBtn}>
+      {/* Native video — keeps progress bar, runtime, volume, fullscreen */}
       <video
         ref={videoRef}
         src={url}
         className="w-full h-full object-contain"
         playsInline
-        onPlay={() => setPlaying(true)}
+        controls
+        onPlay={() => { setPlaying(true); scheduleHide(); }}
         onPause={() => { setPlaying(false); setShowBtn(true); if (hideTimer.current) clearTimeout(hideTimer.current); }}
         onEnded={() => { setPlaying(false); setShowBtn(true); if (hideTimer.current) clearTimeout(hideTimer.current); }}
       />
-      {/* Centered Play / Pause button */}
+
+      {/* Centered big Play/Pause button — floats above video, clears native controls bar */}
       <div
-        className={`absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showBtn ? 'opacity-100' : 'opacity-0'}`}
+        className={`absolute inset-x-0 top-0 flex items-center justify-center pointer-events-none transition-opacity duration-300 ${showBtn ? 'opacity-100' : 'opacity-0'}`}
+        style={{ bottom: 56 }}   /* leave native controls bar (~50px) exposed */
       >
-        <div
-          className={`rounded-full flex items-center justify-center transition-transform duration-200 ${playing ? 'scale-90' : 'scale-100'}`}
+        <button
+          className="pointer-events-auto rounded-full flex items-center justify-center hover:scale-110 active:scale-95 transition-transform duration-150"
+          onClick={togglePlay}
           style={{
-            width: 72, height: 72,
-            background: 'rgba(0,0,0,0.52)',
-            backdropFilter: 'blur(4px)',
-            border: '2.5px solid rgba(255,255,255,0.75)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+            width: 76, height: 76,
+            background: 'rgba(0,0,0,0.50)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            border: '2.5px solid rgba(255,255,255,0.80)',
+            boxShadow: '0 6px 28px rgba(0,0,0,0.45)',
           }}
         >
           {playing
-            ? <Pause size={30} className="text-white" fill="white" />
-            : <Play  size={30} className="text-white" style={{ marginLeft: 4 }} fill="white" />
+            ? <Pause size={32} fill="white" className="text-white" />
+            : <Play  size={32} fill="white" className="text-white" style={{ marginLeft: 4 }} />
           }
-        </div>
+        </button>
       </div>
     </div>
   );
