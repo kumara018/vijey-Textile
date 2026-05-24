@@ -182,6 +182,9 @@ export default function Navbar() {
           <a href={`tel:${STORE.phone1.replace(/\s/g,'')}`} className="hidden sm:flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
             <Phone size={11} /> {STORE.phone1}
           </a>
+          <a href={`tel:${STORE.phone2.replace(/\s/g,'')}`} className="hidden md:flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
+            <Phone size={11} /> {STORE.phone2}
+          </a>
         </div>
         <a href="/shipping" className="text-gold-400 font-medium hover:text-gold-300 transition-colors">
           Fast delivery across India 🚚
