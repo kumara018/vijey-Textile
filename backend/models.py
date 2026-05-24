@@ -72,6 +72,10 @@ class Product(Base):
     size_options  = Column(JSON, default=list)
     colors        = Column(JSON, default=list)
     images        = Column(JSON, default=list)
+    video_url          = Column(String(500), nullable=True)   # product video URL (YouTube/MP4)
+    fit                = Column(String(100), nullable=True)   # e.g. "Regular Fit", "Relaxed Fit"
+    material           = Column(String(255), nullable=True)   # e.g. "100% Cotton"
+    care_instructions  = Column(Text, nullable=True)          # washing & care instructions
     stock         = Column(Integer, default=0)
     sku           = Column(String(50), unique=True, index=True, nullable=True)
     is_active      = Column(Boolean, default=True)

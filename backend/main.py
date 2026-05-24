@@ -161,6 +161,22 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE products ADD COLUMN is_returnable BOOLEAN NOT NULL DEFAULT TRUE"))
                 conn.commit()
                 print("[Startup] Migrated: added is_returnable to products")
+            if "video_url" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN video_url VARCHAR(500)"))
+                conn.commit()
+                print("[Startup] Migrated: added video_url to products")
+            if "fit" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN fit VARCHAR(100)"))
+                conn.commit()
+                print("[Startup] Migrated: added fit to products")
+            if "material" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN material VARCHAR(255)"))
+                conn.commit()
+                print("[Startup] Migrated: added material to products")
+            if "care_instructions" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN care_instructions TEXT"))
+                conn.commit()
+                print("[Startup] Migrated: added care_instructions to products")
         except Exception as e:
             print(f"[Startup] Products migration note: {e}")
 

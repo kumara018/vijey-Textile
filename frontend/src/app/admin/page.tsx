@@ -199,7 +199,8 @@ function CSInteractionsTab() {
 const emptyProduct = {
   name:'', description:'', price:'', compare_price:'', category:'',
   fabric:'', size_options:[] as string[], colors:[] as string[],
-  images:[] as string[], stock:'', is_featured:false, is_new_arrival:false, is_returnable:true,
+  images:[] as string[], video_url:'', fit:'', material:'', care_instructions:'',
+  stock:'', is_featured:false, is_new_arrival:false, is_returnable:true,
 };
 
 export default function AdminPage() {
@@ -251,7 +252,9 @@ export default function AdminPage() {
   const [colorInput, setColorInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   // Order shipping details modal
   const [shipModal, setShipModal] = useState<any>(null); // holds the order being shipped
   const [shipForm, setShipForm] = useState({
@@ -389,7 +392,9 @@ export default function AdminPage() {
       compare_price: p.compare_price ? String(p.compare_price) : '',
       category: p.category, fabric: p.fabric || '',
       size_options: p.size_options || [], colors: p.colors || [],
-      images: p.images || [], stock: String(p.stock),
+      images: p.images || [], video_url: p.video_url || '',
+      fit: p.fit || '', material: p.material || '', care_instructions: p.care_instructions || '',
+      stock: String(p.stock),
       is_featured: p.is_featured, is_new_arrival: p.is_new_arrival || false,
       is_returnable: p.is_returnable !== false,
     });
@@ -412,6 +417,10 @@ export default function AdminPage() {
         size_options: form.size_options,
         colors: form.colors,
         images: form.images,
+        video_url: (form as any).video_url?.trim() || null,
+        fit: (form as any).fit?.trim() || null,
+        material: (form as any).material?.trim() || null,
+        care_instructions: (form as any).care_instructions?.trim() || null,
         stock: Number(form.stock),
         is_featured: form.is_featured,
         is_new_arrival: form.is_new_arrival,
@@ -561,6 +570,25 @@ export default function AdminPage() {
     } finally {
       setUploadingImage(false);
       if (imageInputRef.current) imageInputRef.current.value = '';
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingVideo(true);
+    try {
+      const res = await adminAPI.uploadVideo(formData);
+      const url: string = res.data.url;
+      setForm(f => ({ ...f, video_url: url } as any));
+      toast.success('Video uploaded successfully!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Video upload failed');
+    } finally {
+      setUploadingVideo(false);
+      if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
 
@@ -1511,7 +1539,60 @@ export default function AdminPage() {
                   className="hidden"
                   onChange={handleImageUpload}
                 />
-                <p className="text-xs text-gray-400">JPEG, PNG, WebP. Max 10MB. Images are stored on Cloudinary.</p>
+                <p className="text-xs text-gray-400">JPEG, PNG, WebP. Max 10MB. Images stored on Cloudinary.</p>
+              </div>
+
+              {/* Video Upload */}
+              <div>
+                <label className="label">Product Video (optional)</label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    value={(form as any).video_url || ''}
+                    onChange={e => setForm(f => ({ ...f, video_url: e.target.value } as any))}
+                    placeholder="Paste YouTube/MP4 URL — or upload below"
+                    className="input-field flex-1"
+                  />
+                  {(form as any).video_url && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, video_url: '' } as any))}
+                      className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg border border-red-200 text-sm">Clear</button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    disabled={uploadingVideo}
+                    className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-maroon-400 hover:text-maroon-600 text-sm transition-colors disabled:opacity-50"
+                  >
+                    {uploadingVideo ? (
+                      <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-maroon-600" /> Uploading...</>
+                    ) : (
+                      <><Upload size={15} /> Upload MP4/MOV</>
+                    )}
+                  </button>
+                  <span className="text-xs text-gray-400">Max 100MB · MP4, MOV, WebM</span>
+                </div>
+                <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} />
+              </div>
+
+              {/* Fit, Material, Care */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="label">Fit</label>
+                  <input value={(form as any).fit || ''} onChange={e => setForm(f => ({ ...f, fit: e.target.value } as any))}
+                    placeholder="Regular Fit, Relaxed Fit, Princess Cut..." className="input-field" />
+                </div>
+                <div>
+                  <label className="label">Material / Composition</label>
+                  <input value={(form as any).material || ''} onChange={e => setForm(f => ({ ...f, material: e.target.value } as any))}
+                    placeholder="100% Cotton, Cotton-Silk blend..." className="input-field" />
+                </div>
+              </div>
+              <div>
+                <label className="label">Care Instructions</label>
+                <textarea value={(form as any).care_instructions || ''} onChange={e => setForm(f => ({ ...f, care_instructions: e.target.value } as any))}
+                  rows={2} placeholder="Hand wash gently. Do not bleach. Dry in shade. Iron on low heat."
+                  className="input-field resize-none" />
               </div>
 
               <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-orange-50">

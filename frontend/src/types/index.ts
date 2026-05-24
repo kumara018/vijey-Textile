@@ -24,6 +24,10 @@ export interface Product {
   size_options: string[];
   colors: string[];
   images: string[];
+  video_url?: string;
+  fit?: string;
+  material?: string;
+  care_instructions?: string;
   stock: number;
   sku?: string;
   is_active: boolean;

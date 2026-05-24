@@ -222,6 +222,10 @@ class ProductCreate(BaseModel):
     size_options:  List[str] = []
     colors:        List[str] = []
     images:        List[str] = []
+    video_url:         Optional[str] = None
+    fit:               Optional[str] = None
+    material:          Optional[str] = None
+    care_instructions: Optional[str] = None
     stock:         int
     sku:           Optional[str] = None
     is_featured:   bool = False
@@ -267,6 +271,10 @@ class ProductUpdate(BaseModel):
     size_options:  Optional[List[str]] = None
     colors:        Optional[List[str]] = None
     images:        Optional[List[str]] = None
+    video_url:         Optional[str]   = None
+    fit:               Optional[str]   = None
+    material:          Optional[str]   = None
+    care_instructions: Optional[str]   = None
     stock:         Optional[int]   = None
     is_active:      Optional[bool]  = None
     is_featured:    Optional[bool]  = None
@@ -285,6 +293,10 @@ class ProductOut(BaseModel):
     size_options:  List[str] = []
     colors:        List[str] = []
     images:        List[str] = []
+    video_url:         Optional[str]   = None
+    fit:               Optional[str]   = None
+    material:          Optional[str]   = None
+    care_instructions: Optional[str]   = None
     stock:         int
     sku:           Optional[str]   = None
     is_active:      bool

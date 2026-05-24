@@ -144,6 +144,38 @@ async def upload_image(
         raise HTTPException(500, f"Cloudinary upload failed: {e}")
 
 
+@router.post("/products/upload-video")
+async def upload_video(
+    file: UploadFile = File(...),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "")
+    api_key    = os.getenv("CLOUDINARY_API_KEY", "")
+    api_secret = os.getenv("CLOUDINARY_API_SECRET", "")
+
+    if not all([cloud_name, api_key, api_secret]):
+        raise HTTPException(500, "Cloudinary not configured.")
+
+    if file.content_type not in ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"]:
+        raise HTTPException(400, "Only MP4, MOV, AVI, WebM videos are allowed")
+
+    contents = await file.read()
+    if len(contents) > 100 * 1024 * 1024:
+        raise HTTPException(400, "Video must be under 100MB")
+
+    try:
+        import cloudinary, cloudinary.uploader
+        cloudinary.config(cloud_name=cloud_name, api_key=api_key, api_secret=api_secret, secure=True)
+        result = cloudinary.uploader.upload(
+            contents,
+            folder="vijeytextile/product-videos",
+            resource_type="video",
+        )
+        return {"url": result["secure_url"], "public_id": result["public_id"]}
+    except Exception as e:
+        raise HTTPException(500, f"Cloudinary video upload failed: {e}")
+
+
 @router.post("/orders/create-test", response_model=schemas.OrderOut, status_code=201)
 def create_test_order(
     db:    Session      = Depends(get_db),
