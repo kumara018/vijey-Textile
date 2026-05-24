@@ -63,7 +63,7 @@ function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUr
   const dragDeltaX = useRef(0);
 
   const go = useCallback((idx: number) => {
-    setActive(Math.max(0, Math.min(slides.length - 1, idx)));
+    setActive((idx + slides.length) % slides.length);
   }, [slides.length]);
 
   const prev = () => go(active - 1);
@@ -101,12 +101,12 @@ function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUr
 
         {slides.length > 1 && (
           <>
-            <button onClick={e => { e.stopPropagation(); prev(); }} disabled={active === 0}
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-gray-700 disabled:opacity-30 transition-all z-10">
+            <button onClick={e => { e.stopPropagation(); prev(); }}
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-gray-700 transition-all z-10">
               <ChevronLeft size={18} />
             </button>
-            <button onClick={e => { e.stopPropagation(); next(); }} disabled={active === slides.length - 1}
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-gray-700 disabled:opacity-30 transition-all z-10">
+            <button onClick={e => { e.stopPropagation(); next(); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/80 hover:bg-white shadow-md flex items-center justify-center text-gray-700 transition-all z-10">
               <ChevronRight size={18} />
             </button>
           </>
