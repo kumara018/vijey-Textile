@@ -24,7 +24,7 @@ def _ensure_admin():
     try:
         admin_email    = os.getenv("ADMIN_EMAIL",    "kumaragurubaran27102@gmail.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "VijeyTextile@2026")
-        admin_phone    = os.getenv("ADMIN_PHONE",    "9994168839")
+        admin_phone    = os.getenv("ADMIN_PHONE",    "9443947853")
 
         existing = db.query(models.User).filter(models.User.email == admin_email).first()
         if existing:

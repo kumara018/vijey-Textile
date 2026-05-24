@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { XCircle, CheckCircle } from 'lucide-react';
-import { STORE } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2 } from '@/lib/config';
 
 export const metadata = {
   title: 'Cancellation & Refund Policy — Vijey Textile',
@@ -119,7 +119,7 @@ export default function CancellationPage() {
           <div className="mt-2 p-4 bg-orange-50 rounded-xl text-sm">
             <p className="font-semibold text-gray-800 mb-2">{STORE.name} — Customer Support</p>
             <p>📧 Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a></p>
-            <p>📱 WhatsApp: <a href={`https://wa.me/${STORE.whatsapp}`} className="text-maroon-700" target="_blank" rel="noopener noreferrer">{STORE.phone1}</a></p>
+            <p>📱 WhatsApp: <a href={WHATSAPP_URL} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone1}</a> / <a href={WHATSAPP_URL2} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone2}</a></p>
             <p>⏰ Support Hours: Mon–Sat, 9:00 AM – 8:00 PM</p>
           </div>
         </section>

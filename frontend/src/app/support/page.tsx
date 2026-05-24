@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { STORE, WHATSAPP_URL, MAIL_URL, CALL_URL } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL } from '@/lib/config';
 import Link from 'next/link';
 import {
   Phone, Mail, MapPin, Clock, ChevronDown, ChevronUp,
@@ -126,15 +126,17 @@ export default function SupportPage() {
           <p className="text-xs text-gray-400 mt-1">{STORE.weekdays}</p>
         </a>
 
-        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-          className="card p-4 text-center hover:shadow-md transition-shadow group">
-          <div className="inline-flex p-2.5 bg-green-50 rounded-xl mb-2 text-green-700 group-hover:bg-green-100 transition-colors">
+        <div className="card p-4 text-center">
+          <div className="inline-flex p-2.5 bg-green-50 rounded-xl mb-2 text-green-700">
             <MessageCircle size={20} />
           </div>
-          <p className="font-bold text-gray-800 text-sm mb-0.5">WhatsApp</p>
-          <p className="text-xs text-gray-600">{STORE.phone1}</p>
+          <p className="font-bold text-gray-800 text-sm mb-1">WhatsApp</p>
+          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
+            className="block text-xs text-green-700 font-semibold hover:underline">{STORE.phone1}</a>
+          <a href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
+            className="block text-xs text-green-700 font-semibold hover:underline mt-0.5">{STORE.phone2}</a>
           <p className="text-xs text-gray-400 mt-1">Chat with us anytime</p>
-        </a>
+        </div>
 
         <a href={MAIL_URL}
           className="card p-4 text-center hover:shadow-md transition-shadow group">

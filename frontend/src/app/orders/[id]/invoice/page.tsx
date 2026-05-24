@@ -116,7 +116,7 @@ function InvoiceContent() {
                 <p className="text-white/70 text-xs mt-1">{date}</p>
               </div>
               <p className="text-white/60 text-xs mt-3">Shop Ground Floor No 131, Texvalley Gangapuram</p>
-              <p className="text-white/60 text-xs">vijeytextile.com &nbsp;|&nbsp; +91 99941 68839</p>
+              <p className="text-white/60 text-xs">vijeytextile.com &nbsp;|&nbsp; +91 94439 47853 / +91 75981 86790</p>
             </div>
           </div>
         </div>

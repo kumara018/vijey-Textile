@@ -270,7 +270,7 @@ def seed():
             admin = models.User(
                 full_name="Vijey Textile Admin",
                 email=admin_email,
-                phone="9994168839",
+                phone="9443947853",
                 password_hash=hash_password(admin_password),
                 is_admin=True,
             )

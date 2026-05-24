@@ -155,7 +155,7 @@ _HEADER_HTML = f"""\
                 </p>
                 <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
                           font-size:10px;color:#fda4af;letter-spacing:1px;">
-                  📍 Texvalley Gangapuram, Erode &nbsp;|&nbsp; 📞 +91 99941 68839
+                  📍 Texvalley Gangapuram, Erode &nbsp;|&nbsp; 📞 +91 94439 47853 / +91 75981 86790
                 </p>
               </td>
             </tr>
@@ -911,7 +911,7 @@ def _send_whatsapp(to_phone: str, message: str):
         f"👗 *VIJEY TEXTILE*\n"
         f"_Luxury Baby's & Girls Clothing_\n"
         f"📍 Texvalley Gangapuram, Erode\n"
-        f"📞 +91 99941 68839\n"
+        f"📞 +91 94439 47853 | +91 75981 86790\n"
         f"🌐 {STORE_URL}"
     )
     def _do():
@@ -1248,7 +1248,7 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
             <tr>
               <td style="padding:6px 0;vertical-align:top;width:50%">
                 <p style="margin:0 0 2px;font-weight:bold;color:#111">🏪 Vijey Textile Support</p>
-                <p style="margin:0;color:#555">📞 <a href="tel:+919994168839" style="color:#e11d48;text-decoration:none">+91 99941 68839</a></p>
+                <p style="margin:0;color:#555">📞 <a href="tel:+919443947853" style="color:#e11d48;text-decoration:none">+91 94439 47853</a> / <a href="tel:+917598186790" style="color:#e11d48;text-decoration:none">+91 75981 86790</a></p>
                 <p style="margin:0;color:#555">✉️ <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;text-decoration:none">{SUPPORT_EMAIL}</a></p>
               </td>
               <td style="padding:6px 0;vertical-align:top;padding-left:16px;border-left:1px solid #fecdd3">
@@ -1267,7 +1267,7 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;text-decoration:none;">Contact Support</a>
             &nbsp;&middot;&nbsp;
-            <a href="tel:+919994168839" style="color:#e11d48;text-decoration:none;">+91 99941 68839</a>
+            <a href="tel:+919443947853" style="color:#e11d48;text-decoration:none;">+91 94439 47853</a> / <a href="tel:+917598186790" style="color:#e11d48;text-decoration:none;">+91 75981 86790</a>
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}" style="color:#e11d48;text-decoration:none;">Visit Store</a>
           </p>

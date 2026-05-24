@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Phone, Mail, Facebook, Instagram, MessageCircle, MapIcon } from 'lucide-react';
-import { STORE, WHATSAPP_URL, MAIL_URL, CALL_URL } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL, CALL_URL2 } from '@/lib/config';
 
 function XIcon({ size = 16 }: { size?: number }) {
   return (
@@ -48,7 +48,11 @@ export default function Footer() {
             </p>
             <div className="flex gap-2 flex-wrap">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title="WhatsApp">
+                className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title={`WhatsApp: ${STORE.phone1}`}>
+                <MessageCircle size={16} />
+              </a>
+              <a href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
+                className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title={`WhatsApp: ${STORE.phone2}`}>
                 <MessageCircle size={16} />
               </a>
               <a href={STORE.facebook} target="_blank" rel="noopener noreferrer"
@@ -125,13 +129,20 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <a href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 hover:text-green-400 transition-colors">
+                  <MessageCircle size={16} className="text-green-400 flex-shrink-0" />
+                  WhatsApp: {STORE.phone2}
+                </a>
+              </li>
+              <li>
                 <a href={CALL_URL} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
                   <Phone size={16} className="text-gold-400 flex-shrink-0" />
                   {STORE.phone1}
                 </a>
               </li>
               <li>
-                <a href={`tel:${STORE.phone2}`} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
+                <a href={CALL_URL2} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
                   <Phone size={16} className="text-gold-400 flex-shrink-0" />
                   {STORE.phone2}
                 </a>
