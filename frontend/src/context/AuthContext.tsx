@@ -189,6 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // ── Refresh current user from API ─────────────────────────────────────────
+  // Only logout on 401 (token truly invalid). Keep user logged in for
+  // network errors, server restarts, timeouts, 5xx — they are temporary.
   const refresh = async () => {
     try {
       const res = await authAPI.getMe();
@@ -202,8 +204,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('sessions', JSON.stringify(updated));
         return updated;
       });
-    } catch {
-      logout();
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 401) {
+        // Token is genuinely invalid or expired — sign out
+        logout();
+      }
+      // Any other error (network, timeout, 503, 500) → keep user logged in
     }
   };
 
