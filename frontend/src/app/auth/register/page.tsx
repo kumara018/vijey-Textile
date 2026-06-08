@@ -1,7 +1,7 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { type ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
 import { authAPI } from '@/lib/api';
@@ -123,14 +123,17 @@ function InputRow({ label, error, required = true, children }: InputRowProps) {
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
-export default function RegisterPage() {
+function RegisterPageInner() {
   const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // In switch-account mode (?add=1) allow registration even when logged in
-  const isAddMode = typeof window !== 'undefined'
-    ? new URLSearchParams(window.location.search).get('add') === '1'
-    : false;
+  // In switch-account mode (?add=1) allow registration even when logged in.
+  // Reactive via useSearchParams — window.location.search can be stale on the
+  // very first render right after a client-side <Link> transition, which was
+  // causing isAddMode to read as false and bounce admins straight to /admin
+  // before they could fill out the "Create your account" form.
+  const isAddMode = searchParams.get('add') === '1';
 
   // Redirect if already logged in (wait for auth to finish loading first)
   // Skip redirect in add/switch mode — user wants to register a NEW account
@@ -464,5 +467,13 @@ export default function RegisterPage() {
       </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#fff9f2]"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-maroon-700" /></div>}>
+      <RegisterPageInner />
+    </Suspense>
   );
 }
