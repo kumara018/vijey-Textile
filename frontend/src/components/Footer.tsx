@@ -100,8 +100,8 @@ export default function Footer() {
               <li><Link href="/support"             className="hover:text-gold-400 transition-colors">Contact Us</Link></li>
               <li><Link href="/support#size-guide"  className="hover:text-gold-400 transition-colors">Size Guide</Link></li>
               <li><Link href="/support#shipping"    className="hover:text-gold-400 transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/support#returns"     className="hover:text-gold-400 transition-colors">Return & Refund Policy</Link></li>
-              <li><Link href="/cancellation"         className="hover:text-gold-400 transition-colors">Cancellation Policy</Link></li>
+              <li><Link href="/support#returns"     className="hover:text-gold-400 transition-colors">Exchange & Replacement FAQ</Link></li>
+              <li><Link href="/cancellation"         className="hover:text-gold-400 transition-colors">Exchange & Replacement Policy</Link></li>
               <li><Link href="/terms"               className="hover:text-gold-400 transition-colors">Terms & Conditions</Link></li>
               <li><Link href="/privacy"             className="hover:text-gold-400 transition-colors">Privacy Policy</Link></li>
             </ul>
@@ -167,11 +167,11 @@ export default function Footer() {
           <div className="flex gap-4">
             <Link href="/privacy"      className="hover:text-gold-400 transition-colors">Privacy Policy</Link>
             <Link href="/terms"        className="hover:text-gold-400 transition-colors">Terms of Service</Link>
-            <Link href="/cancellation" className="hover:text-gold-400 transition-colors">Cancellation Policy</Link>
+            <Link href="/cancellation" className="hover:text-gold-400 transition-colors">Exchange & Replacement Policy</Link>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-maroon-500">Secure payments:</span>
-            <span className="text-maroon-300 font-medium">Visa • Mastercard • UPI • COD</span>
+            <span className="text-maroon-300 font-medium">Visa • Mastercard • UPI • Net Banking</span>
           </div>
         </div>
       </div>

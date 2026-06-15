@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Package, Truck, CheckCircle, Clock, XCircle,
   MapPin, CreditCard, ArrowLeft, Sparkles, Phone, ShieldCheck,
-  PackageOpen, Navigation, ExternalLink, AlertTriangle, RefreshCw,
+  PackageOpen, Navigation, ExternalLink, RefreshCw,
   FileText, RotateCcw, ImagePlus, X, ChevronRight,
 } from 'lucide-react';
 import { ordersAPI, returnsAPI } from '@/lib/api';
@@ -25,15 +25,6 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; b
   cancelled:        { label: 'Cancelled',          icon: XCircle,      color: 'text-red-700',    bg: 'bg-red-50',     ring: 'border-red-400' },
 };
 
-const CANCEL_REASONS = [
-  'Changed my mind',
-  'Ordered by mistake',
-  'Found a better price elsewhere',
-  'Delivery time is too long',
-  'Want to change the size/colour',
-  'Other',
-];
-
 const RETURN_REASONS = [
   "Size doesn't fit",
   "Damaged product",
@@ -44,7 +35,6 @@ const RETURN_REASONS = [
 ];
 
 const RETURN_TYPE_INFO = {
-  return:   { label: 'Return & Refund',  desc: 'Return the item and get a full refund to your original payment method.',  color: 'border-red-300 bg-red-50',    badge: 'bg-red-100 text-red-700'    },
   exchange: { label: 'Exchange',         desc: 'Exchange for a different size or colour of the same product.',             color: 'border-blue-300 bg-blue-50',  badge: 'bg-blue-100 text-blue-700'  },
   replace:  { label: 'Replacement',      desc: 'Get a replacement for a damaged or defective product.',                   color: 'border-green-300 bg-green-50',badge: 'bg-green-100 text-green-700'},
 } as const;
@@ -73,16 +63,12 @@ function OrderDetailContent() {
   const [loading, setLoading]         = useState(true);
   const [tracking, setTracking]       = useState<any>(null);
   const [trackLoading, setTrackLoading] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelReason, setCancelReason]       = useState('');
-  const [customReason, setCustomReason]       = useState('');
-  const [cancelling, setCancelling]           = useState(false);
 
   // Return modal state
   const [existingReturn, setExistingReturn]   = useState<ReturnRequest | null>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
   const [returnStep, setReturnStep]           = useState(1);
-  const [returnType, setReturnType]           = useState<'return'|'exchange'|'replace'|''>('');
+  const [returnType, setReturnType]           = useState<'exchange'|'replace'|''>('');
   const [returnReason, setReturnReason]       = useState('');
   const [returnDesc, setReturnDesc]           = useState('');
   const [returnImages, setReturnImages]       = useState<string[]>([]);
@@ -113,20 +99,6 @@ function OrderDetailContent() {
       const res = await ordersAPI.track(Number(id));
       setTracking(res.data);
     } catch { toast.error('Could not fetch tracking info'); } finally { setTrackLoading(false); }
-  };
-
-  const handleCancelConfirm = async () => {
-    const reason = cancelReason === 'Other' ? customReason.trim() : cancelReason;
-    if (!reason) { toast.error('Please select a reason'); return; }
-    setCancelling(true);
-    try {
-      const res = await ordersAPI.cancel(Number(id), reason);
-      setOrder(res.data);
-      setShowCancelModal(false);
-      toast.success('Order cancelled successfully');
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Could not cancel order');
-    } finally { setCancelling(false); }
   };
 
   const handleReturnImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,8 +160,6 @@ function OrderDetailContent() {
 
   const isCancelled = order.status === 'cancelled';
   const isDelivered = order.status === 'delivered';
-  // Can cancel up to "shipped" — not once out for delivery or delivered
-  const canCancel = ['pending', 'confirmed', 'processing', 'shipped'].includes(order.status);
   const currentStep = STATUS_STEPS.indexOf(order.status);
   const addr = order.shipping_address as any;
   // Check if any item in the order is non-returnable
@@ -224,14 +194,6 @@ function OrderDetailContent() {
           <h1 className="text-xl font-bold text-maroon-900">Order {order.order_number}</h1>
           <p className="text-sm text-gray-500">Placed on {new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
         </div>
-        {canCancel && (
-          <button
-            onClick={() => setShowCancelModal(true)}
-            className="ml-auto text-sm text-red-600 hover:text-red-800 border border-red-300 hover:border-red-500 px-4 py-2 rounded-lg transition-colors"
-          >
-            Cancel Order
-          </button>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -498,7 +460,8 @@ function OrderDetailContent() {
                 <CreditCard size={12} />
                 Mode: <b className="capitalize">
                   {order.payment_method === 'razorpay' ? 'Online (Razorpay)' :
-                   order.payment_method === 'upi' ? 'UPI' : 'Cash on Delivery'}
+                   order.payment_method === 'upi' ? 'UPI' :
+                   order.payment_method === 'emi' ? 'EMI' : 'Cash on Delivery'}
                 </b>
               </p>
               <p className="text-xs flex items-center gap-1.5">
@@ -575,11 +538,11 @@ function OrderDetailContent() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-xs text-gray-500 mb-3">Not satisfied? Raise a return, exchange or replacement request within 7 days of delivery.</p>
+                  <p className="text-xs text-gray-500 mb-3">Wrong size or a damaged/defective item? Request an exchange or replacement within 7 days of delivery. We do not offer cancellations or refunds.</p>
                   <button
                     onClick={() => setShowReturnModal(true)}
                     className="w-full flex items-center justify-center gap-2 py-2.5 border border-maroon-300 text-maroon-700 hover:bg-maroon-50 text-sm font-medium rounded-xl transition-colors">
-                    <RotateCcw size={15} /> Request Return / Exchange
+                    <RotateCcw size={15} /> Request Exchange / Replacement
                   </button>
                 </div>
               )}
@@ -597,13 +560,6 @@ function OrderDetailContent() {
               <p className="text-gray-500">📞 {addr.phone}</p>
             </div>
           </div>
-
-          {canCancel && (
-            <button onClick={() => setShowCancelModal(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-red-600 border border-red-300 hover:bg-red-50 rounded-xl transition-colors">
-              <XCircle size={16} /> Cancel This Order
-            </button>
-          )}
 
           <Link href="/products" className="btn-secondary w-full flex items-center justify-center gap-2 py-3">
             Continue Shopping
@@ -748,59 +704,6 @@ function OrderDetailContent() {
         </div>
       )}
 
-      {/* ── Cancel Confirmation Modal ── */}
-      {showCancelModal && (
-        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" onClick={() => setShowCancelModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle size={20} className="text-red-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-900 text-lg">Cancel Order?</h3>
-                <p className="text-sm text-gray-500">{order.order_number}</p>
-              </div>
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4">
-              Please tell us why you want to cancel. This helps us improve.
-              {order.payment_method !== 'cod' && <span className="block mt-1 text-orange-600 font-medium">Your payment will be refunded within 5–7 business days.</span>}
-            </p>
-
-            {/* Reason selector */}
-            <div className="space-y-2 mb-4">
-              {CANCEL_REASONS.map(reason => (
-                <label key={reason} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${cancelReason === reason ? 'border-maroon-500 bg-orange-50' : 'border-gray-200 hover:border-maroon-300'}`}>
-                  <input type="radio" name="cancel_reason" value={reason} checked={cancelReason === reason}
-                    onChange={() => setCancelReason(reason)} className="accent-maroon-700" />
-                  <span className="text-sm text-gray-700">{reason}</span>
-                </label>
-              ))}
-            </div>
-
-            {cancelReason === 'Other' && (
-              <textarea
-                value={customReason}
-                onChange={e => setCustomReason(e.target.value)}
-                placeholder="Please describe your reason..."
-                rows={3}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-maroon-400 resize-none mb-4"
-              />
-            )}
-
-            <div className="flex gap-3">
-              <button onClick={() => setShowCancelModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-700 font-medium text-sm hover:bg-gray-50 transition-colors">
-                Keep Order
-              </button>
-              <button onClick={handleCancelConfirm} disabled={cancelling || !cancelReason}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                {cancelling ? <><RefreshCw size={14} className="animate-spin" /> Cancelling...</> : <><XCircle size={14} /> Yes, Cancel</>}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

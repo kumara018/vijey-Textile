@@ -1118,88 +1118,6 @@ def send_review_request_whatsapp(phone: str, name: str, order_number: str):
     )
 
 
-# ── 15j. Order cancelled by user ─────────────────────────────────────────────
-def send_order_cancelled_email(email: str, name: str, order):
-    first  = name.split()[0]
-    reason = getattr(order, "cancel_reason", "") or "Cancelled by customer"
-    items_html = "".join(
-        f"<tr><td style='padding:8px 0;border-bottom:1px solid #fde8d8'>{i.get('name','')}</td>"
-        f"<td style='padding:8px 0;border-bottom:1px solid #fde8d8;text-align:center'>×{i.get('quantity',1)}</td>"
-        f"<td style='padding:8px 0;border-bottom:1px solid #fde8d8;text-align:right'>₹{i.get('subtotal',0):,.0f}</td></tr>"
-        for i in (order.items_snapshot or [])
-    )
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eee">
-      {_HEADER_HTML}
-      <!-- Order Cancellation sub-banner -->
-      <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#b91c1c;">
-        <tr><td align="center" style="padding:10px 24px 14px;">
-          <p style="margin:0;color:#fca5a5;font-size:13px;font-family:Arial,sans-serif;
-                    letter-spacing:1px;">ORDER CANCELLATION CONFIRMED</p>
-        </td></tr>
-      </table>
-      <div style="padding:32px">
-        <h2 style="color:#111;margin-top:0">Order Cancelled ❌</h2>
-        <p style="color:#555">Hi {first}, your order has been successfully cancelled.</p>
-        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0">
-          <p style="margin:0;color:#991b1b"><b>Order:</b> {order.order_number}</p>
-          <p style="margin:6px 0 0;color:#991b1b"><b>Reason:</b> {reason}</p>
-          <p style="margin:6px 0 0;color:#991b1b"><b>Total:</b> ₹{order.total:,.0f}</p>
-        </div>
-        <table width="100%" style="border-collapse:collapse;margin:16px 0">
-          <thead><tr style="background:#fef2f2">
-            <th style="padding:8px;text-align:left;font-size:13px">Item</th>
-            <th style="padding:8px;text-align:center;font-size:13px">Qty</th>
-            <th style="padding:8px;text-align:right;font-size:13px">Amount</th>
-          </tr></thead>
-          <tbody>{items_html}</tbody>
-        </table>
-        {"<div style='background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:16px 0'><p style='margin:0;color:#92400e;font-size:14px'>💰 <b>Refund:</b> If you paid online, your refund will be processed within 5–7 business days to your original payment method.</p></div>" if order.payment_method != 'cod' else ""}
-        <p style="color:#555;font-size:14px">Changed your mind? You can always <a href="{STORE_URL}/products" style="color:#e11d48">shop again</a>.</p>
-        <p style="color:#888;font-size:13px">Questions? Email us at <a href="mailto:{SUPPORT_EMAIL}">{SUPPORT_EMAIL}</a></p>
-      </div>
-      <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#f8f4f0;border-top:1px solid #ede8e3;">
-        <tr><td align="center" style="padding:16px 24px;">
-          <p style="margin:0 0 5px;color:#888;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
-          <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
-            <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;text-decoration:none;">Contact Support</a>
-            &nbsp;&middot;&nbsp;
-            <a href="{STORE_URL}" style="color:#e11d48;text-decoration:none;">Visit Store</a>
-          </p>
-          <p style="margin:0;color:#bbb;font-size:11px;font-family:Arial,sans-serif;">
-            &copy; {YEAR} {STORE_NAME}. All rights reserved.
-          </p>
-        </td></tr>
-      </table>
-    </div>"""
-    _send_email(email, f"Order Cancelled — {order.order_number}", html)
-
-
-def send_order_cancelled_whatsapp(phone: str, name: str, order):
-    first  = name.split()[0]
-    reason = getattr(order, "cancel_reason", "") or "Cancelled by customer"
-    items_text = "\n".join(
-        f"  • {i.get('name','')} ×{i.get('quantity',1)} — ₹{i.get('subtotal',0):,.0f}"
-        for i in (order.items_snapshot or [])
-    )
-    refund_note = (
-        "\n💰 *Refund:* Will be credited within 5–7 business days."
-        if getattr(order, "payment_method", "cod") != "cod" else ""
-    )
-    _send_whatsapp(phone,
-        f"❌ *Order Cancelled*\n\n"
-        f"Hi {first}, your order has been cancelled.\n\n"
-        f"📦 *Order:* {order.order_number}\n"
-        f"📝 *Reason:* {reason}\n"
-        f"💸 *Total:* ₹{order.total:,.0f}\n\n"
-        f"*Items:*\n{items_text}"
-        f"{refund_note}\n\n"
-        f"🛍️ Shop again: {STORE_URL}/products"
-    )
-
-
 # ── Refund notifications ───────────────────────────────────────────────────────
 
 def send_refund_initiated_email(email: str, name: str, order, refund_id: str = ""):
@@ -1278,13 +1196,6 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
       </table>
     </div>"""
     _send_email(email, f"💰 Refund Initiated — ₹{order.total:,.0f} · {order.order_number}", html)
-
-
-def send_refund_initiated_sms(phone: str, order_number: str, total: float):
-    _bg_sms(phone,
-        f"💰 {STORE_NAME}: Refund of ₹{total:,.0f} initiated for order {order_number}. "
-        f"Will be credited in 5-7 business days. Track: {STORE_URL}/orders"
-    )
 
 
 def send_refund_initiated_whatsapp(phone: str, name: str, order, refund_id: str = ""):
@@ -1538,6 +1449,7 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
     pay_label = {
         "razorpay": "Online Payment (Razorpay)",
         "upi":      "UPI Payment",
+        "emi":      "EMI (Razorpay)",
         "cod":      "Cash on Delivery",
     }.get(pm, pm.upper())
 
@@ -1890,99 +1802,6 @@ def send_admin_revoked_email(email: str, name: str):
       </p>
     """)
     _bg(email, f"🔒 Your Admin Access Has Been Removed — {STORE_NAME}", html)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ── Admin Alert: Order Cancellation ───────────────────────────────────────────
-# ══════════════════════════════════════════════════════════════════════════════
-
-def send_admin_cancellation_email(order, user):
-    """Alert admin by email when a customer cancels an order."""
-    admin_email = os.getenv("ADMIN_EMAIL", SMTP_EMAIL or SUPPORT_EMAIL)
-    if not admin_email:
-        return
-    addr = order.shipping_address or {}
-    needs_refund = (
-        order.payment_method != "cod"
-        and order.payment_status in ("paid", "refund_initiated")
-    )
-    refund_block = (
-        f"<div style='background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;"
-        f"padding:12px 16px;margin:16px 0;'>"
-        f"<p style='margin:0;color:#dc2626;font-weight:bold;font-size:14px;'>"
-        f"Refund Required — {order.payment_method.upper()} payment of Rs.{order.total:.0f} needs to be refunded.</p></div>"
-        if needs_refund else ""
-    )
-    html = _wrap(f"""
-      <h2 style="color:#dc2626;margin-top:0;font-size:22px;">Order Cancelled by Customer</h2>
-      {refund_block}
-      <table style="width:100%;font-size:14px;border-collapse:collapse;margin:16px 0;">
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;width:140px;">Order #</td>
-          <td style="color:#111;font-weight:bold;">{order.order_number}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Customer</td>
-          <td style="color:#444;">{user.full_name}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Phone</td>
-          <td style="color:#444;">{user.phone}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Email</td>
-          <td style="color:#444;">{user.email}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Amount</td>
-          <td style="color:#444;font-weight:bold;">Rs.{order.total:.0f}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Payment</td>
-          <td style="color:#444;">{order.payment_method.upper()} — {order.payment_status.replace('_',' ').title()}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #f0e8e3;">
-          <td style="color:#888;padding:8px 0;">Cancel Reason</td>
-          <td style="color:#444;">{order.cancel_reason or 'Not specified'}</td>
-        </tr>
-        <tr>
-          <td style="color:#888;padding:8px 0;">Ship To</td>
-          <td style="color:#444;">{addr.get('city','')}, {addr.get('state','')}</td>
-        </tr>
-      </table>
-      {_btn("Open Admin Dashboard", f"{STORE_URL}/admin")}
-      <p style="color:#888;font-size:12px;margin-top:20px;">
-        Go to Orders tab and filter by Cancelled to see and process this order.
-      </p>
-    """)
-    _bg(admin_email, f"Order Cancelled — {order.order_number} — {STORE_NAME}", html)
-
-
-def send_admin_cancellation_whatsapp(order, user):
-    """Alert admin via WhatsApp when a customer cancels an order."""
-    admin_phone = os.getenv("ADMIN_PHONE", "")
-    if not admin_phone:
-        return
-    needs_refund = (
-        order.payment_method != "cod"
-        and order.payment_status in ("paid", "refund_initiated")
-    )
-    refund_note = (
-        f"\n*Refund Required* — {order.payment_method.upper()} Rs.{order.total:.0f}"
-        if needs_refund else ""
-    )
-    msg = (
-        f"*Order Cancelled — {STORE_NAME}*\n\n"
-        f"Order: *{order.order_number}*\n"
-        f"Customer: {user.full_name}\n"
-        f"Phone: {user.phone}\n"
-        f"Amount: Rs.{order.total:.0f}\n"
-        f"Payment: {order.payment_method.upper()} — {order.payment_status}\n"
-        f"Reason: {order.cancel_reason or 'Not specified'}"
-        f"{refund_note}\n\n"
-        f"Admin Dashboard: {STORE_URL}/admin"
-    )
-    _send_whatsapp(admin_phone, msg)
 
 
 # ══════════════════════════════════════════════════════════════════════════════

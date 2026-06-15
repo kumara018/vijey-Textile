@@ -408,7 +408,7 @@ class PaymentDetails(BaseModel):
 
     @model_validator(mode="after")
     def validate_payment(self):
-        allowed = ["razorpay", "upi", "cod"]
+        allowed = ["razorpay", "upi", "emi"]
         if self.method not in allowed:
             raise ValueError(f"Payment method must be one of: {', '.join(allowed)}")
         if self.method == "upi" and self.upi_id:
@@ -434,10 +434,6 @@ class OrderStatusUpdate(BaseModel):
     tracking_url:          Optional[str] = None
     estimated_delivery:    Optional[str] = None
     status_location:       Optional[str] = None   # current location note e.g. "In Transit – Erode Hub"
-
-
-class CancelOrderPayload(BaseModel):
-    reason: Optional[str] = None
 
 
 class OrderOut(BaseModel):
@@ -504,7 +500,7 @@ class ReviewOut(BaseModel):
 
 class ReturnRequestCreate(BaseModel):
     order_id:     int
-    request_type: str   # return | exchange | replace
+    request_type: str   # exchange | replace
     reason:       str
     description:  Optional[str] = None
     images:       List[str] = []
@@ -512,8 +508,8 @@ class ReturnRequestCreate(BaseModel):
     @field_validator("request_type")
     @classmethod
     def type_valid(cls, v):
-        if v not in ["return", "exchange", "replace"]:
-            raise ValueError("request_type must be return, exchange, or replace")
+        if v not in ["exchange", "replace"]:
+            raise ValueError("request_type must be exchange or replace")
         return v
 
 class ReturnStatusUpdate(BaseModel):

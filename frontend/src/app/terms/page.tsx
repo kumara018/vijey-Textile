@@ -39,9 +39,8 @@ export default function TermsPage() {
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">3. Orders & Payments</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>Orders are confirmed only after successful payment (online) or order placement (COD).</li>
-            <li>We accept payments via UPI, Credit/Debit Cards, Net Banking (via Razorpay), and Cash on Delivery (COD).</li>
-            <li>For COD orders, payment must be made in full to the delivery agent at the time of delivery.</li>
+            <li>Orders are confirmed only after successful online payment.</li>
+            <li>We accept payments via UPI, Credit/Debit Cards, Net Banking and EMI (via Razorpay). Cash on Delivery is not available.</li>
             <li>We reserve the right to reject or cancel any order at our discretion, with full refund if payment was made.</li>
           </ul>
         </section>
@@ -57,13 +56,12 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-3">5. Returns & Refunds</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">5. Exchange & Replacement</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>We offer a 7-day return policy from the date of delivery for eligible products.</li>
-            <li>Items must be unused, unwashed, with original tags and packaging intact.</li>
-            <li>Certain products marked as <strong>Non-Returnable</strong> are not eligible for returns.</li>
-            <li>Refunds for online payments are processed within 5–7 business days after return approval.</li>
-            <li>COD orders are refunded via bank transfer. Customer must provide bank details.</li>
+            <li>We do not offer order cancellations, returns, or refunds.</li>
+            <li>We offer a 7-day exchange/replacement policy from the date of delivery for eligible products — for example, a size change, or a damaged, defective, or wrong item.</li>
+            <li>Items must be unused, unwashed, with original tags and packaging intact (this does not apply to items reported as damaged, defective, or incorrect on arrival).</li>
+            <li>Certain products marked as <strong>Non-Returnable</strong> are not eligible for exchange, except where the item received is damaged, defective, or incorrect.</li>
           </ul>
         </section>
 
@@ -113,7 +111,7 @@ export default function TermsPage() {
       <div className="flex gap-3 mt-8 justify-center flex-wrap">
         <Link href="/privacy"      className="text-sm text-maroon-700 hover:underline">Privacy Policy</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Cancellation Policy</Link>
+        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Exchange & Replacement Policy</Link>
         <span className="text-gray-300">|</span>
         <Link href="/shipping"     className="text-sm text-maroon-700 hover:underline">Shipping Policy</Link>
       </div>

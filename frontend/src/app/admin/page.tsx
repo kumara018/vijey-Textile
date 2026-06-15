@@ -914,7 +914,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-xs font-medium text-gray-700">
-                          {o.payment_method === 'razorpay' ? 'Razorpay' : o.payment_method === 'upi' ? 'UPI' : 'COD'}
+                          {o.payment_method === 'razorpay' ? 'Razorpay' : o.payment_method === 'upi' ? 'UPI' : o.payment_method === 'emi' ? 'EMI' : 'COD'}
                         </span>
                         {o.payment_status === 'paid' && <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded w-fit">✅ PAID</span>}
                         {o.payment_status === 'refund_initiated' && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded w-fit">🔄 REFUND INITIATED</span>}
@@ -1288,7 +1288,9 @@ export default function AdminPage() {
                                       onChange={e => setReturnUpdateForm(prev => ({ ...prev, [r.id]: { ...prev[r.id], status: e.target.value } }))}
                                       className="input-field text-sm"
                                     >
-                                      {['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','refund_initiated','replacement_shipped','completed'].map(s => (
+                                      {['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','refund_initiated','replacement_shipped','completed']
+                                        .filter(s => s !== 'refund_initiated' || r.request_type === 'return')
+                                        .map(s => (
                                         <option key={s} value={s}>{s.replace(/_/g,' ').replace(/\b\w/g,(c:string)=>c.toUpperCase())}</option>
                                       ))}
                                     </select>

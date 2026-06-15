@@ -109,7 +109,7 @@ export default function PrivacyPage() {
       <div className="flex gap-3 mt-8 justify-center flex-wrap">
         <Link href="/terms"        className="text-sm text-maroon-700 hover:underline">Terms & Conditions</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Cancellation Policy</Link>
+        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Exchange & Replacement Policy</Link>
         <span className="text-gray-300">|</span>
         <Link href="/shipping"     className="text-sm text-maroon-700 hover:underline">Shipping Policy</Link>
       </div>

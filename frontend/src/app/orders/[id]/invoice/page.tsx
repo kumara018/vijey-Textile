@@ -11,6 +11,7 @@ import { ArrowLeft, Download, Mail, Share2, Printer } from 'lucide-react';
 const PAY_LABEL: Record<string, string> = {
   razorpay: 'Online Payment (Razorpay)',
   upi:      'UPI Payment',
+  emi:      'EMI (Razorpay)',
   cod:      'Cash on Delivery',
 };
 

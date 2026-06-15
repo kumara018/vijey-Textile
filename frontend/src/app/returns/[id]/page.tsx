@@ -95,7 +95,7 @@ function ReturnDetailContent() {
 
   const typeInfo = TYPE_INFO[rr.request_type] || TYPE_INFO.return;
   const isRejected = rr.status === 'rejected';
-  const steps = rr.request_type === 'replace' ? STATUS_REPLACE_STEPS : STATUS_STEPS;
+  const steps = rr.request_type === 'return' ? STATUS_STEPS : STATUS_REPLACE_STEPS;
   const activeStepIdx = steps.findIndex(s => s.key === rr.status);
   const progressPct = activeStepIdx < 0 ? 0 : Math.round((activeStepIdx / (steps.length - 1)) * 100);
 

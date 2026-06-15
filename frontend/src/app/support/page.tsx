@@ -164,7 +164,7 @@ export default function SupportPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
         {[
           { icon: Package,   label: 'Track My Order',  href: '/orders'      },
-          { icon: RotateCcw, label: 'Return & Refund', href: '#returns'     },
+          { icon: RotateCcw, label: 'Exchange & Replacement', href: '#returns' },
           { icon: Truck,     label: 'Shipping Info',   href: '#shipping'    },
           { icon: Ruler,     label: 'Size Guide',      href: '#size-guide'  },
         ].map(({ icon: Icon, label, href }) => (
@@ -260,18 +260,17 @@ export default function SupportPage() {
         </div>
       </Accordion>
 
-      {/* ── Return & Refund ────────────────────────────────────────────── */}
-      <Accordion id="returns" title="Return & Refund Policy" icon={RotateCcw}>
+      {/* ── Exchange & Replacement ─────────────────────────────────────── */}
+      <Accordion id="returns" title="Exchange & Replacement Policy" icon={RotateCcw}>
         <div className="grid md:grid-cols-2 gap-6 mb-5">
           <div>
-            <h3 className="font-bold text-green-700 mb-3 text-sm">✅ Eligible for Return</h3>
+            <h3 className="font-bold text-green-700 mb-3 text-sm">✅ Eligible for Exchange / Replacement</h3>
             <ul className="space-y-2 text-sm text-gray-700">
               {[
-                'Unused and unwashed items',
-                'Items with original tags still attached',
-                'Return request within 7 days of delivery',
-                'Wrong size or colour received',
-                'Defective or damaged items received',
+                'Unused and unwashed items, with original tags attached',
+                'Request raised within 7 days of delivery',
+                'Wrong size — exchange for a different size of the same product',
+                'Wrong item, colour, defective or damaged item received',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="text-green-500 font-bold mt-0.5">✓</span> {item}
@@ -280,12 +279,14 @@ export default function SupportPage() {
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-red-700 mb-3 text-sm">❌ NOT Eligible for Return</h3>
+            <h3 className="font-bold text-red-700 mb-3 text-sm">❌ NOT Available</h3>
             <ul className="space-y-2 text-sm text-gray-700">
               {[
-                'Washed or used items',
-                'Items without original tags or packaging',
-                'Return request after 7 days of delivery',
+                'Order cancellation, once placed',
+                'Return for refund — we do not issue refunds',
+                'Washed or used items (unless damaged/defective on arrival)',
+                'Items without original tags or packaging (unless damaged/defective on arrival)',
+                'Requests raised after 7 days of delivery',
                 'Undergarments or innerwear (hygiene reasons)',
                 'Items purchased on final sale / clearance',
               ].map((item) => (
@@ -298,8 +299,8 @@ export default function SupportPage() {
         </div>
 
         <div className="p-4 bg-blue-50 rounded-xl text-sm text-gray-700 border border-blue-100 mb-3">
-          <b className="text-gray-800">How to Initiate a Return:</b> Go to My Orders → Select the
-          order → Tap "Request Return" and follow the steps. Or contact us on WhatsApp at{' '}
+          <b className="text-gray-800">How to Request an Exchange / Replacement:</b> Go to My Orders → Select the
+          order → Tap "Request Exchange / Replacement" and follow the steps. Or contact us on WhatsApp at{' '}
           <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="text-maroon-700 font-medium hover:underline">
             {STORE.phone1}
           </a>{' '}
@@ -307,9 +308,10 @@ export default function SupportPage() {
         </div>
 
         <div className="p-4 bg-green-50 rounded-xl text-sm text-gray-700 border border-green-100">
-          <b className="text-gray-800">Refund Timeline:</b> Refunds are processed within{' '}
-          <b>5–7 business days</b> after we receive and inspect the returned item. Amount is
-          credited back to your original payment method (bank account for COD orders).
+          <b className="text-gray-800">Exchange Timeline:</b> Once your original item is picked up
+          and verified, the exchanged or replacement item is shipped within{' '}
+          <b>5–7 business days</b>. We do not offer cancellations, returns, or refunds — only exchange
+          or replacement of the product.
         </div>
       </Accordion>
 
@@ -330,7 +332,7 @@ export default function SupportPage() {
           </div>
           <div>
             <b className="text-gray-800">4. Product Accuracy</b>
-            <p className="mt-1">We strive to display accurate product images, colours, and descriptions. Minor colour variations due to different screen settings and lighting are not grounds for return unless the item is significantly different from what was described.</p>
+            <p className="mt-1">We strive to display accurate product images, colours, and descriptions. Minor colour variations due to different screen settings and lighting are not grounds for exchange unless the item is significantly different from what was described.</p>
           </div>
           <div>
             <b className="text-gray-800">5. Pricing & Availability</b>
@@ -389,8 +391,8 @@ export default function SupportPage() {
             a: `Standard delivery takes 5–7 business days across India. Express delivery (1–3 days) is available in select cities. A flat ₹49 shipping fee applies to all orders.`,
           },
           {
-            q: 'What is your return and refund policy?',
-            a: 'We offer a 7-day hassle-free return policy. Items must be unused, unwashed, and in original packaging with tags. Refunds are processed within 5–7 business days after we receive the returned item.',
+            q: 'What is your exchange and replacement policy?',
+            a: 'We do not offer cancellations, returns, or refunds. If you have a size issue, or received a damaged, defective or wrong item, you can request an exchange or replacement within 7 days of delivery. Items must be unused, unwashed, and in original packaging with tags (this does not apply if the item arrived damaged, defective or incorrect).',
           },
           {
             q: 'How do I track my order?',
@@ -398,7 +400,7 @@ export default function SupportPage() {
           },
           {
             q: 'Are the colours accurate in product photos?',
-            a: 'We strive for accurate colour representation. However, slight variations may occur due to different screen settings. If the colour is significantly different from what was shown, you can return within 7 days.',
+            a: 'We strive for accurate colour representation. However, slight variations may occur due to different screen settings. If the colour is significantly different from what was shown, you can request an exchange within 7 days.',
           },
           {
             q: 'How do I choose the right size?',
@@ -406,11 +408,11 @@ export default function SupportPage() {
           },
           {
             q: 'Can I change or cancel my order after placing it?',
-            a: 'Orders can be cancelled within 24 hours of placement if they are in "Pending" or "Confirmed" status. Go to My Orders → Select the order → Cancel. Once the order is shipped, cancellation is not possible.',
+            a: 'Orders cannot be cancelled or changed once placed, as we begin processing immediately. Please double-check your size, colour and address before confirming. If you receive a wrong size or item, you can request an exchange or replacement after delivery.',
           },
           {
             q: 'Do you offer Cash on Delivery?',
-            a: 'Yes! COD is available across India with no extra charges. Please keep the exact amount ready at the time of delivery.',
+            a: 'No, we currently accept online payments only (Cards, Net Banking, UPI and EMI) for a faster and more secure checkout experience.',
           },
           {
             q: `What are your store timings?`,
@@ -422,7 +424,7 @@ export default function SupportPage() {
           },
           {
             q: 'What payment methods do you accept?',
-            a: 'We accept Credit/Debit Cards (Visa, Mastercard, RuPay), UPI (PhonePe, Google Pay, Paytm, BHIM), and Cash on Delivery. All online transactions are secured with SSL encryption.',
+            a: 'We accept Credit/Debit Cards (Visa, Mastercard, RuPay), Net Banking, UPI (PhonePe, Google Pay, Paytm, BHIM) and EMI. All online transactions are secured with SSL encryption.',
           },
         ].map((faq) => (
           <FaqItem key={faq.q} q={faq.q} a={faq.a} />

@@ -70,17 +70,12 @@ def place_order(
     while db.query(models.Order).filter(models.Order.order_number == order_number).first():
         order_number = generate_order_number()
 
-    transaction_id = None
-    payment_status = "pending"
-    if payload.payment.method == "cod":
-        payment_status = "pending"
-    else:
-        # Use the real Razorpay payment ID (pay_xxx) if provided by frontend
-        transaction_id = (
-            payload.payment.razorpay_payment_id
-            or f"TXN{''.join(random.choices(string.digits, k=12))}"
-        )
-        payment_status = "paid"
+    # Use the real Razorpay payment ID (pay_xxx) if provided by frontend
+    transaction_id = (
+        payload.payment.razorpay_payment_id
+        or f"TXN{''.join(random.choices(string.digits, k=12))}"
+    )
+    payment_status = "paid"
 
     order = models.Order(
         order_number=order_number,
@@ -145,142 +140,6 @@ def get_order(
     ).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return order
-
-
-@router.post("/{order_id}/cancel", response_model=schemas.OrderOut)
-def cancel_order(
-    order_id: int,
-    payload: schemas.CancelOrderPayload = schemas.CancelOrderPayload(),
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth_utils.get_current_user),
-):
-    order = db.query(models.Order).filter(
-        models.Order.id == order_id,
-        models.Order.user_id == current_user.id,
-    ).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-
-    # Allow cancel up to shipped — not once out for delivery or delivered
-    cancellable = ["pending", "confirmed", "processing", "shipped"]
-    if order.status not in cancellable:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Order cannot be cancelled once it is '{order.status}'. Please contact support.",
-        )
-
-    order.status       = "cancelled"
-    order.cancelled_by = "user"
-    order.cancel_reason = (payload.reason or "Cancelled by customer").strip()
-
-    # Restore stock
-    for item in order.items_snapshot:
-        product = db.query(models.Product).filter(
-            models.Product.id == item["product_id"]
-        ).first()
-        if product:
-            product.stock += item["quantity"]
-
-    # Cancel on Delhivery if AWB exists
-    if order.awb_code:
-        courier = (order.courier_name or "").lower()
-        try:
-            if "delhivery" in courier or not courier:
-                import delhivery as dl
-                dl.cancel_shipment(order.awb_code)
-                print(f"[Delhivery] Cancelled AWB {order.awb_code}")
-            elif order.shiprocket_order_id:
-                from shiprocket import shiprocket as sr
-                sr.cancel_order([int(order.shiprocket_order_id)])
-        except Exception as e:
-            print(f"[Courier cancel error] {e}")
-
-    # ── Auto-refund via Razorpay for paid online orders ───────────────────────
-    refund_status = None
-    if (
-        order.payment_method != "cod"
-        and order.payment_status == "paid"
-        and order.payment_transaction_id
-        and order.payment_transaction_id.startswith("pay_")
-    ):
-        import razorpay as _rp, os as _os
-        key_id     = _os.getenv("RAZORPAY_KEY_ID", "")
-        key_secret = _os.getenv("RAZORPAY_KEY_SECRET", "")
-        if not key_id or not key_secret:
-            print(f"[Razorpay] ⚠️  REFUND SKIPPED — RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set in env vars. "
-                  f"Order {order.order_number} txn {order.payment_transaction_id} "
-                  f"₹{order.total} must be refunded MANUALLY from Razorpay Dashboard.")
-        else:
-            try:
-                client = _rp.Client(auth=(key_id, key_secret))
-                refund = client.payment.refund(
-                    order.payment_transaction_id,
-                    {
-                        "amount": int(order.total * 100),   # paise
-                        "speed":  "normal",
-                        "notes":  {
-                            "order_number": order.order_number,
-                            "reason":       order.cancel_reason,
-                        },
-                    },
-                )
-                order.payment_status = "refund_initiated"
-                refund_status = refund.get("id", "initiated")
-                print(f"[Razorpay] ✅ Refund {refund_status} initiated for {order.order_number} ₹{order.total}")
-            except Exception as e:
-                print(f"[Razorpay] ❌ Refund FAILED for {order.order_number} txn {order.payment_transaction_id}: {e}")
-
-    db.commit()
-    db.refresh(order)
-
-    # Notify customer — cancellation
-    try:
-        notifications.send_order_cancelled_email(current_user.email, current_user.full_name, order)
-    except Exception as e:
-        print(f"[Cancel email error] {e}")
-    try:
-        notifications.send_order_cancelled_whatsapp(current_user.phone, current_user.full_name, order)
-    except Exception as e:
-        print(f"[Cancel WhatsApp error] {e}")
-
-    # Notify admin — new cancellation alert
-    try:
-        admin_notif = models.AdminNotification(
-            type="cancellation",
-            order_id=order.id,
-            user_id=current_user.id,
-            title=f"Order {order.order_number} Cancelled",
-            message=f"{current_user.full_name} cancelled order {order.order_number}. Reason: {order.cancel_reason}",
-        )
-        db.add(admin_notif)
-        db.commit()
-        notifications.send_admin_cancellation_email(order, current_user)
-        notifications.send_admin_cancellation_whatsapp(order, current_user)
-    except Exception as e:
-        print(f"[Admin notify cancel error] {e}")
-
-    # Notify customer — refund (if refund was triggered)
-    if refund_status:
-        try:
-            notifications.send_refund_initiated_email(
-                current_user.email, current_user.full_name, order, refund_status
-            )
-        except Exception as e:
-            print(f"[Refund email error] {e}")
-        try:
-            notifications.send_refund_initiated_sms(
-                current_user.phone, order.order_number, order.total
-            )
-        except Exception as e:
-            print(f"[Refund SMS error] {e}")
-        try:
-            notifications.send_refund_initiated_whatsapp(
-                current_user.phone, current_user.full_name, order, refund_status
-            )
-        except Exception as e:
-            print(f"[Refund WhatsApp error] {e}")
-
     return order
 
 
