@@ -615,8 +615,8 @@ export default function AdminPage() {
     { key: 'dash',          label: 'Dashboard'        },
     { key: 'products',      label: 'Products'          },
     { key: 'orders',        label: 'Orders'            },
-    { key: 'cancellations', label: 'Cancellations'     },
-    { key: 'returns',       label: 'Returns & Exchange'},
+    { key: 'cancellations', label: 'Cancelled Orders (Legacy)' },
+    { key: 'returns',       label: 'Exchange & Replacement'},
     { key: 'users',         label: 'Customers'         },
     { key: 'ratings',       label: 'Support Ratings'   },
     { key: 'admins',        label: '🔐 Admin Accounts' },
@@ -1087,7 +1087,7 @@ export default function AdminPage() {
         <div>
           <div className="mb-4 flex items-center gap-3 flex-wrap">
             <Ban size={20} className="text-red-500" />
-            <h2 className="font-bold text-gray-800 text-lg">Cancelled Orders</h2>
+            <h2 className="font-bold text-gray-800 text-lg">Cancelled Orders (Legacy)</h2>
             <button onClick={loadOrders} className="ml-auto text-xs text-maroon-700 hover:underline">Refresh</button>
           </div>
           {loading ? (
@@ -1171,7 +1171,7 @@ export default function AdminPage() {
       {tab === 'returns' && (
         <div>
           <div className="mb-4 flex items-center gap-3">
-            <h2 className="font-bold text-gray-800 text-lg">Return / Exchange / Replace Requests</h2>
+            <h2 className="font-bold text-gray-800 text-lg">Exchange & Replacement Requests</h2>
             {returns.length > 0 && (
               <span className="ml-auto text-sm text-gray-500">{returns.length} total</span>
             )}

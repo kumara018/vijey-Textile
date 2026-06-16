@@ -81,7 +81,7 @@ const CATEGORIES = [
 const FEATURES = [
   { icon: Truck,      title: 'Fast Delivery',       desc: 'Delivered to your doorstep', href: '/shipping'  },
   { icon: Shield,     title: '100% Authentic',   desc: 'Genuine quality products',    href: '/authentic' },
-  { icon: RotateCcw,  title: 'Easy Returns',     desc: '7-day hassle-free returns',   href: '/support#returns'   },
+  { icon: RotateCcw,  title: 'Easy Exchange',    desc: '7-day exchange & replacement', href: '/support#returns'   },
   { icon: Headphones, title: 'Customer Support', desc: 'Mon–Sat, 9AM to 8PM',         href: '/support'   },
 ];
 

@@ -62,7 +62,7 @@ export default function LoginPromptModal() {
 
         {/* Trust badges */}
         <div className="flex justify-center gap-4 mb-6">
-          {['Fast Delivery', 'Easy Returns', 'Secure Payments'].map(b => (
+          {['Fast Delivery', 'Easy Exchange', 'Secure Payments'].map(b => (
             <div key={b} className="flex items-center gap-1 text-[10px] text-gray-500">
               <ShieldCheck size={11} className="text-green-500 flex-shrink-0" />
               {b}

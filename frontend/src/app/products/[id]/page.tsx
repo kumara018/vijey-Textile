@@ -488,7 +488,7 @@ export default function ProductDetailPage() {
           <div className="grid grid-cols-3 gap-3 mb-6">
             {[
               { icon: Truck, text: 'Fast Delivery' },
-              { icon: product.is_returnable === false ? XCircle : RotateCcw, text: product.is_returnable === false ? 'Non-Returnable' : '7-day Easy Returns', red: product.is_returnable === false },
+              { icon: product.is_returnable === false ? XCircle : RotateCcw, text: product.is_returnable === false ? 'Non-Returnable' : '7-day Easy Exchange', red: product.is_returnable === false },
               { icon: Shield, text: '100% Authentic' },
             ].map(({ icon: Icon, text, red }) => (
               <div key={text} className={`flex flex-col items-center gap-1.5 p-3 rounded-xl text-center ${red ? 'bg-red-50' : 'bg-maroon-50'}`}>
