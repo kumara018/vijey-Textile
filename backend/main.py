@@ -435,7 +435,7 @@ def test_notification(to: str = "", type: str = "welcome"):
     target = to.strip() or os.getenv("SMTP_EMAIL", "kumaragurubaran27102@gmail.com")
 
     class _FakeOrder:
-        order_number = "AMT-TEST-001"
+        order_number = "VJT-TEST-001"
         id = 1
         total = 1499.00
         subtotal = 1499.00

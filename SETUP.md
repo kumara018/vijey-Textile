@@ -60,12 +60,32 @@ STEP 2 — DEPLOY BACKEND ON RENDER
 
    SENDGRID_API_KEY     = (from SendGrid Dashboard — optional, better email delivery)
 
-   ULTRAMSG_TOKEN       = (from Ultramsg Dashboard)
-   ULTRAMSG_INSTANCE    = (from Ultramsg Dashboard — e.g. instance12345)
-
-   FAST2SMS_API_KEY     = (from Fast2SMS Dashboard)
+   TWILIO_ACCOUNT_SID   = (from Twilio Console)
+   TWILIO_AUTH_TOKEN    = (from Twilio Console)
+   TWILIO_PHONE         = (your Twilio SMS-enabled number, e.g. +1XXXXXXXXXX)
+   TWILIO_WHATSAPP_FROM = (your Twilio WhatsApp sender, e.g. whatsapp:+14155238886)
+   (Note: the code uses Twilio for SMS + WhatsApp, NOT Ultramsg/Fast2SMS —
+    those two services are not wired into the backend at all.)
 
    DELHIVERY_API_TOKEN  = (from Delhivery Direct Dashboard)
+
+   ⚠️ CRITICAL — Vijey Textile and Ammalu Tex share the SAME Delhivery
+   account. If DELHIVERY_PICKUP_NAME is left unset, BOTH sites default to
+   the same "Primary" pickup location, meaning couriers will be dispatched
+   to pick up Vijey Textile orders from the wrong shop. Before going live:
+     1. In the Delhivery dashboard, register a SEPARATE pickup location for
+        each shop (Ammalu Tex: Shop GF No 129; Vijey Textile: Shop GF No 131).
+     2. Set these on EACH Render service to the correct shop's details:
+
+   DELHIVERY_PICKUP_NAME   = (the pickup location name you registered for
+                              THIS shop in the Delhivery dashboard — do not
+                              leave unset, and do not reuse the other shop's)
+   DELHIVERY_RETURN_NAME   = Vijey Textile
+   DELHIVERY_RETURN_ADDRESS= Shop Ground Floor No 131, Texvalley Gangapuram
+   DELHIVERY_RETURN_PIN    = 638004
+   DELHIVERY_RETURN_CITY   = Erode
+   DELHIVERY_RETURN_STATE  = Tamil Nadu
+   DELHIVERY_RETURN_PHONE  = 9994168839
 
    SUPPORT_EMAIL        = kumaragurubaran27102@gmail.com
    FRONTEND_URL         = https://vijeytextile.com

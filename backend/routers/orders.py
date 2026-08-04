@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/orders", tags=["Orders"])
 def generate_order_number() -> str:
     chars = string.ascii_uppercase + string.digits
     suffix = "".join(random.choices(chars, k=8))
-    return f"AMT-{suffix}"
+    return f"VJT-{suffix}"
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=status.HTTP_201_CREATED)

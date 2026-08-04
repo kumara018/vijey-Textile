@@ -458,7 +458,7 @@ def create_shiprocket_shipment(
         "order_items": [
             {
                 "name":          item.get("name", "Product"),
-                "sku":           f"AMT-{item.get('product_id', 0)}",
+                "sku":           f"VJT-{item.get('product_id', 0)}",
                 "units":         item.get("quantity", 1),
                 "selling_price": item.get("price", 0),
             }
