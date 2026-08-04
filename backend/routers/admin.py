@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os, random
+from datetime import datetime, timezone
 from database import get_db
 import models, schemas, auth as auth_utils, notifications
 
@@ -286,6 +287,10 @@ def update_order_status(
     if payload.status == "out_for_delivery":
         otp = str(random.randint(100000, 999999))
         order.delivery_otp = otp
+
+    # ── Delivered: stamp the time — this anchors the return/exchange windows ──
+    if payload.status == "delivered" and not order.delivered_at:
+        order.delivered_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(order)
@@ -630,7 +635,7 @@ def update_return_status(
     VALID_STATUSES = [
         "pending", "under_review", "approved", "rejected",
         "pickup_scheduled", "picked_up", "processing",
-        "replacement_shipped", "completed",
+        "replacement_shipped", "refund_initiated", "refunded", "completed",
     ]
     if payload.status not in VALID_STATUSES:
         raise HTTPException(400, f"Invalid status")
@@ -644,11 +649,13 @@ def update_return_status(
     if payload.admin_notes:
         rr.admin_notes = payload.admin_notes
 
-    # Reserve stock for the replacement item the first time a request is
+    order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+    user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+
+    # Reserve stock for the replacement item the first time an exchange is
     # approved — guarded so re-saving an already-approved request never
     # double-decrements.
-    if payload.status == "approved" and previous_status != "approved" and rr.new_product_id:
-        order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+    if payload.status == "approved" and previous_status != "approved" and rr.request_type == "exchange" and rr.new_product_id:
         qty = 1
         if order:
             item = next((i for i in (order.items_snapshot or []) if i.get("product_id") == rr.product_id), None)
@@ -660,20 +667,71 @@ def update_return_status(
                 raise HTTPException(400, f'"{new_product.name}" only has {new_product.stock} in stock — cannot approve this exchange.')
             new_product.stock -= qty
 
+    # Approving a RETURN auto-schedules a Delhivery pickup (best effort —
+    # never blocks the approval if the courier call fails; admin can always
+    # arrange pickup manually in that case).
+    if payload.status == "approved" and previous_status != "approved" and rr.request_type == "return" and order and user:
+        try:
+            import delhivery as dl
+            result = dl.create_return_pickup(order, user)
+            if result:
+                rr.status = "pickup_scheduled"
+                print(f"[Returns] Delhivery return pickup scheduled for return #{rr.id}")
+            else:
+                print(f"[Returns] ⚠️ Delhivery return pickup could not be auto-scheduled for return #{rr.id} — arrange manually.")
+        except Exception as e:
+            print(f"[Returns] Delhivery return pickup error: {e}")
+
+    # Once a RETURN is marked picked_up, automatically initiate the Razorpay
+    # refund — no separate manual "refund_initiated" click needed.
+    if payload.status == "picked_up" and rr.request_type == "return" and order:
+        if (
+            order.payment_status == "paid"
+            and order.payment_transaction_id
+            and order.payment_transaction_id.startswith("pay_")
+        ):
+            key_id     = os.getenv("RAZORPAY_KEY_ID", "")
+            key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
+            if key_id and key_secret:
+                try:
+                    import razorpay as _rp
+                    client = _rp.Client(auth=(key_id, key_secret))
+                    refund = client.payment.refund(
+                        order.payment_transaction_id,
+                        {
+                            "amount": int(order.total * 100),
+                            "speed":  "normal",
+                            "notes":  {"order_number": order.order_number, "reason": rr.reason},
+                        },
+                    )
+                    rr.refund_id = refund.get("id", "")
+                    rr.status = "refund_initiated"
+                    order.payment_status = "refund_initiated"
+                    print(f"[Returns] ✅ Refund {rr.refund_id} auto-initiated for return #{rr.id}")
+                except Exception as e:
+                    print(f"[Returns] ❌ Auto-refund FAILED for return #{rr.id}: {e}")
+            else:
+                print(f"[Returns] ⚠️ REFUND SKIPPED — Razorpay not configured. Return #{rr.id} must be refunded manually.")
+
     db.commit()
     db.refresh(rr)
 
     # Notify customer
-    user = db.query(models.User).filter(models.User.id == rr.user_id).first()
-    order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
     if user and order:
         try:
             notifications.send_return_status_email(user.email, user.full_name, order, rr)
             notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr)
         except Exception as e:
             print(f"[Returns] Notification error: {e}")
+        if rr.status == "refund_initiated":
+            try:
+                notifications.send_refund_initiated_email(user.email, user.full_name, order, rr.refund_id or "")
+                notifications.send_refund_initiated_sms(user.phone, order.order_number, order.total)
+                notifications.send_refund_initiated_whatsapp(user.phone, user.full_name, order, rr.refund_id or "")
+            except Exception as e:
+                print(f"[Returns] Refund notification error: {e}")
 
-    return {"message": f"Return request updated to {payload.status}", "return_id": return_id}
+    return {"message": f"Return request updated to {rr.status}", "return_id": return_id, "status": rr.status}
 
 
 @router.get("/notifications")

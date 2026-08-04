@@ -98,6 +98,7 @@ export interface Order {
   // Cancellation
   cancel_reason?: string;
   cancelled_by?: string;
+  delivered_at?: string;
   created_at: string;
 }
 
@@ -118,7 +119,7 @@ export interface ReturnRequest {
   id: number;
   order_id: number;
   user_id: number;
-  request_type: 'exchange';
+  request_type: 'return' | 'exchange';
   reason: string;
   description?: string;
   images: string[];

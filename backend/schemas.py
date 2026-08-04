@@ -424,6 +424,10 @@ class OrderCreate(BaseModel):
     open_box_delivery: bool = False    # customer can request open-box inspection
 
 
+class CancelOrderPayload(BaseModel):
+    reason: Optional[str] = None
+
+
 class OrderStatusUpdate(BaseModel):
     status:                str
     tracking_number:       Optional[str] = None
@@ -462,6 +466,7 @@ class OrderOut(BaseModel):
     status_location:        Optional[str] = None
     cancel_reason:          Optional[str] = None
     cancelled_by:           Optional[str] = None
+    delivered_at:           Optional[datetime] = None
     created_at:             datetime
 
     model_config = {"from_attributes": True}
@@ -500,18 +505,19 @@ class ReviewOut(BaseModel):
 
 class ReturnRequestCreate(BaseModel):
     order_id:     int
-    product_id:   int              # which item in the order is being exchanged
-    request_type: str = "exchange"
+    product_id:   int              # which item in the order is being returned/exchanged
+    request_type: str              # "return" (refund) | "exchange" (different product)
     reason:       str              # "size_issue" | "damage" only
     description:  Optional[str] = None
     images:       List[str] = []   # 2 required, max 3
 
-    new_product_id: int            # what the customer wants instead — any product
+    # Exchange only — what the customer wants instead, any product
+    new_product_id: Optional[int] = None
     new_size:       Optional[str] = None
     new_color:      Optional[str] = None
 
-    # Required only when the replacement costs more than the original item —
-    # the price difference must be paid upfront before the request is created.
+    # Exchange only, required when the replacement costs more than the
+    # original item — the price difference must be paid upfront.
     razorpay_order_id:   Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     razorpay_signature:  Optional[str] = None
@@ -519,8 +525,8 @@ class ReturnRequestCreate(BaseModel):
     @field_validator("request_type")
     @classmethod
     def type_valid(cls, v):
-        if v != "exchange":
-            raise ValueError("Only exchanges are supported — returns/refunds are not offered.")
+        if v not in ["return", "exchange"]:
+            raise ValueError("request_type must be 'return' or 'exchange'")
         return v
 
     @field_validator("reason")
@@ -538,6 +544,14 @@ class ReturnRequestCreate(BaseModel):
         if len(v) > 3:
             raise ValueError("Maximum 3 photos allowed")
         return v
+
+    @model_validator(mode="after")
+    def exchange_needs_product(self):
+        if self.request_type == "exchange" and not self.new_product_id:
+            raise ValueError("Please choose a replacement product for an exchange")
+        if self.request_type == "return" and self.new_product_id:
+            raise ValueError("A return does not take a replacement product — use exchange instead")
+        return self
 
 class ReturnStatusUpdate(BaseModel):
     status:      str

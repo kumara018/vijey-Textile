@@ -175,6 +175,76 @@ def cancel_shipment(awb: str) -> dict | None:
         return None
 
 
+# ── Reverse pickup for a return (best effort) ─────────────────────────────────
+# NOTE: Delhivery's actual reverse-pickup (RVP) contract can vary by account
+# setup. This mirrors create_shipment() with pickup/destination swapped
+# (collect FROM the customer, return TO the shop) using the same CMU endpoint,
+# which is the common pattern — but verify against your live Delhivery
+# account before relying on it. Callers must treat a None return as "schedule
+# this pickup manually" rather than a hard failure, since a courier issue
+# should never block a return being approved.
+def create_return_pickup(order, user) -> dict | None:
+    if not is_configured():
+        return None
+    addr = order.shipping_address or {}
+
+    def _ascii(s: str) -> str:
+        return (s or "").encode("ascii", errors="ignore").decode("ascii").strip()
+
+    shipment = {
+        # Customer becomes the pickup point for a reverse shipment
+        "name":    _ascii(addr.get("full_name") or (user.full_name if user else "Customer")),
+        "add":     _ascii(" ".join(filter(None, [addr.get("address_line1", ""), addr.get("address_line2", "")]))),
+        "pin":     str(addr.get("pincode", "")),
+        "city":    _ascii(addr.get("city", "")),
+        "state":   _ascii(addr.get("state", "Tamil Nadu")),
+        "country": "India",
+        "phone":   str(addr.get("phone") or (user.phone if user else "")),
+        "order":   f"RVP-{order.order_number}",
+        "payment_mode":   "Pickup",
+        "payment":        "Pickup",
+        # Shop becomes the delivery destination for the returned item
+        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638001"),
+        "return_city":    os.getenv("DELHIVERY_RETURN_CITY",    "Gangapuram"),
+        "return_state":   os.getenv("DELHIVERY_RETURN_STATE",   "Tamil Nadu"),
+        "return_country": "India",
+        "return_phone":   os.getenv("DELHIVERY_RETURN_PHONE",   ""),
+        "return_name":    os.getenv("DELHIVERY_RETURN_NAME",    "Vijey Textile"),
+        "return_add":     os.getenv("DELHIVERY_RETURN_ADDRESS", "Shop Ground Floor No 131, Texvalley Gangapuram"),
+        "return_time":    "72",
+        "products_desc":  "Return pickup",
+        "hsn_code":       "",
+        "cod_amount":     "0",
+        "total_amount":   str(round(order.total, 2)),
+        "shipment_width":  20,
+        "shipment_height": 5,
+        "shipment_length": 25,
+        "weight":          0.5,
+        "quantity":        1,
+        "waybill":         "",
+        "seller_tin":      "",
+        "seller_gst_tin":  "",
+        "is_return":       True,
+    }
+
+    pickup_name = os.getenv("DELHIVERY_PICKUP_NAME", "Primary")
+    payload = {"shipments": [shipment], "pickup_location": {"name": pickup_name}}
+
+    try:
+        data_json = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
+        resp = _requests.post(
+            f"{_base()}/api/cmu/create.json",
+            data    = {"format": "json", "data": data_json},
+            headers = {"Authorization": f"Token {_token()}"},
+            timeout = 20,
+        )
+        print(f"[Delhivery] Return pickup HTTP {resp.status_code}  body={resp.text[:500]}")
+        return resp.json()
+    except Exception as e:
+        print(f"[Delhivery] Return pickup error: {e}")
+        return None
+
+
 # ── Check serviceability (pincode reachable?) ─────────────────────────────────
 def check_serviceability(origin_pin: str, dest_pin: str, weight_grams: int = 500) -> dict | None:
     if not is_configured():

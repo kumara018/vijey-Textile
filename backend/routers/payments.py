@@ -142,6 +142,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
 
             if order and order.payment_status != "refunded":
                 order.payment_status = "refunded"
+
+                # If this refund belongs to an approved return (not just a
+                # cancellation), mark it refunded too — the customer's return
+                # status page reflects "Refund Credited" from here.
+                rr = db.query(models.ReturnRequest).filter(
+                    models.ReturnRequest.order_id == order.id,
+                    models.ReturnRequest.request_type == "return",
+                    models.ReturnRequest.status == "refund_initiated",
+                ).first()
+                if rr:
+                    rr.status = "refunded"
+                    if not rr.refund_id:
+                        rr.refund_id = refund_id
+
                 db.commit()
                 print(f"[Webhook] ✅ Order {order.order_number} — refund processed, on way to customer's bank")
 

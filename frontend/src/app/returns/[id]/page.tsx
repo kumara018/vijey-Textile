@@ -11,6 +11,7 @@ import { ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
 const TYPE_INFO = {
+  return:   { label: 'Return',   color: 'text-red-700',  bg: 'bg-red-50',  border: 'border-red-200'  },
   exchange: { label: 'Exchange', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
 } as const;
 
@@ -19,7 +20,7 @@ const REASON_LABELS: Record<string, string> = {
   damage:     'Damage / Defective Piece',
 };
 
-const STATUS_STEPS = [
+const EXCHANGE_STEPS = [
   { key: 'pending',             label: 'Request Received',    icon: Clock         },
   { key: 'under_review',        label: 'Under Review',        icon: RefreshCw     },
   { key: 'approved',            label: 'Approved',            icon: CheckCircle   },
@@ -30,16 +31,28 @@ const STATUS_STEPS = [
   { key: 'completed',           label: 'Completed',           icon: CheckCircle   },
 ];
 
+const RETURN_STEPS = [
+  { key: 'pending',             label: 'Request Received',    icon: Clock         },
+  { key: 'under_review',        label: 'Under Review',        icon: RefreshCw     },
+  { key: 'approved',            label: 'Approved',            icon: CheckCircle   },
+  { key: 'pickup_scheduled',    label: 'Pickup Scheduled',    icon: Package       },
+  { key: 'picked_up',           label: 'Item Picked Up',      icon: Package       },
+  { key: 'refund_initiated',    label: 'Refund Initiated',    icon: RefreshCw     },
+  { key: 'refunded',            label: 'Refund Credited',     icon: CheckCircle   },
+];
+
 const STATUS_MSG: Record<string, string> = {
   pending:             'We\'ve received your request. Our team will review it within 24 hours.',
   under_review:        'Our team is carefully reviewing your request and the photos you uploaded.',
-  approved:            'Great news! Your exchange has been approved. We will schedule a pickup soon.',
+  approved:            'Great news! Your request has been approved. We will arrange a pickup soon.',
   rejected:            'Unfortunately, your request could not be approved at this time.',
   pickup_scheduled:    'Our courier has been scheduled to pick up the item from your address.',
-  picked_up:           'Your item has been picked up. We are now inspecting it.',
+  picked_up:           'Your item has been picked up.',
   processing:          'Your item is being inspected by our quality team.',
   replacement_shipped: 'Your replacement item has been dispatched and is on its way!',
-  completed:           'Your exchange has been successfully completed. Thank you for your patience!',
+  refund_initiated:    'Your refund has been initiated with Razorpay and is on its way to your original payment method.',
+  refunded:             'Your refund has been credited. It may take 5–7 business days to reflect in your account.',
+  completed:            'Your request has been successfully completed. Thank you for your patience!',
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -51,7 +64,9 @@ const STATUS_COLOR: Record<string, string> = {
   picked_up:           'text-cyan-700 bg-cyan-50 border-cyan-300',
   processing:          'text-indigo-700 bg-indigo-50 border-indigo-300',
   replacement_shipped: 'text-purple-700 bg-purple-50 border-purple-300',
-  completed:           'text-green-700 bg-green-50 border-green-300',
+  refund_initiated:    'text-amber-700 bg-amber-50 border-amber-300',
+  refunded:             'text-green-700 bg-green-50 border-green-300',
+  completed:            'text-green-700 bg-green-50 border-green-300',
 };
 
 function ReturnDetailContent() {
@@ -82,9 +97,9 @@ function ReturnDetailContent() {
 
   if (!rr) return null;
 
-  const typeInfo = TYPE_INFO.exchange;
+  const typeInfo = TYPE_INFO[rr.request_type] || TYPE_INFO.exchange;
   const isRejected = rr.status === 'rejected';
-  const steps = STATUS_STEPS;
+  const steps = rr.request_type === 'return' ? RETURN_STEPS : EXCHANGE_STEPS;
   const activeStepIdx = steps.findIndex(s => s.key === rr.status);
   const progressPct = activeStepIdx < 0 ? 0 : Math.round((activeStepIdx / (steps.length - 1)) * 100);
 
@@ -222,7 +237,11 @@ function ReturnDetailContent() {
       {rr.refund_id && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5">
           <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Refund Information</p>
-          <p className="text-sm text-green-800">Refund has been initiated. It will be credited within 5-7 business days.</p>
+          <p className="text-sm text-green-800">
+            {rr.status === 'refunded'
+              ? 'Refund credited to your original payment method.'
+              : 'Refund initiated — it will be credited within 5–7 business days.'}
+          </p>
           <p className="text-xs font-mono text-green-600 mt-1">Refund ID: {rr.refund_id}</p>
         </div>
       )}

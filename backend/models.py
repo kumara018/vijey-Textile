@@ -159,6 +159,7 @@ class Order(Base):
     # ── Cancellation info ──────────────────────────────────────────────────
     cancel_reason         = Column(String(255), nullable=True)
     cancelled_by          = Column(String(20),  nullable=True)       # 'user' or 'admin'
+    delivered_at           = Column(DateTime(timezone=True), nullable=True)  # set when status → delivered; anchors return/exchange windows
     created_at             = Column(DateTime(timezone=True), server_default=func.now())
     updated_at             = Column(DateTime(timezone=True), onupdate=func.now())
 

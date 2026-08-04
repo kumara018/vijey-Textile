@@ -109,6 +109,7 @@ export const ordersAPI = {
   getOne:      (id: number)                  => api.get(`/api/orders/${id}`),
   track:       (id: number)                  => api.get(`/api/orders/${id}/track`),
   sendInvoice: (id: number)                  => api.post(`/api/orders/${id}/send-invoice`),
+  cancel:      (id: number, reason?: string) => api.post(`/api/orders/${id}/cancel`, { reason: reason || '' }),
 };
 
 export const addressAPI = {

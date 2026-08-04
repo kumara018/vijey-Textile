@@ -143,6 +143,10 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE orders ADD COLUMN cancelled_by VARCHAR(20)"))
                 conn.commit()
                 print("[Startup] Migrated: added cancelled_by to orders")
+            if "delivered_at" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN delivered_at TIMESTAMP WITH TIME ZONE"))
+                conn.commit()
+                print("[Startup] Migrated: added delivered_at to orders")
         except Exception as e:
             print(f"[Startup] Orders migration note: {e}")
 

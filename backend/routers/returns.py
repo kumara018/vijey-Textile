@@ -1,4 +1,4 @@
-"""Exchange requests. No return/refund — that is out of scope for now."""
+"""Return (refund) and Exchange requests."""
 import os
 import hmac
 import hashlib
@@ -11,11 +11,19 @@ import models, schemas, auth as auth_utils, notifications
 
 router = APIRouter(prefix="/api/returns", tags=["Returns"])
 
-RETURN_WINDOW_DAYS = 7  # days after delivery to allow exchange requests
+# Windows are anchored to delivery time, not purchase time — you can't
+# return/exchange something you haven't received yet.
+RETURN_WINDOW_HOURS   = 4    # money-back return: strict, short window
+EXCHANGE_WINDOW_HOURS = 12   # exchange for a different product
 
 REASON_LABELS = {
     "size_issue": "Size Issue",
     "damage":     "Damage / Defective Piece",
+}
+
+TYPE_LABELS = {
+    "return":   "Return",
+    "exchange": "Exchange",
 }
 
 
@@ -53,18 +61,21 @@ def create_return_request(
     if not order:
         raise HTTPException(404, "Order not found")
     if order.status != "delivered":
-        raise HTTPException(400, "Exchange requests can only be made for delivered orders")
+        raise HTTPException(400, "Return/exchange requests can only be made for delivered orders")
 
-    # Enforce the 7-day exchange window from delivery/order date
-    if order.created_at:
-        created = order.created_at
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        deadline = created + timedelta(days=RETURN_WINDOW_DAYS)
+    # Enforce the window from delivery time — strictly shorter for a return
+    # (money back) than an exchange (different product, no refund involved).
+    window_hours = RETURN_WINDOW_HOURS if payload.request_type == "return" else EXCHANGE_WINDOW_HOURS
+    anchor = order.delivered_at or order.created_at
+    if anchor:
+        if anchor.tzinfo is None:
+            anchor = anchor.replace(tzinfo=timezone.utc)
+        deadline = anchor + timedelta(hours=window_hours)
         if datetime.now(timezone.utc) > deadline:
-            raise HTTPException(400, f"The {RETURN_WINDOW_DAYS}-day exchange window for this order has passed.")
+            label = TYPE_LABELS.get(payload.request_type, payload.request_type)
+            raise HTTPException(400, f"The {window_hours}-hour {label.lower()} window for this order has passed.")
 
-    # Find the specific item being exchanged within this (possibly multi-item) order
+    # Find the specific item being returned/exchanged within this (possibly multi-item) order
     items = order.items_snapshot or []
     item = next((i for i in items if i.get("product_id") == payload.product_id), None)
     if not item:
@@ -72,55 +83,59 @@ def create_return_request(
 
     original_product = db.query(models.Product).filter(models.Product.id == payload.product_id).first()
     if original_product and not original_product.is_returnable:
-        raise HTTPException(400, f'"{item.get("name", "This item")}" is not eligible for exchange.')
+        raise HTTPException(400, f'"{item.get("name", "This item")}" is not eligible for return/exchange.')
     original_price = item.get("price", 0)
 
-    # Check if an exchange request already exists for this item
+    # Check if a request already exists for this item
     existing = db.query(models.ReturnRequest).filter(
         models.ReturnRequest.order_id == payload.order_id,
         models.ReturnRequest.product_id == payload.product_id,
         models.ReturnRequest.status.notin_(["rejected", "completed"]),
     ).first()
     if existing:
-        raise HTTPException(400, "An exchange request already exists for this item")
+        raise HTTPException(400, "A return/exchange request already exists for this item")
 
-    # Validate the replacement product — must exist, be active, and cost the
-    # same or more than the original item. Cheaper items are never allowed,
-    # since there is no refund mechanism to return the difference.
-    new_product = db.query(models.Product).filter(
-        models.Product.id == payload.new_product_id,
-        models.Product.is_active == True,
-    ).first()
-    if not new_product:
-        raise HTTPException(400, "The selected replacement product is not available")
-
-    price_difference = round(new_product.price - original_price, 2)
-    if price_difference < 0:
-        raise HTTPException(
-            400,
-            "The replacement item must cost the same or more than the original — "
-            "a cheaper item cannot be selected since no refund is issued.",
-        )
-
-    # If the replacement costs more, the difference must already be paid
+    new_product = None
+    price_difference = 0.0
     price_diff_payment_id = None
-    if price_difference > 0:
-        _verify_price_diff_payment(payload, price_difference)
-        price_diff_payment_id = payload.razorpay_payment_id
+
+    if payload.request_type == "exchange":
+        # Validate the replacement product — must exist, be active, and cost
+        # the same or more than the original item. Cheaper items are never
+        # allowed, since there is no refund mechanism to return the difference.
+        new_product = db.query(models.Product).filter(
+            models.Product.id == payload.new_product_id,
+            models.Product.is_active == True,
+        ).first()
+        if not new_product:
+            raise HTTPException(400, "The selected replacement product is not available")
+
+        price_difference = round(new_product.price - original_price, 2)
+        if price_difference < 0:
+            raise HTTPException(
+                400,
+                "The replacement item must cost the same or more than the original — "
+                "a cheaper item cannot be selected since no refund is issued.",
+            )
+
+        # If the replacement costs more, the difference must already be paid
+        if price_difference > 0:
+            _verify_price_diff_payment(payload, price_difference)
+            price_diff_payment_id = payload.razorpay_payment_id
 
     rr = models.ReturnRequest(
         order_id       = payload.order_id,
         user_id        = current_user.id,
-        request_type   = "exchange",
+        request_type   = payload.request_type,
         reason         = payload.reason,
         description    = payload.description,
         images         = payload.images,
         status         = "pending",
         product_id     = payload.product_id,
         original_price = original_price,
-        new_product_id = payload.new_product_id,
-        new_size       = payload.new_size,
-        new_color      = payload.new_color,
+        new_product_id = payload.new_product_id if payload.request_type == "exchange" else None,
+        new_size       = payload.new_size if payload.request_type == "exchange" else None,
+        new_color      = payload.new_color if payload.request_type == "exchange" else None,
         price_difference      = price_difference,
         price_diff_payment_id = price_diff_payment_id,
     )
@@ -135,18 +150,20 @@ def create_return_request(
     except Exception as e:
         print(f"[Return] Notification error: {e}")
 
-    # Notify admin — new exchange request
+    # Notify admin — new return/exchange request
     try:
+        type_label = TYPE_LABELS.get(rr.request_type, rr.request_type)
         price_note = f", pays ₹{price_difference:.2f} difference" if price_difference > 0 else ""
         admin_notif = models.AdminNotification(
             type=rr.request_type,
             order_id=rr.order_id,
             return_request_id=rr.id,
             user_id=current_user.id,
-            title=f"New Exchange Request — {order.order_number}",
+            title=f"New {type_label} Request — {order.order_number}",
             message=(
-                f"{current_user.full_name} requested an exchange for order {order.order_number}. "
-                f"Reason: {REASON_LABELS.get(rr.reason, rr.reason)}{price_note}."
+                f"{current_user.full_name} requested a {type_label.lower()} for order {order.order_number}. "
+                f"Reason: {REASON_LABELS.get(rr.reason, rr.reason)}{price_note}. "
+                f"Please review the stated reason carefully before approving."
             ),
         )
         db.add(admin_notif)

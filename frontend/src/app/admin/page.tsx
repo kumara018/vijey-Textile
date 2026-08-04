@@ -1199,6 +1199,7 @@ export default function AdminPage() {
                   ) : returns.map((r) => {
                     const typeBadge: Record<string,string> = {
                       exchange: 'bg-blue-100 text-blue-700 border-blue-200',
+                      return:   'bg-red-100 text-red-700 border-red-200',
                     };
                     const statusBadge: Record<string,string> = {
                       pending:             'bg-yellow-100 text-yellow-700',
@@ -1209,9 +1210,11 @@ export default function AdminPage() {
                       picked_up:           'bg-cyan-100 text-cyan-700',
                       processing:          'bg-indigo-100 text-indigo-700',
                       replacement_shipped: 'bg-purple-100 text-purple-700',
+                      refund_initiated:    'bg-amber-100 text-amber-700',
+                      refunded:            'bg-green-100 text-green-700',
                       completed:           'bg-gray-100 text-gray-700',
                     };
-                    const typeLabel: Record<string,string> = { exchange: 'Exchange' };
+                    const typeLabel: Record<string,string> = { exchange: 'Exchange', return: 'Return' };
                     const reasonLabel: Record<string,string> = { size_issue: 'Size Issue', damage: 'Damage / Defective' };
                     const isExpanded = expandedReturn === r.id;
                     return (
@@ -1309,8 +1312,10 @@ export default function AdminPage() {
                                       onChange={e => setReturnUpdateForm(prev => ({ ...prev, [r.id]: { ...prev[r.id], status: e.target.value } }))}
                                       className="input-field text-sm"
                                     >
-                                      {['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','replacement_shipped','completed']
-                                        .map(s => (
+                                      {(r.request_type === 'return'
+                                        ? ['pending','under_review','approved','rejected','pickup_scheduled','picked_up','refund_initiated','refunded','completed']
+                                        : ['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','replacement_shipped','completed']
+                                      ).map(s => (
                                         <option key={s} value={s}>{s.replace(/_/g,' ').replace(/\b\w/g,(c:string)=>c.toUpperCase())}</option>
                                       ))}
                                     </select>
