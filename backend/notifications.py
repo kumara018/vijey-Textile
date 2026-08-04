@@ -22,7 +22,7 @@ SMTP_EMAIL    = os.getenv("SMTP_EMAIL", "")
 SMTP_PASS     = os.getenv("SMTP_PASSWORD", "")
 STORE_NAME    = "Vijey Textile"
 STORE_URL     = os.getenv("FRONTEND_URL", "https://vijeytextile.com")
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", SMTP_EMAIL or "kumaragurubaran27102@gmail.com")
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "admin@vijeytextile.com")
 STORE_ADDR    = "Shop Ground Floor No 131, Texvalley Gangapuram"
 YEAR          = datetime.now().year
 

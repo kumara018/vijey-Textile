@@ -356,7 +356,7 @@ def get_all_admins(
             "phone": u.phone,
             "is_admin": u.is_admin,
             "created_at": str(u.created_at),
-            "is_primary": u.email == os.getenv("ADMIN_EMAIL", "kumaragurubaran27102@gmail.com"),
+            "is_primary": u.email == os.getenv("ADMIN_EMAIL", "admin@vijeytextile.com"),
         }
         for u in admins
     ]
@@ -393,7 +393,7 @@ def revoke_admin_access(
     current_admin: models.User = Depends(auth_utils.get_current_admin),
 ):
     """Revoke admin access from a secondary admin account. Only the primary admin can do this."""
-    primary = os.getenv("ADMIN_EMAIL", "kumaragurubaran27102@gmail.com")
+    primary = os.getenv("ADMIN_EMAIL", "admin@vijeytextile.com")
 
     # Only the primary admin can remove other admins
     if current_admin.email != primary:

@@ -22,7 +22,7 @@ def _ensure_admin():
     from auth import hash_password
     db = SessionLocal()
     try:
-        admin_email    = os.getenv("ADMIN_EMAIL",    "kumaragurubaran27102@gmail.com")
+        admin_email    = os.getenv("ADMIN_EMAIL",    "admin@vijeytextile.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "VijeyTextile@2026")
         admin_phone    = os.getenv("ADMIN_PHONE",    "9443947853")
 
@@ -466,7 +466,7 @@ def seed_database():
 @app.get("/reset-admin")
 def reset_admin():
     _ensure_admin()
-    admin_email = os.getenv("ADMIN_EMAIL", "kumaragurubaran27102@gmail.com")
+    admin_email = os.getenv("ADMIN_EMAIL", "admin@vijeytextile.com")
     return {"status": "Admin reset successfully", "email": admin_email}
 
 
@@ -478,7 +478,7 @@ def test_notification(to: str = "", type: str = "welcome"):
     Types: welcome | order | payment | admin | deletion | retrieved | deleted
     """
     import notifications as _n
-    target = to.strip() or os.getenv("SMTP_EMAIL", "kumaragurubaran27102@gmail.com")
+    target = to.strip() or os.getenv("SMTP_EMAIL", "admin@vijeytextile.com")
 
     class _FakeOrder:
         order_number = "VJT-TEST-001"
@@ -535,7 +535,7 @@ def test_email(to: str = ""):
     brevo_key  = os.getenv("BREVO_API_KEY", "")
     sg_key     = os.getenv("SENDGRID_API_KEY", "")
     smtp_email = os.getenv("SMTP_EMAIL", "")
-    target     = to.strip() if to.strip() else smtp_email or "kumaragurubaran27102@gmail.com"
+    target     = to.strip() if to.strip() else smtp_email or "admin@vijeytextile.com"
 
     # ── Test via Brevo ───────────────────────────────────────────────────────────
     if brevo_key:
