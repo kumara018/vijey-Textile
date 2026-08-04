@@ -408,7 +408,7 @@ export default function CheckoutPage() {
                   { val: 'razorpay', icon: CreditCard,    label: 'Card / UPI / Net Banking', sub: 'Visa • Master • UPI • Wallets' },
                   { val: 'emi',      icon: CalendarDays,  label: 'Pay in EMI',               sub: 'No-cost EMI available' },
                 ] as const).map(({ val, icon: Icon, label, sub }) => (
-                  <button key={val} onClick={() => { setPayMethod(val); setPayErrors({}); }}
+                  <button key={val} onClick={() => setPayMethod(val)}
                     className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 text-sm font-medium transition-all ${payMethod === val ? 'border-maroon-800 bg-maroon-50 text-maroon-800' : 'border-gray-200 text-gray-600 hover:border-maroon-300'}`}>
                     <Icon size={22} />
                     <span className="text-center leading-tight font-semibold">{label}</span>
