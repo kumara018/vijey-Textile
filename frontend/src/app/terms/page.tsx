@@ -56,12 +56,13 @@ export default function TermsPage() {
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-3">5. Exchange & Replacement</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-3">5. Cancellation, Return & Exchange</h2>
           <ul className="list-disc pl-5 space-y-1">
-            <li>We do not offer order cancellations, returns, or refunds.</li>
-            <li>We offer a 7-day exchange/replacement policy from the date of delivery for eligible products — for example, a size change, or a damaged, defective, or wrong item.</li>
-            <li>Items must be unused, unwashed, with original tags and packaging intact (this does not apply to items reported as damaged, defective, or incorrect on arrival).</li>
-            <li>Certain products marked as <strong>Non-Returnable</strong> are not eligible for exchange, except where the item received is damaged, defective, or incorrect.</li>
+            <li>Orders can be <strong>cancelled within 1 hour</strong> of purchase — instant, automatic, no reason required.</li>
+            <li>Once delivered, a <strong>return (for refund)</strong> can be requested within <strong>4 hours</strong>, or an <strong>exchange</strong> within <strong>12 hours</strong> — both require a valid reason (size issue or damage) with 2–3 photos as proof, and admin approval.</li>
+            <li>Approved returns are refunded via Razorpay to the original payment method once the item is picked up. Exchanges can be swapped for any product of equal or higher value (price difference payable online; no refund for a lower-value choice).</li>
+            <li>Certain products marked as <strong>Non-Returnable</strong> are not eligible for return/exchange, except where the item received is genuinely damaged.</li>
+            <li>Full details: <Link href="/cancellation" className="text-maroon-700 hover:underline">Cancellation, Return & Exchange Policy</Link>.</li>
           </ul>
         </section>
 
@@ -111,7 +112,7 @@ export default function TermsPage() {
       <div className="flex gap-3 mt-8 justify-center flex-wrap">
         <Link href="/privacy"      className="text-sm text-maroon-700 hover:underline">Privacy Policy</Link>
         <span className="text-gray-300">|</span>
-        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Exchange & Replacement Policy</Link>
+        <Link href="/cancellation" className="text-sm text-maroon-700 hover:underline">Cancellation, Return & Exchange Policy</Link>
         <span className="text-gray-300">|</span>
         <Link href="/shipping"     className="text-sm text-maroon-700 hover:underline">Shipping Policy</Link>
       </div>

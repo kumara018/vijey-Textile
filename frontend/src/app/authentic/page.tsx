@@ -133,11 +133,12 @@ export default function AuthenticPage() {
           <Award size={18} className="text-orange-600" /> Not Satisfied? We'll Make It Right.
         </p>
         <p className="text-sm text-gray-600 leading-relaxed mb-3">
-          If any product doesn't match its description, we offer a <strong>7-day hassle-free return</strong>.
-          Simply raise a return request from My Orders and we'll process a full refund within 5–7 business days.
+          If a product arrives with a genuine size issue or damage, you can request a{' '}
+          <strong>return within 4 hours of delivery</strong> — once approved and picked up, your refund is
+          processed automatically via Razorpay.
         </p>
         <Link href="/support#returns" className="text-sm font-semibold text-maroon-700 hover:underline">
-          Read Return & Refund Policy →
+          Read Cancellation, Return & Exchange Policy →
         </Link>
       </div>
 

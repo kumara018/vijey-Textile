@@ -100,8 +100,8 @@ export default function Footer() {
               <li><Link href="/support"             className="hover:text-gold-400 transition-colors">Contact Us</Link></li>
               <li><Link href="/support#size-guide"  className="hover:text-gold-400 transition-colors">Size Guide</Link></li>
               <li><Link href="/support#shipping"    className="hover:text-gold-400 transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/support#returns"     className="hover:text-gold-400 transition-colors">Exchange & Replacement FAQ</Link></li>
-              <li><Link href="/cancellation"         className="hover:text-gold-400 transition-colors">Exchange & Replacement Policy</Link></li>
+              <li><Link href="/support#returns"     className="hover:text-gold-400 transition-colors">Cancel, Return & Exchange FAQ</Link></li>
+              <li><Link href="/cancellation"         className="hover:text-gold-400 transition-colors">Cancellation, Return & Exchange Policy</Link></li>
               <li><Link href="/terms"               className="hover:text-gold-400 transition-colors">Terms & Conditions</Link></li>
               <li><Link href="/privacy"             className="hover:text-gold-400 transition-colors">Privacy Policy</Link></li>
             </ul>

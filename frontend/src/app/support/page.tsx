@@ -260,17 +260,31 @@ export default function SupportPage() {
         </div>
       </Accordion>
 
-      {/* ── Exchange & Replacement ─────────────────────────────────────── */}
-      <Accordion id="returns" title="Exchange & Replacement Policy" icon={RotateCcw}>
+      {/* ── Cancellation, Return & Exchange ────────────────────────────── */}
+      <Accordion id="returns" title="Cancellation, Return & Exchange Policy" icon={RotateCcw}>
+        <div className="grid md:grid-cols-3 gap-4 mb-5">
+          <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+            <h3 className="font-bold text-red-700 mb-1.5 text-sm">❌ Cancel</h3>
+            <p className="text-xs text-gray-600">Within <b>1 hour</b> of purchase. Instant, automatic — no reason needed, refund auto-initiated if paid.</p>
+          </div>
+          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <h3 className="font-bold text-blue-700 mb-1.5 text-sm">↩️ Return</h3>
+            <p className="text-xs text-gray-600">Within <b>4 hours</b> of delivery. Size issue or damage only, with photo proof — admin-approved, then refunded via Razorpay after pickup.</p>
+          </div>
+          <div className="p-4 bg-green-50 rounded-xl border border-green-100">
+            <h3 className="font-bold text-green-700 mb-1.5 text-sm">🔁 Exchange</h3>
+            <p className="text-xs text-gray-600">Within <b>12 hours</b> of delivery. Size issue or damage only — swap for any product of equal or higher value (pay the difference if higher).</p>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-2 gap-6 mb-5">
           <div>
-            <h3 className="font-bold text-green-700 mb-3 text-sm">✅ Eligible for Exchange / Replacement</h3>
+            <h3 className="font-bold text-green-700 mb-3 text-sm">✅ Eligible</h3>
             <ul className="space-y-2 text-sm text-gray-700">
               {[
-                'Unused and unwashed items, with original tags attached',
-                'Request raised within 7 days of delivery',
-                'Wrong size — exchange for a different size of the same product',
-                'Wrong item, colour, defective or damaged item received',
+                'Cancel any order within 1 hour of purchase — no reason required',
+                'Return within 4 hours of delivery for a size issue or damage, with 2–3 photos as proof',
+                'Exchange within 12 hours of delivery for a size issue or damage — choose any replacement of equal or higher value',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="text-green-500 font-bold mt-0.5">✓</span> {item}
@@ -282,13 +296,13 @@ export default function SupportPage() {
             <h3 className="font-bold text-red-700 mb-3 text-sm">❌ NOT Available</h3>
             <ul className="space-y-2 text-sm text-gray-700">
               {[
-                'Order cancellation, once placed',
-                'Return for refund — we do not issue refunds',
-                'Washed or used items (unless damaged/defective on arrival)',
-                'Items without original tags or packaging (unless damaged/defective on arrival)',
-                'Requests raised after 7 days of delivery',
-                'Undergarments or innerwear (hygiene reasons)',
-                'Items purchased on final sale / clearance',
+                'Cancellation after 1 hour of purchase',
+                'Return or exchange requests raised after their time window has closed',
+                'Reasons other than a genuine size issue or damage — change of mind is not valid',
+                'Requests without the required photo proof',
+                'Washed or used items (unless damaged on arrival)',
+                'A cheaper replacement product on exchange, to get money back',
+                'Items marked Non-Returnable (unless genuinely damaged)',
               ].map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <span className="text-red-500 font-bold mt-0.5">✗</span> {item}
@@ -299,8 +313,8 @@ export default function SupportPage() {
         </div>
 
         <div className="p-4 bg-blue-50 rounded-xl text-sm text-gray-700 border border-blue-100 mb-3">
-          <b className="text-gray-800">How to Request an Exchange / Replacement:</b> Go to My Orders → Select the
-          order → Tap "Request Exchange / Replacement" and follow the steps. Or contact us on WhatsApp at{' '}
+          <b className="text-gray-800">How to Request:</b> Go to My Orders → Select the
+          order → Cancel, Return or Exchange (only options still inside their window will show). Or contact us on WhatsApp at{' '}
           <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" className="text-maroon-700 font-medium hover:underline">
             {STORE.phone1}
           </a>{' '}
@@ -308,10 +322,10 @@ export default function SupportPage() {
         </div>
 
         <div className="p-4 bg-green-50 rounded-xl text-sm text-gray-700 border border-green-100">
-          <b className="text-gray-800">Exchange Timeline:</b> Once your original item is picked up
-          and verified, the exchanged or replacement item is shipped within{' '}
-          <b>5–7 business days</b>. We do not offer cancellations, returns, or refunds — only exchange
-          or replacement of the product.
+          <b className="text-gray-800">Return refund timeline:</b> Once your returned item is picked up and confirmed,
+          a refund is automatically initiated with Razorpay to your original payment method — you'll get an email/WhatsApp
+          with the exact expected credit date. See the full{' '}
+          <Link href="/cancellation" className="text-maroon-700 font-semibold hover:underline">Cancellation, Return & Exchange Policy</Link> for details.
         </div>
       </Accordion>
 
@@ -343,7 +357,11 @@ export default function SupportPage() {
             <p className="mt-1">All content on this website — including logos, images, product descriptions, and design — is the intellectual property of Vijey Textile and may not be reproduced or used without prior written permission.</p>
           </div>
           <div>
-            <b className="text-gray-800">7. Governing Law</b>
+            <b className="text-gray-800">7. Cancellation, Return & Exchange</b>
+            <p className="mt-1">Orders can be cancelled within 1 hour of purchase. Returns (for refund) can be requested within 4 hours of delivery, and exchanges within 12 hours of delivery — both require a valid reason (size issue or damage) with photo proof and admin approval. See our full <Link href="/cancellation" className="text-maroon-700 hover:underline">Cancellation, Return & Exchange Policy</Link>.</p>
+          </div>
+          <div>
+            <b className="text-gray-800">8. Governing Law</b>
             <p className="mt-1">These Terms are governed by the laws of India. Any disputes arising shall be subject to the exclusive jurisdiction of courts in Erode, Tamil Nadu.</p>
           </div>
         </div>
@@ -391,8 +409,8 @@ export default function SupportPage() {
             a: `Standard delivery takes 5–7 business days across India. Express delivery (1–3 days) is available in select cities. A flat ₹49 shipping fee applies to all orders.`,
           },
           {
-            q: 'What is your exchange and replacement policy?',
-            a: 'We do not offer cancellations, returns, or refunds. If you have a size issue, or received a damaged, defective or wrong item, you can request an exchange or replacement within 7 days of delivery. Items must be unused, unwashed, and in original packaging with tags (this does not apply if the item arrived damaged, defective or incorrect).',
+            q: 'What is your cancellation, return and exchange policy?',
+            a: 'You can cancel an order within 1 hour of purchase — instant and automatic. After delivery, you can request a return (for refund) within 4 hours, or an exchange within 12 hours — both need a valid reason (size issue or damage) with 2–3 photos as proof, and go through admin approval. Returns are refunded via Razorpay once the item is picked up; exchanges can be swapped for any product of equal or higher value.',
           },
           {
             q: 'How do I track my order?',
@@ -400,7 +418,7 @@ export default function SupportPage() {
           },
           {
             q: 'Are the colours accurate in product photos?',
-            a: 'We strive for accurate colour representation. However, slight variations may occur due to different screen settings. If the colour is significantly different from what was shown, you can request an exchange within 7 days.',
+            a: 'We strive for accurate colour representation. However, slight variations may occur due to different screen settings. If the colour is significantly different from what was shown, this counts as damage/defect — you can request a return or exchange within 4/12 hours of delivery.',
           },
           {
             q: 'How do I choose the right size?',
@@ -408,7 +426,7 @@ export default function SupportPage() {
           },
           {
             q: 'Can I change or cancel my order after placing it?',
-            a: 'Orders cannot be cancelled or changed once placed, as we begin processing immediately. Please double-check your size, colour and address before confirming. If you receive a wrong size or item, you can request an exchange or replacement after delivery.',
+            a: 'You can cancel an order yourself from My Orders within 1 hour of placing it — after that, we begin processing and it can no longer be cancelled or changed, so please double-check your size, colour and address before confirming. Once delivered, a size issue or damage can be handled via Return (4 hours) or Exchange (12 hours).',
           },
           {
             q: 'Do you offer Cash on Delivery?',
