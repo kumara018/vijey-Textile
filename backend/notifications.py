@@ -16,7 +16,7 @@ Optional (SMS):
 import os, smtplib, threading
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timedelta
 
 SMTP_EMAIL    = os.getenv("SMTP_EMAIL", "")
 SMTP_PASS     = os.getenv("SMTP_PASSWORD", "")
@@ -1328,6 +1328,17 @@ def send_admin_cancellation_whatsapp(order, user):
 
 # ── Refund notifications ───────────────────────────────────────────────────────
 
+def _expected_refund_date(business_days: int = 5) -> str:
+    """Estimated bank-credit date per Razorpay's standard refund SLA (business days, skips weekends)."""
+    d = datetime.now()
+    added = 0
+    while added < business_days:
+        d += timedelta(days=1)
+        if d.weekday() < 5:
+            added += 1
+    return d.strftime("%A, %d %b %Y")
+
+
 def send_refund_initiated_email(email: str, name: str, order, refund_id: str = ""):
     first = name.split()[0]
     pm    = (getattr(order, "payment_method", "") or "").lower()
@@ -1360,7 +1371,7 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
         </div>
 
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin:16px 0">
-          <p style="margin:0;color:#92400e;font-size:14px">⏱️ <b>Timeline:</b> The refund will be credited to your original payment method within <b>5–7 business days</b>.</p>
+          <p style="margin:0;color:#92400e;font-size:14px">⏱️ <b>Expected credit date:</b> <b>{_expected_refund_date()}</b> — Razorpay will deposit the amount to your original payment method by this date.</p>
         </div>
 
         <div style="text-align:center;margin:24px 0">
@@ -1409,7 +1420,7 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
 def send_refund_initiated_sms(phone: str, order_number: str, total: float):
     _bg_sms(phone,
         f"💰 {STORE_NAME}: Refund of ₹{total:,.0f} initiated for order {order_number}. "
-        f"Will be credited in 5-7 business days. Track: {STORE_URL}/orders"
+        f"Expected credit by {_expected_refund_date()}. Track: {STORE_URL}/orders"
     )
 
 
@@ -1425,7 +1436,8 @@ def send_refund_initiated_whatsapp(phone: str, name: str, order, refund_id: str 
         f"💸 *Amount:* ₹{order.total:,.0f}\n"
         f"💳 *Mode:* {'Razorpay (Online)' if pm == 'razorpay' else pm.upper()}"
         f"{txn_line}{refund_line}\n\n"
-        f"⏱️ Will be credited within *5–7 business days* to your original payment method.\n\n"
+        f"⏱️ *Expected credit date:* {_expected_refund_date()}\n"
+        f"(Will be credited to your original payment method by this date)\n\n"
         f"📦 Track orders: {STORE_URL}/orders"
     )
 
@@ -1452,7 +1464,7 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
           Your Refund of ₹{order.total:,.0f} Has Been Processed!
         </h2>
         <p style="color:#555;font-size:15px;margin:0;">
-          Hi {first}, Razorpay has successfully processed your refund. The amount will be credited to your bank account or card within <strong>3–5 business days</strong>. Please check your bank account or card statement.
+          Hi {first}, Razorpay has successfully processed your refund. The amount will be deposited to your bank account or card by <strong>{_expected_refund_date()}</strong>. Please check your bank account or card statement on or after this date.
         </p>
       </div>
 
@@ -1478,6 +1490,11 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
                        border-bottom:1px solid #d1fae5;">
               {'Razorpay (Online)' if pm == 'razorpay' else pm.upper()}
             </td>
+          </tr>
+          <tr>
+            <td style="color:#555;padding:6px 0;border-bottom:1px solid #d1fae5;">Expected Credit Date</td>
+            <td style="text-align:right;font-weight:bold;color:#16a34a;
+                       border-bottom:1px solid #d1fae5;">{_expected_refund_date()}</td>
           </tr>
           {f"<tr><td style='color:#555;padding:6px 0;border-bottom:1px solid #d1fae5;'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#666;font-size:12px;border-bottom:1px solid #d1fae5;'>{txn}</td></tr>" if txn else ""}
           {f"<tr><td style='color:#555;padding:6px 0;'>Refund ID</td><td style='text-align:right;font-family:monospace;color:#666;font-size:12px;'>{refund_id}</td></tr>" if refund_id and refund_id != 'manual' else ""}
@@ -1543,8 +1560,8 @@ def send_refund_credited_whatsapp(phone: str, name: str, order, refund_id: str =
         f"💸 *Refund Amount:* ₹{order.total:,.0f}\n"
         f"💳 *Payment Method:* {'Razorpay (Online)' if pm == 'razorpay' else pm.upper()}"
         f"{txn_line}{refund_line}\n\n"
-        f"👉 *Please check your bank account or card statement.*\n"
-        f"   The amount will be credited within *3–5 business days* (maximum).\n\n"
+        f"👉 *Expected credit date:* {_expected_refund_date()}\n"
+        f"   Please check your bank account or card statement on or after this date.\n\n"
         f"─────────────────\n"
         f"🆘 *Need Help?*\n\n"
         f"💳 *Razorpay Support* (for payment/refund queries):\n"
