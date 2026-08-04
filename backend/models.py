@@ -253,15 +253,32 @@ class ReturnRequest(Base):
     id            = Column(Integer, primary_key=True, index=True)
     order_id      = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     user_id       = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    request_type  = Column(String(20), nullable=False)   # "return" | "exchange" | "replace"
-    reason        = Column(String(100), nullable=False)  # reason category
+    request_type  = Column(String(20), nullable=False)   # "exchange" only — no return/refund
+    reason        = Column(String(100), nullable=False)  # "size_issue" | "damage" only
     description   = Column(Text, nullable=True)
-    images        = Column(JSON, default=list)            # Cloudinary image URLs (up to 3)
+    images        = Column(JSON, default=list)            # Cloudinary image URLs (2 required, up to 3)
     status        = Column(String(50), default="pending")
-    # pending → under_review → approved / rejected → pickup_scheduled → picked_up → processing → refund_initiated / replacement_shipped → completed
+    # pending → under_review → approved / rejected → pickup_scheduled → picked_up → processing → replacement_shipped → completed
     admin_notes   = Column(Text, nullable=True)
-    refund_id     = Column(String(100), nullable=True)
+    refund_id     = Column(String(100), nullable=True)   # unused while return/refund is out of scope; kept for future
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
-    order = relationship("Order")
-    user  = relationship("User")
+
+    # Which item in the (possibly multi-item) order is being exchanged
+    product_id       = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    original_price    = Column(Float, nullable=True)  # price of that item at time of request
+
+    # What the customer wants instead — any product, not just the same one
+    new_product_id    = Column(Integer, ForeignKey("products.id", ondelete="SET NULL"), nullable=True)
+    new_size           = Column(String(10), nullable=True)
+    new_color           = Column(String(50), nullable=True)
+
+    # Price-difference payment — required upfront if the replacement costs more.
+    # Replacement must always cost the same or more; never less (no refund path exists).
+    price_difference        = Column(Float, default=0.0)
+    price_diff_payment_id   = Column(String(100), nullable=True)  # Razorpay payment_id, if a difference was paid
+
+    order       = relationship("Order")
+    user        = relationship("User")
+    product     = relationship("Product", foreign_keys=[product_id])
+    new_product = relationship("Product", foreign_keys=[new_product_id])

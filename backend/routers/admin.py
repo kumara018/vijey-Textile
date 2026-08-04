@@ -630,7 +630,7 @@ def update_return_status(
     VALID_STATUSES = [
         "pending", "under_review", "approved", "rejected",
         "pickup_scheduled", "picked_up", "processing",
-        "refund_initiated", "replacement_shipped", "completed",
+        "replacement_shipped", "completed",
     ]
     if payload.status not in VALID_STATUSES:
         raise HTTPException(400, f"Invalid status")
@@ -639,30 +639,26 @@ def update_return_status(
     if not rr:
         raise HTTPException(404, "Return request not found")
 
+    previous_status = rr.status
     rr.status = payload.status
     if payload.admin_notes:
         rr.admin_notes = payload.admin_notes
 
-    # If refund_initiated for a return type — trigger Razorpay refund
-    if payload.status == "refund_initiated" and rr.request_type == "return":
+    # Reserve stock for the replacement item the first time a request is
+    # approved — guarded so re-saving an already-approved request never
+    # double-decrements.
+    if payload.status == "approved" and previous_status != "approved" and rr.new_product_id:
         order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
-        if order and order.payment_method != "cod" and order.payment_transaction_id and order.payment_transaction_id.startswith("pay_"):
-            import razorpay as _rp, os as _os
-            key_id     = _os.getenv("RAZORPAY_KEY_ID", "")
-            key_secret = _os.getenv("RAZORPAY_KEY_SECRET", "")
-            if key_id and key_secret:
-                try:
-                    client = _rp.Client(auth=(key_id, key_secret))
-                    refund = client.payment.refund(
-                        order.payment_transaction_id,
-                        {"amount": int(order.total * 100), "speed": "normal",
-                         "notes": {"order_number": order.order_number, "reason": rr.reason}},
-                    )
-                    rr.refund_id = refund.get("id", "")
-                    order.payment_status = "refund_initiated"   # webhook fires refund.processed → "refunded"
-                    print(f"[Returns] Razorpay refund {rr.refund_id} initiated for return {return_id}")
-                except Exception as e:
-                    print(f"[Returns] Razorpay refund error: {e}")
+        qty = 1
+        if order:
+            item = next((i for i in (order.items_snapshot or []) if i.get("product_id") == rr.product_id), None)
+            if item:
+                qty = item.get("quantity", 1)
+        new_product = db.query(models.Product).filter(models.Product.id == rr.new_product_id).first()
+        if new_product:
+            if new_product.stock < qty:
+                raise HTTPException(400, f'"{new_product.name}" only has {new_product.stock} in stock — cannot approve this exchange.')
+            new_product.stock -= qty
 
     db.commit()
     db.refresh(rr)

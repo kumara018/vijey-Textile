@@ -1410,6 +1410,11 @@ _RETURN_TYPE_LABEL = {
     "replace":  "Replacement",
 }
 
+_REASON_LABEL = {
+    "size_issue": "Size Issue",
+    "damage":     "Damage / Defective Piece",
+}
+
 _RETURN_STATUS_INFO = {
     "pending":              ("Pending Review",              "#f59e0b", "We've received your request and will review it within 24 hours."),
     "under_review":         ("Under Review",               "#3b82f6", "Our team is reviewing your request and photos."),
@@ -1435,7 +1440,7 @@ def send_return_request_email(email: str, name: str, order, rr):
       <div style="background:#f8f4f0;border-left:4px solid #e11d48;border-radius:4px;padding:16px;margin:20px 0;">
         <p style="margin:0 0 6px;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Request Details</p>
         <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Type:</strong> {type_label}</p>
-        <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Reason:</strong> {rr.reason}</p>
+        <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Reason:</strong> {_REASON_LABEL.get(rr.reason, rr.reason)}</p>
         {f'<p style="margin:4px 0;font-size:14px;color:#444;"><strong>Details:</strong> {rr.description}</p>' if rr.description else ''}
         <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Status:</strong> <span style="color:#f59e0b;font-weight:bold;">Pending Review</span></p>
       </div>
@@ -1456,7 +1461,7 @@ def send_return_request_whatsapp(phone: str, name: str, order, rr):
         f"*{type_label} Request Received — {order.order_number}*\n\n"
         f"Hi {first},\n\n"
         f"We've received your {type_label} request.\n\n"
-        f"*Reason:* {rr.reason}\n"
+        f"*Reason:* {_REASON_LABEL.get(rr.reason, rr.reason)}\n"
         f"*Status:* Pending Review\n\n"
         f"Our team will review within 24 hours and contact you.\n\n"
         f"Track status: {STORE_URL}/orders/{order.id}"
@@ -1920,7 +1925,7 @@ def send_admin_return_email(rr, order, user):
         </tr>
         <tr style="border-bottom:1px solid #f0e8e3;">
           <td style="color:#888;padding:8px 0;">Reason</td>
-          <td style="color:#444;">{rr.reason}</td>
+          <td style="color:#444;">{_REASON_LABEL.get(rr.reason, rr.reason)}</td>
         </tr>
         <tr style="border-bottom:1px solid #f0e8e3;">
           <td style="color:#888;padding:8px 0;">Order Amount</td>
@@ -1956,7 +1961,7 @@ def send_admin_return_whatsapp(rr, order, user):
         f"Customer: {user.full_name}\n"
         f"Phone: {user.phone}\n"
         f"Amount: Rs.{order.total:.0f}\n"
-        f"Reason: {rr.reason}\n"
+        f"Reason: {_REASON_LABEL.get(rr.reason, rr.reason)}\n"
         f"Status: Pending Review\n\n"
         f"Admin Dashboard: {STORE_URL}/admin"
     )

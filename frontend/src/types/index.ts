@@ -118,12 +118,20 @@ export interface ReturnRequest {
   id: number;
   order_id: number;
   user_id: number;
-  request_type: 'return' | 'exchange' | 'replace';
+  request_type: 'exchange';
   reason: string;
   description?: string;
   images: string[];
   status: string;
   admin_notes?: string;
   refund_id?: string;
+  product_id?: number;
+  original_price?: number;
+  new_product_id?: number;
+  new_product?: Product;
+  new_size?: string;
+  new_color?: string;
+  price_difference: number;
+  price_diff_payment_id?: string;
   created_at: string;
 }

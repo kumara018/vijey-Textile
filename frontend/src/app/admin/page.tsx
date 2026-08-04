@@ -716,7 +716,7 @@ export default function AdminPage() {
           const badge = isCancel
             ? notifications.filter(n => n.type === 'cancellation' && !n.is_read).length
             : isReturn
-            ? notifications.filter(n => ['return','exchange','replace'].includes(n.type) && !n.is_read).length
+            ? notifications.filter(n => n.type === 'exchange' && !n.is_read).length
             : 0;
           return (
             <button
@@ -1198,9 +1198,7 @@ export default function AdminPage() {
                     <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">No return requests yet</td></tr>
                   ) : returns.map((r) => {
                     const typeBadge: Record<string,string> = {
-                      return:   'bg-red-100 text-red-700 border-red-200',
                       exchange: 'bg-blue-100 text-blue-700 border-blue-200',
-                      replace:  'bg-green-100 text-green-700 border-green-200',
                     };
                     const statusBadge: Record<string,string> = {
                       pending:             'bg-yellow-100 text-yellow-700',
@@ -1210,11 +1208,11 @@ export default function AdminPage() {
                       pickup_scheduled:    'bg-purple-100 text-purple-700',
                       picked_up:           'bg-cyan-100 text-cyan-700',
                       processing:          'bg-indigo-100 text-indigo-700',
-                      refund_initiated:    'bg-green-100 text-green-700',
                       replacement_shipped: 'bg-purple-100 text-purple-700',
                       completed:           'bg-gray-100 text-gray-700',
                     };
-                    const typeLabel: Record<string,string> = { return:'Return & Refund', exchange:'Exchange', replace:'Replacement' };
+                    const typeLabel: Record<string,string> = { exchange: 'Exchange' };
+                    const reasonLabel: Record<string,string> = { size_issue: 'Size Issue', damage: 'Damage / Defective' };
                     const isExpanded = expandedReturn === r.id;
                     return (
                       <>
@@ -1232,7 +1230,7 @@ export default function AdminPage() {
                               {typeLabel[r.request_type] || r.request_type}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-600 text-xs max-w-[120px] truncate">{r.reason}</td>
+                          <td className="px-4 py-3 text-gray-600 text-xs max-w-[120px] truncate">{reasonLabel[r.reason] || r.reason}</td>
                           <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(r.created_at).toLocaleDateString('en-IN')}</td>
                           <td className="px-4 py-3">
                             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge[r.status] || 'bg-gray-100 text-gray-600'}`}>
@@ -1249,6 +1247,29 @@ export default function AdminPage() {
                           <tr key={`${r.id}-expand`}>
                             <td colSpan={8} className="px-4 py-4 bg-orange-50 border-b border-orange-100">
                               <div className="max-w-2xl space-y-4">
+                                {/* Exchange details — what they want instead */}
+                                {r.new_product && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Wants to Exchange Into</p>
+                                    <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2.5">
+                                      <div className="w-12 h-12 rounded-lg bg-orange-50 overflow-hidden flex-shrink-0">
+                                        {r.new_product.images?.[0] && <img src={r.new_product.images[0]} alt={r.new_product.name} className="w-full h-full object-cover" />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-800 truncate">{r.new_product.name}</p>
+                                        <p className="text-xs text-gray-500">{r.new_size ? `Size ${r.new_size}` : ''}{r.new_size && r.new_color ? ' · ' : ''}{r.new_color || ''} · ₹{r.new_product.price?.toLocaleString()}</p>
+                                      </div>
+                                      {r.price_difference > 0 ? (
+                                        <span className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
+                                          ✓ Paid ₹{r.price_difference.toLocaleString()} diff
+                                        </span>
+                                      ) : (
+                                        <span className="text-xs text-gray-400">Same price</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
                                 {/* Photos */}
                                 {r.images && r.images.length > 0 && (
                                   <div>
@@ -1288,8 +1309,7 @@ export default function AdminPage() {
                                       onChange={e => setReturnUpdateForm(prev => ({ ...prev, [r.id]: { ...prev[r.id], status: e.target.value } }))}
                                       className="input-field text-sm"
                                     >
-                                      {['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','refund_initiated','replacement_shipped','completed']
-                                        .filter(s => s !== 'refund_initiated' || r.request_type === 'return')
+                                      {['pending','under_review','approved','rejected','pickup_scheduled','picked_up','processing','replacement_shipped','completed']
                                         .map(s => (
                                         <option key={s} value={s}>{s.replace(/_/g,' ').replace(/\b\w/g,(c:string)=>c.toUpperCase())}</option>
                                       ))}

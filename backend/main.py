@@ -180,6 +180,41 @@ def _migrate_db():
         except Exception as e:
             print(f"[Startup] Products migration note: {e}")
 
+        # ── return_requests columns (exchange-for-any-product + price-diff payment) ──
+        try:
+            if "return_requests" in inspector.get_table_names():
+                rr_cols = [c["name"] for c in inspector.get_columns("return_requests")]
+                if "product_id" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN product_id INTEGER REFERENCES products(id) ON DELETE SET NULL"))
+                    conn.commit()
+                    print("[Startup] Migrated: added product_id to return_requests")
+                if "original_price" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN original_price FLOAT"))
+                    conn.commit()
+                    print("[Startup] Migrated: added original_price to return_requests")
+                if "new_product_id" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN new_product_id INTEGER REFERENCES products(id) ON DELETE SET NULL"))
+                    conn.commit()
+                    print("[Startup] Migrated: added new_product_id to return_requests")
+                if "new_size" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN new_size VARCHAR(10)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added new_size to return_requests")
+                if "new_color" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN new_color VARCHAR(50)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added new_color to return_requests")
+                if "price_difference" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN price_difference FLOAT DEFAULT 0"))
+                    conn.commit()
+                    print("[Startup] Migrated: added price_difference to return_requests")
+                if "price_diff_payment_id" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN price_diff_payment_id VARCHAR(100)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added price_diff_payment_id to return_requests")
+        except Exception as e:
+            print(f"[Startup] Return-requests migration note: {e}")
+
         # ── new tables ─────────────────────────────────────────────────────
         try:
             existing_tables = inspector.get_table_names()
@@ -248,7 +283,14 @@ def _migrate_db():
                         admin_notes TEXT,
                         refund_id VARCHAR(100),
                         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                        updated_at TIMESTAMP WITH TIME ZONE
+                        updated_at TIMESTAMP WITH TIME ZONE,
+                        product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+                        original_price FLOAT,
+                        new_product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+                        new_size VARCHAR(10),
+                        new_color VARCHAR(50),
+                        price_difference FLOAT DEFAULT 0,
+                        price_diff_payment_id VARCHAR(100)
                     )
                 """))
                 conn.commit()

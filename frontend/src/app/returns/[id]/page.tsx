@@ -11,24 +11,15 @@ import { ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
 const TYPE_INFO = {
-  return:   { label: 'Return & Refund',  color: 'text-red-700',   bg: 'bg-red-50',    border: 'border-red-200'    },
-  exchange: { label: 'Exchange',         color: 'text-blue-700',  bg: 'bg-blue-50',   border: 'border-blue-200'   },
-  replace:  { label: 'Replacement',      color: 'text-green-700', bg: 'bg-green-50',  border: 'border-green-200'  },
+  exchange: { label: 'Exchange', color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
 } as const;
 
-const STATUS_STEPS = [
-  { key: 'pending',             label: 'Request Received',    icon: Clock         },
-  { key: 'under_review',        label: 'Under Review',        icon: RefreshCw     },
-  { key: 'approved',            label: 'Approved',            icon: CheckCircle   },
-  { key: 'pickup_scheduled',    label: 'Pickup Scheduled',    icon: Package       },
-  { key: 'picked_up',           label: 'Item Picked Up',      icon: Package       },
-  { key: 'processing',          label: 'Processing',          icon: RefreshCw     },
-  { key: 'refund_initiated',    label: 'Refund Initiated',    icon: CheckCircle   },
-  { key: 'replacement_shipped', label: 'Replacement Shipped', icon: Package       },
-  { key: 'completed',           label: 'Completed',           icon: CheckCircle   },
-];
+const REASON_LABELS: Record<string, string> = {
+  size_issue: 'Size Issue',
+  damage:     'Damage / Defective Piece',
+};
 
-const STATUS_REPLACE_STEPS = [
+const STATUS_STEPS = [
   { key: 'pending',             label: 'Request Received',    icon: Clock         },
   { key: 'under_review',        label: 'Under Review',        icon: RefreshCw     },
   { key: 'approved',            label: 'Approved',            icon: CheckCircle   },
@@ -42,14 +33,13 @@ const STATUS_REPLACE_STEPS = [
 const STATUS_MSG: Record<string, string> = {
   pending:             'We\'ve received your request. Our team will review it within 24 hours.',
   under_review:        'Our team is carefully reviewing your request and the photos you uploaded.',
-  approved:            'Great news! Your request has been approved. We will schedule a pickup soon.',
+  approved:            'Great news! Your exchange has been approved. We will schedule a pickup soon.',
   rejected:            'Unfortunately, your request could not be approved at this time.',
   pickup_scheduled:    'Our courier has been scheduled to pick up the item from your address.',
   picked_up:           'Your item has been picked up. We are now inspecting it.',
   processing:          'Your item is being inspected by our quality team.',
-  refund_initiated:    'Your refund has been processed and will be credited within 5-7 business days.',
   replacement_shipped: 'Your replacement item has been dispatched and is on its way!',
-  completed:           'Your request has been successfully completed. Thank you for your patience!',
+  completed:           'Your exchange has been successfully completed. Thank you for your patience!',
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -60,7 +50,6 @@ const STATUS_COLOR: Record<string, string> = {
   pickup_scheduled:    'text-purple-700 bg-purple-50 border-purple-300',
   picked_up:           'text-cyan-700 bg-cyan-50 border-cyan-300',
   processing:          'text-indigo-700 bg-indigo-50 border-indigo-300',
-  refund_initiated:    'text-green-700 bg-green-50 border-green-300',
   replacement_shipped: 'text-purple-700 bg-purple-50 border-purple-300',
   completed:           'text-green-700 bg-green-50 border-green-300',
 };
@@ -93,9 +82,9 @@ function ReturnDetailContent() {
 
   if (!rr) return null;
 
-  const typeInfo = TYPE_INFO[rr.request_type] || TYPE_INFO.return;
+  const typeInfo = TYPE_INFO.exchange;
   const isRejected = rr.status === 'rejected';
-  const steps = rr.request_type === 'return' ? STATUS_STEPS : STATUS_REPLACE_STEPS;
+  const steps = STATUS_STEPS;
   const activeStepIdx = steps.findIndex(s => s.key === rr.status);
   const progressPct = activeStepIdx < 0 ? 0 : Math.round((activeStepIdx / (steps.length - 1)) * 100);
 
@@ -129,9 +118,34 @@ function ReturnDetailContent() {
         </div>
         <div>
           <p className={`font-bold ${typeInfo.color}`}>{typeInfo.label}</p>
-          <p className="text-sm text-gray-600">Reason: {rr.reason}</p>
+          <p className="text-sm text-gray-600">Reason: {REASON_LABELS[rr.reason] || rr.reason}</p>
         </div>
       </div>
+
+      {/* Exchanging into */}
+      {rr.new_product && (
+        <div className="card p-5 mb-5">
+          <h3 className="font-bold text-maroon-900 mb-3">Exchanging Into</h3>
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-lg bg-orange-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {rr.new_product.images?.[0]
+                ? <img src={rr.new_product.images[0]} alt={rr.new_product.name} className="w-full h-full object-cover" />
+                : <Package size={22} className="text-gray-300" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-800 truncate">{rr.new_product.name}</p>
+              <p className="text-xs text-gray-500">{rr.new_size ? `Size ${rr.new_size}` : ''}{rr.new_size && rr.new_color ? ' · ' : ''}{rr.new_color || ''}</p>
+            </div>
+            <p className="text-sm font-bold text-maroon-800">₹{rr.new_product.price.toLocaleString()}</p>
+          </div>
+          {rr.price_difference > 0 && (
+            <div className="mt-3 pt-3 border-t border-orange-100 flex justify-between text-sm">
+              <span className="text-gray-500">Price difference paid</span>
+              <span className="font-semibold text-green-700">₹{rr.price_difference.toLocaleString()} ✓</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status timeline */}
       {!isRejected && (
@@ -223,7 +237,7 @@ function ReturnDetailContent() {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Reason</span>
-            <span className="font-medium text-gray-800">{rr.reason}</span>
+            <span className="font-medium text-gray-800">{REASON_LABELS[rr.reason] || rr.reason}</span>
           </div>
           {rr.description && (
             <div>

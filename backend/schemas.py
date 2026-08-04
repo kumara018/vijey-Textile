@@ -500,16 +500,43 @@ class ReviewOut(BaseModel):
 
 class ReturnRequestCreate(BaseModel):
     order_id:     int
-    request_type: str   # exchange | replace
-    reason:       str
+    product_id:   int              # which item in the order is being exchanged
+    request_type: str = "exchange"
+    reason:       str              # "size_issue" | "damage" only
     description:  Optional[str] = None
-    images:       List[str] = []
+    images:       List[str] = []   # 2 required, max 3
+
+    new_product_id: int            # what the customer wants instead — any product
+    new_size:       Optional[str] = None
+    new_color:      Optional[str] = None
+
+    # Required only when the replacement costs more than the original item —
+    # the price difference must be paid upfront before the request is created.
+    razorpay_order_id:   Optional[str] = None
+    razorpay_payment_id: Optional[str] = None
+    razorpay_signature:  Optional[str] = None
 
     @field_validator("request_type")
     @classmethod
     def type_valid(cls, v):
-        if v not in ["exchange", "replace"]:
-            raise ValueError("request_type must be exchange or replace")
+        if v != "exchange":
+            raise ValueError("Only exchanges are supported — returns/refunds are not offered.")
+        return v
+
+    @field_validator("reason")
+    @classmethod
+    def reason_valid(cls, v):
+        if v not in ["size_issue", "damage"]:
+            raise ValueError("Reason must be 'size_issue' or 'damage'")
+        return v
+
+    @field_validator("images")
+    @classmethod
+    def images_valid(cls, v):
+        if len(v) < 2:
+            raise ValueError("At least 2 photos are required as proof")
+        if len(v) > 3:
+            raise ValueError("Maximum 3 photos allowed")
         return v
 
 class ReturnStatusUpdate(BaseModel):
@@ -527,6 +554,14 @@ class ReturnRequestOut(BaseModel):
     status:       str
     admin_notes:  Optional[str] = None
     refund_id:    Optional[str] = None
+    product_id:            Optional[int] = None
+    original_price:         Optional[float] = None
+    new_product_id:         Optional[int] = None
+    new_product:             Optional[ProductOut] = None
+    new_size:               Optional[str] = None
+    new_color:               Optional[str] = None
+    price_difference:        float = 0.0
+    price_diff_payment_id:   Optional[str] = None
     created_at:   datetime
     model_config = {"from_attributes": True}
 

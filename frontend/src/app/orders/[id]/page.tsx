@@ -7,11 +7,17 @@ import {
   MapPin, CreditCard, ArrowLeft, Sparkles, Phone, ShieldCheck,
   PackageOpen, Navigation, ExternalLink, RefreshCw,
   FileText, RotateCcw, ImagePlus, X, ChevronRight,
+  Search, AlertCircle, Lock,
 } from 'lucide-react';
-import { ordersAPI, returnsAPI } from '@/lib/api';
-import { Order, ReturnRequest } from '@/types';
+import { ordersAPI, returnsAPI, productsAPI } from '@/lib/api';
+import api from '@/lib/api';
+import { Order, OrderItem, Product, ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
+
+declare global {
+  interface Window { Razorpay: any; }
+}
 
 const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered'];
 
@@ -25,19 +31,10 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; b
   cancelled:        { label: 'Cancelled',          icon: XCircle,      color: 'text-red-700',    bg: 'bg-red-50',     ring: 'border-red-400' },
 };
 
-const RETURN_REASONS = [
-  "Size doesn't fit",
-  "Damaged product",
-  "Stitching / quality issue",
-  "Wrong item received",
-  "Colour different from photo",
-  "Other",
-];
-
-const RETURN_TYPE_INFO = {
-  exchange: { label: 'Exchange',         desc: 'Exchange for a different size or colour of the same product.',             color: 'border-blue-300 bg-blue-50',  badge: 'bg-blue-100 text-blue-700'  },
-  replace:  { label: 'Replacement',      desc: 'Get a replacement for a damaged or defective product.',                   color: 'border-green-300 bg-green-50',badge: 'bg-green-100 text-green-700'},
-} as const;
+const EXCHANGE_REASONS = [
+  { value: 'size_issue', label: "Size Issue", desc: "Doesn't fit — need a different size" },
+  { value: 'damage',     label: 'Damage / Defective Piece', desc: 'Item arrived damaged or has a defect' },
+] as const;
 
 const RETURN_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pending:             { label: 'Pending Review',       color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
@@ -47,7 +44,6 @@ const RETURN_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   pickup_scheduled:    { label: 'Pickup Scheduled',     color: 'bg-purple-100 text-purple-700 border-purple-300' },
   picked_up:           { label: 'Picked Up',            color: 'bg-cyan-100 text-cyan-700 border-cyan-300'       },
   processing:          { label: 'Processing',           color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
-  refund_initiated:    { label: 'Refund Initiated',     color: 'bg-green-100 text-green-700 border-green-300'    },
   replacement_shipped: { label: 'Replacement Shipped',  color: 'bg-purple-100 text-purple-700 border-purple-300' },
   completed:           { label: 'Completed',            color: 'bg-green-100 text-green-700 border-green-300'    },
 };
@@ -64,17 +60,40 @@ function OrderDetailContent() {
   const [tracking, setTracking]       = useState<any>(null);
   const [trackLoading, setTrackLoading] = useState(false);
 
-  // Return modal state
+  // Exchange modal state — steps: 1 Item (skipped if single-item order) →
+  // 2 Reason → 3 Choose Replacement → 4 Pay Difference (skipped if same price)
+  // → 5 Photos + Checklist + Submit
   const [existingReturn, setExistingReturn]   = useState<ReturnRequest | null>(null);
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const [returnStep, setReturnStep]           = useState(1);
-  const [returnType, setReturnType]           = useState<'exchange'|'replace'|''>('');
-  const [returnReason, setReturnReason]       = useState('');
+  const [returnStep, setReturnStep]           = useState(2);
+  const [selectedItem, setSelectedItem]       = useState<OrderItem | null>(null);
+  const [returnReason, setReturnReason]       = useState<'size_issue'|'damage'|''>('');
   const [returnDesc, setReturnDesc]           = useState('');
   const [returnImages, setReturnImages]       = useState<string[]>([]);
   const [uploadingReturnImg, setUploadingReturnImg] = useState(false);
   const [submittingReturn, setSubmittingReturn]     = useState(false);
   const returnImgRef = useRef<HTMLInputElement>(null);
+
+  // Replacement product picker
+  const [productSearch, setProductSearch]     = useState('');
+  const [productResults, setProductResults]   = useState<Product[]>([]);
+  const [searchingProducts, setSearchingProducts] = useState(false);
+  const [newProduct, setNewProduct]           = useState<Product | null>(null);
+  const [newSize, setNewSize]                 = useState('');
+  const [newColor, setNewColor]               = useState('');
+
+  // Price-difference payment
+  const [paymentProof, setPaymentProof] = useState<{
+    razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string;
+  } | null>(null);
+  const [payingDiff, setPayingDiff] = useState(false);
+
+  // Final checklist confirmations
+  const [checklist, setChecklist] = useState({ unused: false, packaging: false, invoice: false });
+
+  const priceDifference = newProduct && selectedItem
+    ? Math.round((newProduct.price - selectedItem.price) * 100) / 100
+    : 0;
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -101,6 +120,34 @@ function OrderDetailContent() {
     } catch { toast.error('Could not fetch tracking info'); } finally { setTrackLoading(false); }
   };
 
+  const openReturnModal = () => {
+    const items = order?.items_snapshot || [];
+    if (items.length === 1) {
+      setSelectedItem(items[0]);
+      setReturnStep(2); // single item — skip straight to Reason
+    } else {
+      setSelectedItem(null);
+      setReturnStep(1); // multi-item order — ask which item first
+    }
+    setShowReturnModal(true);
+  };
+
+  const resetReturnModal = () => {
+    setReturnStep(1);
+    setSelectedItem(null);
+    setReturnReason('');
+    setReturnDesc('');
+    setReturnImages([]);
+    setProductSearch('');
+    setProductResults([]);
+    setNewProduct(null);
+    setNewSize('');
+    setNewColor('');
+    setPaymentProof(null);
+    setChecklist({ unused: false, packaging: false, invoice: false });
+    setShowReturnModal(false);
+  };
+
   const handleReturnImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -120,33 +167,97 @@ function OrderDetailContent() {
     }
   };
 
+  const searchReplacementProducts = async (q: string) => {
+    setProductSearch(q);
+    if (q.trim().length < 2) { setProductResults([]); return; }
+    setSearchingProducts(true);
+    try {
+      const res = await productsAPI.getAll({ search: q.trim(), limit: 12 });
+      const raw = res.data;
+      const data: Product[] = Array.isArray(raw) ? raw : (raw?.products ?? raw?.items ?? raw?.data ?? []);
+      setProductResults(data.filter(p => p.id !== selectedItem?.product_id));
+    } catch { /* silent — search box just shows no results */ }
+    finally { setSearchingProducts(false); }
+  };
+
+  const selectNewProduct = (p: Product) => {
+    setNewProduct(p);
+    setNewSize(p.size_options?.[0] || '');
+    setNewColor(p.colors?.[0] || '');
+    setPaymentProof(null); // changing product invalidates any prior payment proof
+  };
+
+  // Pay the price difference via Razorpay before the exchange can be submitted
+  const handlePayDifference = async () => {
+    if (!newProduct || priceDifference <= 0) return;
+    setPayingDiff(true);
+    try {
+      const orderRes = await api.post('/api/payments/create-order', { amount: priceDifference });
+      const { order_id, key_id } = orderRes.data;
+      const options: any = {
+        key: key_id,
+        amount: priceDifference * 100,
+        currency: 'INR',
+        name: order?.order_number ? `Exchange — ${order.order_number}` : 'Exchange Price Difference',
+        description: `Price difference for exchanging into ${newProduct.name}`,
+        order_id,
+        prefill: { name: user?.full_name, contact: user?.phone, email: user?.email },
+        theme: { color: '#e11d48' },
+        handler: async (response: any) => {
+          const proof = {
+            razorpay_order_id:   response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature:  response.razorpay_signature,
+          };
+          try {
+            await api.post('/api/payments/verify', proof);
+            setPaymentProof(proof);
+            toast.success('Payment successful — you can now submit your exchange request.');
+          } catch {
+            toast.error('Payment verification failed. Please try again.');
+          } finally { setPayingDiff(false); }
+        },
+        modal: { ondismiss: () => { setPayingDiff(false); toast.error('Payment cancelled'); } },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch {
+      toast.error('Could not start payment. Please try again.');
+      setPayingDiff(false);
+    }
+  };
+
   const handleReturnSubmit = async () => {
-    if (!returnType) { toast.error('Please select a request type'); return; }
-    if (!returnReason) { toast.error('Please select a reason'); return; }
+    if (!selectedItem || !returnReason || !newProduct) {
+      toast.error('Please complete all steps'); return;
+    }
+    if (returnImages.length < 2) { toast.error('Please upload at least 2 photos'); return; }
+    if (!checklist.unused || !checklist.packaging || !checklist.invoice) {
+      toast.error('Please confirm all three checklist items'); return;
+    }
+    if (priceDifference > 0 && !paymentProof) {
+      toast.error('Please pay the price difference before submitting'); return;
+    }
     setSubmittingReturn(true);
     try {
       const res = await returnsAPI.create({
         order_id: Number(id),
-        request_type: returnType,
+        product_id: selectedItem.product_id,
+        request_type: 'exchange',
         reason: returnReason,
         description: returnDesc.trim() || undefined,
         images: returnImages,
+        new_product_id: newProduct.id,
+        new_size: newSize || undefined,
+        new_color: newColor || undefined,
+        ...(paymentProof || {}),
       });
       setExistingReturn(res.data);
       setShowReturnModal(false);
-      toast.success('Return request submitted! We will review within 24 hours.');
+      toast.success('Exchange request submitted! We will review within 24 hours.');
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Could not submit return request');
+      toast.error(err.response?.data?.detail || 'Could not submit exchange request');
     } finally { setSubmittingReturn(false); }
-  };
-
-  const resetReturnModal = () => {
-    setReturnStep(1);
-    setReturnType('');
-    setReturnReason('');
-    setReturnDesc('');
-    setReturnImages([]);
-    setShowReturnModal(false);
   };
 
   if (loading) return (
@@ -522,7 +633,7 @@ function OrderDetailContent() {
                 </div>
               ) : existingReturn ? (
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">You have a {existingReturn.request_type === 'return' ? 'Return & Refund' : existingReturn.request_type === 'exchange' ? 'Exchange' : 'Replacement'} request</p>
+                  <p className="text-xs text-gray-500 mb-2">You have an Exchange request</p>
                   <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border mb-3 ${RETURN_STATUS_LABEL[existingReturn.status]?.color || 'bg-gray-100 text-gray-600 border-gray-300'}`}>
                     {RETURN_STATUS_LABEL[existingReturn.status]?.label || existingReturn.status}
                   </div>
@@ -538,11 +649,11 @@ function OrderDetailContent() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-xs text-gray-500 mb-3">Wrong size or a damaged/defective item? Request an exchange or replacement within 7 days of delivery. We do not offer cancellations or refunds.</p>
+                  <p className="text-xs text-gray-500 mb-3">Wrong size or a damaged/defective item? Request an exchange within 7 days of delivery — choose any product as your replacement. We do not offer cancellations or refunds.</p>
                   <button
-                    onClick={() => setShowReturnModal(true)}
+                    onClick={openReturnModal}
                     className="w-full flex items-center justify-center gap-2 py-2.5 border border-maroon-300 text-maroon-700 hover:bg-maroon-50 text-sm font-medium rounded-xl transition-colors">
-                    <RotateCcw size={15} /> Request Exchange / Replacement
+                    <RotateCcw size={15} /> Request Exchange
                   </button>
                 </div>
               )}
@@ -567,65 +678,63 @@ function OrderDetailContent() {
         </div>
       </div>
 
-      {/* ── Return / Exchange / Replace Modal ── */}
+      {/* ── Exchange Request Modal ── */}
       {showReturnModal && (
         <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={resetReturnModal}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-orange-100">
               <div>
-                <h3 className="font-bold text-maroon-900 text-lg">Return / Exchange Request</h3>
-                <p className="text-xs text-gray-500">{order.order_number} · Step {returnStep} of 3</p>
+                <h3 className="font-bold text-maroon-900 text-lg">Exchange Request</h3>
+                <p className="text-xs text-gray-500">{order.order_number} · Step {returnStep} of 5</p>
               </div>
               <button onClick={resetReturnModal} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
             </div>
 
             {/* Step indicator */}
             <div className="flex gap-0 px-5 pt-4">
-              {[1,2,3].map(s => (
+              {[1,2,3,4,5].map(s => (
                 <div key={s} className={`flex-1 h-1.5 rounded-full mx-0.5 transition-all ${returnStep >= s ? 'bg-maroon-800' : 'bg-gray-200'}`} />
               ))}
             </div>
 
             <div className="p-5">
-              {/* Step 1: Choose type */}
+              {/* Step 1: Which item (only shown for multi-item orders) */}
               {returnStep === 1 && (
                 <div>
-                  <p className="font-semibold text-gray-800 mb-4">What would you like to do?</p>
-                  <div className="space-y-3">
-                    {(Object.entries(RETURN_TYPE_INFO) as [keyof typeof RETURN_TYPE_INFO, typeof RETURN_TYPE_INFO[keyof typeof RETURN_TYPE_INFO]][]).map(([type, info]) => (
-                      <button key={type} onClick={() => setReturnType(type)}
-                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${returnType === type ? info.color + ' border-opacity-100' : 'border-gray-200 hover:border-maroon-300 bg-white'}`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-gray-800 text-sm">{info.label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{info.desc}</p>
-                          </div>
-                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ml-3 ${returnType === type ? 'border-maroon-700 bg-maroon-700' : 'border-gray-300'}`}>
-                            {returnType === type && <div className="w-2 h-2 rounded-full bg-white" />}
-                          </div>
+                  <p className="font-semibold text-gray-800 mb-4">Which item do you want to exchange?</p>
+                  <div className="space-y-2">
+                    {(order.items_snapshot as OrderItem[]).map((it, idx) => (
+                      <button key={idx} onClick={() => { setSelectedItem(it); setReturnStep(2); }}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-maroon-400 text-left transition-all">
+                        <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-xl flex-shrink-0 overflow-hidden">
+                          {it.image ? <img src={it.image} alt={it.name} className="w-full h-full object-cover" /> : '👗'}
                         </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800 truncate">{it.name}</p>
+                          <p className="text-xs text-gray-500">Qty {it.quantity}{it.size ? ` · ${it.size}` : ''}{it.color ? ` · ${it.color}` : ''} · ₹{it.price.toLocaleString()}</p>
+                        </div>
+                        <ChevronRight size={16} className="text-gray-400" />
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => { if (!returnType) { toast.error('Please choose a request type'); return; } setReturnStep(2); }}
-                    className="mt-5 w-full btn-primary py-3 flex items-center justify-center gap-2">
-                    Continue <ChevronRight size={16} />
-                  </button>
                 </div>
               )}
 
               {/* Step 2: Reason */}
               {returnStep === 2 && (
                 <div>
-                  <p className="font-semibold text-gray-800 mb-1">Why are you raising this request?</p>
+                  <p className="font-semibold text-gray-800 mb-1">Why are you exchanging this item?</p>
                   <p className="text-xs text-gray-500 mb-4">Select the most appropriate reason</p>
                   <div className="space-y-2 mb-4">
-                    {RETURN_REASONS.map(r => (
-                      <label key={r} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${returnReason === r ? 'border-maroon-500 bg-orange-50' : 'border-gray-200 hover:border-maroon-300'}`}>
-                        <input type="radio" name="return_reason" value={r} checked={returnReason === r}
-                          onChange={() => setReturnReason(r)} className="accent-maroon-700" />
-                        <span className="text-sm text-gray-700">{r}</span>
+                    {EXCHANGE_REASONS.map(r => (
+                      <label key={r.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${returnReason === r.value ? 'border-maroon-500 bg-orange-50' : 'border-gray-200 hover:border-maroon-300'}`}>
+                        <input type="radio" name="return_reason" value={r.value} checked={returnReason === r.value}
+                          onChange={() => setReturnReason(r.value)} className="accent-maroon-700" />
+                        <div>
+                          <span className="text-sm text-gray-800 font-medium block">{r.label}</span>
+                          <span className="text-xs text-gray-500">{r.desc}</span>
+                        </div>
                       </label>
                     ))}
                   </div>
@@ -637,7 +746,9 @@ function OrderDetailContent() {
                       className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-maroon-400 resize-none" />
                   </div>
                   <div className="flex gap-3 mt-5">
-                    <button onClick={() => setReturnStep(1)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
+                    {(order.items_snapshot as OrderItem[]).length > 1 && (
+                      <button onClick={() => setReturnStep(1)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
+                    )}
                     <button onClick={() => { if (!returnReason) { toast.error('Please select a reason'); return; } setReturnStep(3); }}
                       className="flex-1 py-2.5 bg-maroon-800 text-white rounded-xl font-semibold text-sm hover:bg-maroon-900 flex items-center justify-center gap-2">
                       Continue <ChevronRight size={16} />
@@ -646,30 +757,140 @@ function OrderDetailContent() {
                 </div>
               )}
 
-              {/* Step 3: Upload photos */}
+              {/* Step 3: Choose replacement — any product, must cost the same or more */}
               {returnStep === 3 && (
                 <div>
-                  <p className="font-semibold text-gray-800 mb-1">Upload Photos</p>
+                  <p className="font-semibold text-gray-800 mb-1">Choose your replacement</p>
                   <p className="text-xs text-gray-500 mb-4">
-                    {returnReason === "Damaged product" || returnReason === "Stitching / quality issue" || returnReason === "Wrong item received"
-                      ? "Please upload photos of the issue — this helps us process your request faster."
-                      : "Upload photos of the item (optional but recommended)."}
-                    {' '}Max 3 photos.
+                    Original item: ₹{selectedItem?.price.toLocaleString()}. Your replacement must cost the same or more — no cheaper items (no refund is issued for the difference).
                   </p>
 
+                  <div className="relative mb-3">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input type="text" value={productSearch} onChange={e => searchReplacementProducts(e.target.value)}
+                      placeholder="Search products to exchange into..."
+                      className="w-full border border-gray-200 rounded-xl pl-9 pr-4 py-2.5 text-sm outline-none focus:border-maroon-400" />
+                  </div>
+
+                  {searchingProducts && <p className="text-xs text-gray-400 mb-3">Searching...</p>}
+
+                  {productResults.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mb-4 max-h-56 overflow-y-auto">
+                      {productResults.map(p => {
+                        const tooCheap = p.price < (selectedItem?.price || 0);
+                        return (
+                          <button key={p.id} disabled={tooCheap} onClick={() => selectNewProduct(p)}
+                            className={`text-left p-2.5 rounded-xl border-2 transition-all ${newProduct?.id === p.id ? 'border-maroon-700 bg-orange-50' : tooCheap ? 'border-gray-100 opacity-40 cursor-not-allowed' : 'border-gray-200 hover:border-maroon-300'}`}>
+                            <div className="w-full aspect-square rounded-lg bg-orange-50 mb-1.5 overflow-hidden flex items-center justify-center">
+                              {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" /> : <span className="text-2xl">👗</span>}
+                            </div>
+                            <p className="text-xs font-medium text-gray-800 truncate">{p.name}</p>
+                            <p className="text-xs font-semibold text-maroon-800">₹{p.price.toLocaleString()}</p>
+                            {tooCheap && <p className="text-[10px] text-red-500 mt-0.5">Too low — pick ₹{selectedItem?.price.toLocaleString()}+</p>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {newProduct && (
+                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 space-y-3">
+                      <p className="text-sm font-semibold text-gray-800">Selected: {newProduct.name}</p>
+                      {newProduct.size_options?.length > 0 && (
+                        <div>
+                          <label className="label">Size</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {newProduct.size_options.map(s => (
+                              <button key={s} onClick={() => setNewSize(s)}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-medium ${newSize === s ? 'border-maroon-700 bg-maroon-800 text-white' : 'border-gray-300 text-gray-600'}`}>{s}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {newProduct.colors?.length > 0 && (
+                        <div>
+                          <label className="label">Colour</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {newProduct.colors.map(c => (
+                              <button key={c} onClick={() => setNewColor(c)}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-medium ${newColor === c ? 'border-maroon-700 bg-maroon-800 text-white' : 'border-gray-300 text-gray-600'}`}>{c}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div className="border-t border-orange-200 pt-2 text-xs text-gray-700 space-y-0.5">
+                        <p>Original: ₹{selectedItem?.price.toLocaleString()}</p>
+                        <p>Replacement: ₹{newProduct.price.toLocaleString()}</p>
+                        <p className="font-semibold text-maroon-800">
+                          {priceDifference > 0 ? `You pay ₹${priceDifference.toLocaleString()} more` : 'Same price — no extra payment'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button onClick={() => setReturnStep(2)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
+                    <button onClick={() => {
+                        if (!newProduct) { toast.error('Please choose a replacement product'); return; }
+                        setReturnStep(priceDifference > 0 ? 4 : 5);
+                      }}
+                      className="flex-1 py-2.5 bg-maroon-800 text-white rounded-xl font-semibold text-sm hover:bg-maroon-900 flex items-center justify-center gap-2">
+                      Continue <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 4: Pay the difference (only when replacement costs more) */}
+              {returnStep === 4 && (
+                <div>
+                  <p className="font-semibold text-gray-800 mb-1 flex items-center gap-2"><Lock size={16} className="text-green-600" /> Pay Price Difference</p>
+                  <p className="text-xs text-gray-500 mb-4">Your replacement costs more than the original item. This must be paid upfront before your exchange request is submitted.</p>
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Due</p>
+                    <p className="text-2xl font-bold text-maroon-800">₹{priceDifference.toLocaleString()}</p>
+                  </div>
+                  {paymentProof ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl mb-4">
+                      <CheckCircle size={18} className="text-green-600" />
+                      <p className="text-sm text-green-700 font-medium">Payment received — ready to submit</p>
+                    </div>
+                  ) : (
+                    <button onClick={handlePayDifference} disabled={payingDiff}
+                      className="w-full py-3 bg-maroon-800 text-white rounded-xl font-semibold text-sm hover:bg-maroon-900 disabled:opacity-60 flex items-center justify-center gap-2 mb-4">
+                      {payingDiff ? <><RefreshCw size={14} className="animate-spin" /> Opening payment...</> : <><Lock size={16} /> Pay ₹{priceDifference.toLocaleString()}</>}
+                    </button>
+                  )}
+                  <div className="flex gap-3">
+                    <button onClick={() => setReturnStep(3)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
+                    <button onClick={() => { if (!paymentProof) { toast.error('Please complete the payment first'); return; } setReturnStep(5); }}
+                      className="flex-1 py-2.5 bg-maroon-800 text-white rounded-xl font-semibold text-sm hover:bg-maroon-900 flex items-center justify-center gap-2 disabled:opacity-60"
+                      disabled={!paymentProof}>
+                      Continue <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Photos + checklist + submit */}
+              {returnStep === 5 && (
+                <div>
+                  <p className="font-semibold text-gray-800 mb-1">Upload Photos & Confirm</p>
+                  <p className="text-xs text-gray-500 mb-4">At least 2 photos are required as proof. Max 3.</p>
+
                   {/* Summary */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4">
-                    <p className="text-xs text-gray-600">
-                      <span className="font-semibold">Type:</span> {returnType ? RETURN_TYPE_INFO[returnType].label : ''} &nbsp;·&nbsp;
-                      <span className="font-semibold">Reason:</span> {returnReason}
-                    </p>
+                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs text-gray-600 space-y-0.5">
+                    <p><span className="font-semibold">Item:</span> {selectedItem?.name}</p>
+                    <p><span className="font-semibold">Reason:</span> {EXCHANGE_REASONS.find(r => r.value === returnReason)?.label}</p>
+                    <p><span className="font-semibold">Replacement:</span> {newProduct?.name}{newSize ? ` · ${newSize}` : ''}{newColor ? ` · ${newColor}` : ''}</p>
+                    {priceDifference > 0 && <p><span className="font-semibold">Paid:</span> ₹{priceDifference.toLocaleString()} difference</p>}
                   </div>
 
                   {/* Image grid */}
-                  <div className="flex flex-wrap gap-3 mb-3">
+                  <div className="flex flex-wrap gap-3 mb-2">
                     {returnImages.map((url, idx) => (
                       <div key={idx} className="relative group">
-                        <img src={url} alt={`Return photo ${idx+1}`} className="w-20 h-20 object-cover rounded-xl border-2 border-orange-200" />
+                        <img src={url} alt={`Exchange photo ${idx+1}`} className="w-20 h-20 object-cover rounded-xl border-2 border-orange-200" />
                         <button onClick={() => setReturnImages(prev => prev.filter((_, i) => i !== idx))}
                           className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                           <X size={10} />
@@ -688,13 +909,29 @@ function OrderDetailContent() {
                     )}
                   </div>
                   <input ref={returnImgRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleReturnImageUpload} />
-                  <p className="text-xs text-gray-400 mb-5">JPEG, PNG or WebP · Max 10MB each</p>
+                  <p className="text-xs text-gray-400 mb-4">JPEG, PNG or WebP · Max 10MB each {returnImages.length < 2 && <span className="text-red-500 font-medium">· {2 - returnImages.length} more required</span>}</p>
+
+                  {/* Checklist */}
+                  <div className="space-y-2 mb-5">
+                    {[
+                      { key: 'unused' as const,     label: 'The item is unused and not dirty' },
+                      { key: 'packaging' as const,  label: 'It will be packed properly for pickup' },
+                      { key: 'invoice' as const,    label: 'The original invoice/bill will be included' },
+                    ].map(c => (
+                      <label key={c.key} className="flex items-center gap-2.5 p-2.5 rounded-xl border border-gray-200 cursor-pointer hover:border-maroon-300">
+                        <input type="checkbox" checked={checklist[c.key]}
+                          onChange={e => setChecklist(prev => ({ ...prev, [c.key]: e.target.checked }))}
+                          className="w-4 h-4 accent-maroon-700" />
+                        <span className="text-sm text-gray-700">{c.label}</span>
+                      </label>
+                    ))}
+                  </div>
 
                   <div className="flex gap-3">
-                    <button onClick={() => setReturnStep(2)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
+                    <button onClick={() => setReturnStep(priceDifference > 0 ? 4 : 3)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-gray-700 text-sm font-medium hover:bg-gray-50">Back</button>
                     <button onClick={handleReturnSubmit} disabled={submittingReturn}
                       className="flex-1 py-2.5 bg-maroon-800 text-white rounded-xl font-semibold text-sm hover:bg-maroon-900 disabled:opacity-60 flex items-center justify-center gap-2">
-                      {submittingReturn ? <><RefreshCw size={14} className="animate-spin" /> Submitting...</> : 'Submit Request'}
+                      {submittingReturn ? <><RefreshCw size={14} className="animate-spin" /> Submitting...</> : 'Submit Exchange Request'}
                     </button>
                   </div>
                 </div>

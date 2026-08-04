@@ -1,5 +1,8 @@
-"""Return / Exchange / Replace requests."""
+"""Exchange requests. No return/refund — that is out of scope for now."""
 import os
+import hmac
+import hashlib
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 from typing import List
@@ -8,16 +11,33 @@ import models, schemas, auth as auth_utils, notifications
 
 router = APIRouter(prefix="/api/returns", tags=["Returns"])
 
-RETURN_WINDOW_DAYS = 7  # days after delivery to allow return requests
+RETURN_WINDOW_DAYS = 7  # days after delivery to allow exchange requests
 
-VALID_REASONS = [
-    "Size doesn't fit",
-    "Damaged product",
-    "Stitching / quality issue",
-    "Wrong item received",
-    "Colour different from photo",
-    "Other",
-]
+REASON_LABELS = {
+    "size_issue": "Size Issue",
+    "damage":     "Damage / Defective Piece",
+}
+
+
+def _verify_price_diff_payment(payload: schemas.ReturnRequestCreate, amount_due: float):
+    """Same HMAC verification pattern as order placement — the price
+    difference must be a real, verified Razorpay payment before the
+    exchange request is created."""
+    if not (payload.razorpay_order_id and payload.razorpay_payment_id and payload.razorpay_signature):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Payment of ₹{amount_due:.2f} for the price difference is required before this exchange can be requested.",
+        )
+    razorpay_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
+    if not razorpay_secret:
+        raise HTTPException(status_code=503, detail="Payment gateway not configured")
+    expected_signature = hmac.new(
+        razorpay_secret.encode(),
+        f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_signature, payload.razorpay_signature):
+        raise HTTPException(status_code=400, detail="Payment verification failed. Invalid signature.")
 
 
 @router.post("/", response_model=schemas.ReturnRequestOut, status_code=201)
@@ -33,35 +53,76 @@ def create_return_request(
     if not order:
         raise HTTPException(404, "Order not found")
     if order.status != "delivered":
-        raise HTTPException(400, "Return requests can only be made for delivered orders")
+        raise HTTPException(400, "Exchange requests can only be made for delivered orders")
 
-    # Check if any item in the order is non-returnable
+    # Enforce the 7-day exchange window from delivery/order date
+    if order.created_at:
+        created = order.created_at
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        deadline = created + timedelta(days=RETURN_WINDOW_DAYS)
+        if datetime.now(timezone.utc) > deadline:
+            raise HTTPException(400, f"The {RETURN_WINDOW_DAYS}-day exchange window for this order has passed.")
+
+    # Find the specific item being exchanged within this (possibly multi-item) order
     items = order.items_snapshot or []
-    product_ids = [item.get("product_id") for item in items if item.get("product_id")]
-    if product_ids:
-        non_returnable = db.query(models.Product).filter(
-            models.Product.id.in_(product_ids),
-            models.Product.is_returnable == False,
-        ).first()
-        if non_returnable:
-            raise HTTPException(400, f'"{non_returnable.name}" is a non-returnable product. Returns are not accepted for this item.')
+    item = next((i for i in items if i.get("product_id") == payload.product_id), None)
+    if not item:
+        raise HTTPException(400, "That item was not found in this order")
 
-    # Check if return request already exists
+    original_product = db.query(models.Product).filter(models.Product.id == payload.product_id).first()
+    if original_product and not original_product.is_returnable:
+        raise HTTPException(400, f'"{item.get("name", "This item")}" is not eligible for exchange.')
+    original_price = item.get("price", 0)
+
+    # Check if an exchange request already exists for this item
     existing = db.query(models.ReturnRequest).filter(
         models.ReturnRequest.order_id == payload.order_id,
+        models.ReturnRequest.product_id == payload.product_id,
         models.ReturnRequest.status.notin_(["rejected", "completed"]),
     ).first()
     if existing:
-        raise HTTPException(400, "A return request already exists for this order")
+        raise HTTPException(400, "An exchange request already exists for this item")
+
+    # Validate the replacement product — must exist, be active, and cost the
+    # same or more than the original item. Cheaper items are never allowed,
+    # since there is no refund mechanism to return the difference.
+    new_product = db.query(models.Product).filter(
+        models.Product.id == payload.new_product_id,
+        models.Product.is_active == True,
+    ).first()
+    if not new_product:
+        raise HTTPException(400, "The selected replacement product is not available")
+
+    price_difference = round(new_product.price - original_price, 2)
+    if price_difference < 0:
+        raise HTTPException(
+            400,
+            "The replacement item must cost the same or more than the original — "
+            "a cheaper item cannot be selected since no refund is issued.",
+        )
+
+    # If the replacement costs more, the difference must already be paid
+    price_diff_payment_id = None
+    if price_difference > 0:
+        _verify_price_diff_payment(payload, price_difference)
+        price_diff_payment_id = payload.razorpay_payment_id
 
     rr = models.ReturnRequest(
-        order_id     = payload.order_id,
-        user_id      = current_user.id,
-        request_type = payload.request_type,
-        reason       = payload.reason,
-        description  = payload.description,
-        images       = payload.images or [],
-        status       = "pending",
+        order_id       = payload.order_id,
+        user_id        = current_user.id,
+        request_type   = "exchange",
+        reason         = payload.reason,
+        description    = payload.description,
+        images         = payload.images,
+        status         = "pending",
+        product_id     = payload.product_id,
+        original_price = original_price,
+        new_product_id = payload.new_product_id,
+        new_size       = payload.new_size,
+        new_color      = payload.new_color,
+        price_difference      = price_difference,
+        price_diff_payment_id = price_diff_payment_id,
     )
     db.add(rr)
     db.commit()
@@ -74,15 +135,19 @@ def create_return_request(
     except Exception as e:
         print(f"[Return] Notification error: {e}")
 
-    # Notify admin — new return/exchange/replace request
+    # Notify admin — new exchange request
     try:
+        price_note = f", pays ₹{price_difference:.2f} difference" if price_difference > 0 else ""
         admin_notif = models.AdminNotification(
             type=rr.request_type,
             order_id=rr.order_id,
             return_request_id=rr.id,
             user_id=current_user.id,
-            title=f"New {rr.request_type.title()} Request — {order.order_number}",
-            message=f"{current_user.full_name} submitted a {rr.request_type} for order {order.order_number}. Reason: {rr.reason}",
+            title=f"New Exchange Request — {order.order_number}",
+            message=(
+                f"{current_user.full_name} requested an exchange for order {order.order_number}. "
+                f"Reason: {REASON_LABELS.get(rr.reason, rr.reason)}{price_note}."
+            ),
         )
         db.add(admin_notif)
         db.commit()
