@@ -147,6 +147,7 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(403, "Your account has been deactivated. Contact support.")
 
     token = auth_utils.create_access_token({"sub": user.id})
+    notifications.send_login_notification_email(user.email, user.full_name)
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 
@@ -273,6 +274,7 @@ def verify_login_otp(payload: schemas.LoginOTPVerify, db: Session = Depends(get_
         raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
 
     token = auth_utils.create_access_token({"sub": user.id})
+    notifications.send_login_notification_email(user.email, user.full_name)
     return {"access_token": token, "token_type": "bearer", "user": user}
 
 

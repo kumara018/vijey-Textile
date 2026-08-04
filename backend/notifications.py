@@ -585,6 +585,33 @@ def send_login_otp_email(email: str, name: str, otp: str):
     _bg(email, f"Your Vijey Textile sign-in code", html)
 
 
+# ── 9b. Login success notification (sent after every completed sign-in) ───────
+def send_login_notification_email(email: str, name: str):
+    first = name.split()[0]
+    when = datetime.now().strftime("%d %b %Y, %I:%M %p")
+    html = _wrap(f"""
+      <div style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 20px;margin-bottom:20px;">
+        <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ New Sign-In</span>
+      </div>
+      <h2 style="color:#1e293b;margin-top:0;font-size:22px;">Hi {first}, you just signed in</h2>
+      <p style="color:#444;font-size:14px;line-height:1.7;">
+        Your <strong>{STORE_NAME}</strong> account was just signed into successfully.
+      </p>
+      <div style="background:#f8f4f0;border-radius:8px;padding:16px;margin:20px 0;">
+        <p style="margin:0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Sign-in time</p>
+        <p style="margin:6px 0 0;font-size:16px;font-weight:bold;color:#1e293b;">{when}</p>
+      </div>
+      <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:20px 0;">
+        <p style="margin:0;color:#92400e;font-size:13px;line-height:1.6;">
+          🛡️ <strong>Wasn't you?</strong> Reset your password immediately and contact
+          <a href="mailto:{SUPPORT_EMAIL}" style="color:#e11d48;">{SUPPORT_EMAIL}</a>.
+        </p>
+      </div>
+      {_btn("View Account →", f"{STORE_URL}/account")}
+    """)
+    _bg(email, f"New sign-in to your {STORE_NAME} account", html)
+
+
 # ── 10. Password reset OTP email ──────────────────────────────────────────────
 def send_password_reset_otp_email(email: str, name: str, otp: str):
     first = name.split()[0]
