@@ -481,14 +481,60 @@ def test_notification(to: str = "", type: str = "welcome"):
 def test_email(to: str = ""):
     """
     Diagnostic endpoint — tests email delivery and returns the exact result.
-    Uses SendGrid HTTP API (works on Render). Falls back to SMTP.
+    Tries Brevo first, then SendGrid, then reports SMTP status.
     Usage: GET /test-email?to=youremail@gmail.com
     """
     import json as _json, urllib.request as _req, urllib.error as _uerr
 
+    brevo_key  = os.getenv("BREVO_API_KEY", "")
     sg_key     = os.getenv("SENDGRID_API_KEY", "")
     smtp_email = os.getenv("SMTP_EMAIL", "")
     target     = to.strip() if to.strip() else smtp_email or "kumaragurubaran27102@gmail.com"
+
+    # ── Test via Brevo ───────────────────────────────────────────────────────────
+    if brevo_key:
+        from_email = smtp_email or "noreply@vijeytextile.com"
+        payload = _json.dumps({
+            "sender": {"name": "Vijey Textile", "email": from_email},
+            "to": [{"email": target}],
+            "subject": "✅ Vijey Textile — Email Test (Brevo)",
+            "htmlContent": (
+                "<h2 style='color:#6d28d9'>Email delivery is working! ✅</h2>"
+                "<p>This test email was sent from the Vijey Textile backend on Render "
+                "using Brevo. If you're reading this, emails (OTPs, order confirmations, etc.) "
+                "are now working correctly.</p>"
+                "<p style='color:#888;font-size:12px;'>Sent from vijey-textile.onrender.com</p>"
+            ),
+        }).encode()
+        try:
+            request = _req.Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=payload,
+                headers={"api-key": brevo_key, "Content-Type": "application/json", "Accept": "application/json"},
+            )
+            with _req.urlopen(request, timeout=15) as resp:
+                return {
+                    "status":  "success",
+                    "method":  "Brevo",
+                    "message": f"Test email sent to {target}. Check inbox + spam folder.",
+                    "from":    from_email,
+                    "to":      target,
+                    "http_status": resp.status,
+                }
+        except _uerr.HTTPError as e:
+            body = e.read().decode(errors="ignore")
+            return {
+                "status":  "error",
+                "method":  "Brevo",
+                "type":    f"HTTP {e.code}",
+                "message": body,
+                "hint":    (
+                    "Common causes: (1) API key is wrong/expired — check app.brevo.com/settings/keys/api, "
+                    "(2) Sender email not verified — go to app.brevo.com → Senders, Domains & Dedicated IPs."
+                ),
+            }
+        except Exception as e:
+            return {"status": "error", "method": "Brevo", "type": type(e).__name__, "message": str(e)}
 
     # ── Test via SendGrid ──────────────────────────────────────────────────────
     if sg_key:
@@ -538,16 +584,16 @@ def test_email(to: str = ""):
         except Exception as e:
             return {"status": "error", "method": "SendGrid", "type": type(e).__name__, "message": str(e)}
 
-    # ── No SendGrid key — report setup instructions ────────────────────────────
+    # ── No Brevo/SendGrid key — report setup instructions ──────────────────────
     return {
         "status":  "not_configured",
         "message": (
-            "SENDGRID_API_KEY is not set. "
-            "Render free tier blocks SMTP ports, so SendGrid is required. "
-            "Steps: (1) Sign up free at sendgrid.com, "
-            "(2) Settings → Sender Authentication → Single Sender → verify your Gmail, "
-            "(3) Settings → API Keys → Create API Key → Full Access, "
-            "(4) Add SENDGRID_API_KEY to Render environment variables."
+            "Neither BREVO_API_KEY nor SENDGRID_API_KEY is set. "
+            "Render free tier blocks SMTP ports, so one of these is required. "
+            "Steps: (1) Sign up free at brevo.com (300 emails/day, no card needed), "
+            "(2) Senders, Domains & Dedicated IPs → add + verify your sender email, "
+            "(3) Settings → SMTP & API → API Keys → Generate a new API key, "
+            "(4) Add BREVO_API_KEY to Render environment variables."
         ),
         "smtp_email_set": bool(smtp_email),
     }

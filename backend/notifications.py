@@ -30,14 +30,45 @@ YEAR          = datetime.now().year
 # ── Low-level send (runs in background thread so API never blocks) ─────────────
 def _send_email(to: str, subject: str, html: str):
     """
-    Tries SendGrid HTTP API first (works on Render — no port blocking).
-    Falls back to Gmail SMTP only if SENDGRID_API_KEY is not set.
+    Tries Brevo HTTP API first (free tier, works on Render — no port blocking).
+    Falls back to SendGrid if BREVO_API_KEY is not set, then Gmail SMTP if
+    neither is configured.
     """
     import json as _json, urllib.request as _req, urllib.error as _uerr
 
-    sg_key = os.getenv("SENDGRID_API_KEY", "")
+    brevo_key = os.getenv("BREVO_API_KEY", "")
+    sg_key    = os.getenv("SENDGRID_API_KEY", "")
 
-    # ── Path A: SendGrid (recommended on Render) ───────────────────────────────
+    # ── Path A: Brevo (recommended — free tier, no card required) ──────────────
+    if brevo_key:
+        from_email = SMTP_EMAIL or "noreply@vijeytextile.com"
+        payload = _json.dumps({
+            "sender":      {"name": STORE_NAME, "email": from_email},
+            "to":          [{"email": to}],
+            "replyTo":     {"email": SUPPORT_EMAIL},
+            "subject":     subject,
+            "htmlContent": html,
+        }).encode()
+        try:
+            request = _req.Request(
+                "https://api.brevo.com/v3/smtp/email",
+                data=payload,
+                headers={
+                    "api-key":      brevo_key,
+                    "Content-Type": "application/json",
+                    "Accept":       "application/json",
+                },
+            )
+            with _req.urlopen(request, timeout=15) as resp:
+                print(f"[Email SENT ✓ Brevo {resp.status}] {subject} → {to}")
+        except _uerr.HTTPError as e:
+            body = e.read().decode(errors="ignore")
+            print(f"[Email Brevo HTTP {e.code}] {subject} → {to} | {body}")
+        except Exception as e:
+            print(f"[Email Brevo ERROR] {type(e).__name__}: {e}")
+        return  # never fall through when Brevo key is set
+
+    # ── Path B: SendGrid (fallback) ─────────────────────────────────────────────
     if sg_key:
         from_email = SMTP_EMAIL or "noreply@vijeytextile.com"
         # Plain-text version strips HTML tags for multipart — improves deliverability
@@ -83,9 +114,9 @@ def _send_email(to: str, subject: str, html: str):
             print(f"[Email SendGrid ERROR] {type(e).__name__}: {e}")
         return  # never fall through to SMTP when API key is set
 
-    # ── Path B: Gmail SMTP (blocked on Render free tier — local dev only) ──────
+    # ── Path C: Gmail SMTP (blocked on Render free tier — local dev only) ──────
     if not SMTP_EMAIL or not SMTP_PASS:
-        print(f"[Email SKIP — no SendGrid key and no SMTP config] {subject} → {to}")
+        print(f"[Email SKIP — no Brevo/SendGrid key and no SMTP config] {subject} → {to}")
         return
     try:
         msg = MIMEMultipart("alternative")
