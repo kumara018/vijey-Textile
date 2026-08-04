@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  CreditCard, Smartphone, AlertCircle, CheckCircle,
+  CreditCard, AlertCircle, CheckCircle,
   Lock, Package, ArrowLeft, MapPin, Navigation, Plus, Star, CalendarDays,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -22,7 +22,7 @@ const INDIA_STATES = [
   'Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry',
 ];
 
-type PayMethod = 'razorpay' | 'upi' | 'emi';
+type PayMethod = 'razorpay' | 'emi';
 interface Errors { [k: string]: string; }
 
 function FieldErr({ msg }: { msg?: string }) {
@@ -110,8 +110,6 @@ export default function CheckoutPage() {
   });
   const [addrErrors, setAddrErrors] = useState<Errors>({});
   const [payMethod, setPayMethod] = useState<PayMethod>('razorpay');
-  const [upiId, setUpiId]         = useState('');
-  const [payErrors, setPayErrors] = useState<Errors>({});
 
   // Use GPS to fill address
   const detectLocation = () => {
@@ -166,29 +164,17 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  const validatePayment = (): boolean => {
-    const e: Errors = {};
-    if (payMethod === 'upi') {
-      if (!upiId.trim()) e.upi = 'UPI ID is required';
-      else if (!/^[\w.\-_]{3,}@[a-zA-Z]{3,}$/.test(upiId.trim()))
-        e.upi = 'Enter a valid UPI ID (e.g. name@upi or 9876543210@paytm)';
-    }
-    setPayErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
   const handleAddrNext = () => {
     if (validateAddr()) setStep(2);
     else toast.error('Please fill all required address fields correctly');
   };
 
-  const handlePayNext = () => {
-    if (validatePayment()) setStep(3);
-    else toast.error('Please enter a valid UPI ID');
-  };
+  const handlePayNext = () => setStep(3);
 
-  // ── Place COD / UPI order directly ──
-  const placeDirectOrder = async (method: string, extraPayment = {}) => {
+  // ── Finalize the order — only ever called after Razorpay confirms payment ──
+  const finalizeOrder = async (method: string, paymentProof: {
+    razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string;
+  }) => {
     setPlacing(true);
     try {
       const res = await ordersAPI.place({
@@ -201,7 +187,7 @@ export default function CheckoutPage() {
           state:        addr.state,
           pincode:      addr.pincode.trim(),
         },
-        payment: { method, upi_id: upiId.trim() || undefined, ...extraPayment },
+        payment: { method, ...paymentProof },
         open_box_delivery: openBox,
       });
       await clearCart();
@@ -235,15 +221,16 @@ export default function CheckoutPage() {
         },
         theme: { color: '#e11d48' },
         handler: async (response: any) => {
+          const paymentProof = {
+            razorpay_order_id:   response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature:  response.razorpay_signature,
+          };
           try {
-            await api.post('/api/payments/verify', {
-              razorpay_order_id:   response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature:  response.razorpay_signature,
-            });
-            await placeDirectOrder(isEmi ? 'emi' : 'razorpay', {
-              razorpay_payment_id: response.razorpay_payment_id,
-            });
+            await api.post('/api/payments/verify', paymentProof);
+            // Order is only ever created after this — the backend independently
+            // re-verifies the same signature before writing anything to the DB.
+            await finalizeOrder(isEmi ? 'emi' : 'razorpay', paymentProof);
           } catch {
             toast.error('Payment verification failed. Contact support.');
             setPlacing(false);
@@ -267,12 +254,11 @@ export default function CheckoutPage() {
   const handleRazorpay = async () => openRazorpay(false);
 
   const handlePlaceOrder = async () => {
-    if (!validateAddr() || !validatePayment()) {
+    if (!validateAddr()) {
       toast.error('Please complete all required fields'); return;
     }
-    if (payMethod === 'razorpay') { await handleRazorpay(); return; }
     if (payMethod === 'emi') { await openRazorpay(true); return; }
-    await placeDirectOrder('upi');
+    await handleRazorpay();
   };
 
   const StepDot = ({ n, label }: { n: number; label: string }) => (
@@ -417,11 +403,10 @@ export default function CheckoutPage() {
                 <span className="ml-auto text-xs text-green-600 flex items-center gap-1"><Lock size={11} /> 100% Secure</span>
               </h2>
 
-              <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="grid grid-cols-2 gap-3 mb-6">
                 {([
-                  { val: 'razorpay', icon: CreditCard,    label: 'Card / Net Banking', sub: 'Visa • Master • UPI' },
-                  { val: 'emi',      icon: CalendarDays,  label: 'Pay in EMI',         sub: 'No-cost EMI available' },
-                  { val: 'upi',      icon: Smartphone,    label: 'UPI Direct',         sub: 'PhonePe • GPay • Paytm' },
+                  { val: 'razorpay', icon: CreditCard,    label: 'Card / UPI / Net Banking', sub: 'Visa • Master • UPI • Wallets' },
+                  { val: 'emi',      icon: CalendarDays,  label: 'Pay in EMI',               sub: 'No-cost EMI available' },
                 ] as const).map(({ val, icon: Icon, label, sub }) => (
                   <button key={val} onClick={() => { setPayMethod(val); setPayErrors({}); }}
                     className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 text-sm font-medium transition-all ${payMethod === val ? 'border-maroon-800 bg-maroon-50 text-maroon-800' : 'border-gray-200 text-gray-600 hover:border-maroon-300'}`}>
@@ -459,31 +444,11 @@ export default function CheckoutPage() {
                   {grandTotal < 1000 ? (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
                       <p className="text-xs text-orange-700 font-semibold">⚠️ Your order total is ₹{grandTotal}. EMI requires a minimum order of ₹1,000.</p>
-                      <p className="text-xs text-orange-600 mt-1">You can still pay via Card or UPI below.</p>
+                      <p className="text-xs text-orange-600 mt-1">You can still pay via Card / UPI using the option above.</p>
                     </div>
                   ) : (
                     <p className="text-xs text-purple-500 flex items-center gap-1"><Lock size={11} /> EMI options will appear in the payment screen. Requires a Credit Card.</p>
                   )}
-                </div>
-              )}
-
-              {/* UPI form */}
-              {payMethod === 'upi' && (
-                <div className="space-y-3">
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700">
-                    Supported: PhonePe, Google Pay, Paytm, BHIM, Amazon Pay & more.
-                  </div>
-                  <div>
-                    <label className="label">UPI ID *</label>
-                    <input type="text" value={upiId} onChange={e => { setUpiId(e.target.value); setPayErrors({}); }}
-                      placeholder="name@upi or 9876543210@paytm"
-                      className={`input-field ${payErrors.upi ? 'input-error' : ''}`} />
-                    <p className="text-xs text-gray-400 mt-1">e.g. ramesh@okicici, 9876543210@paytm</p>
-                    <FieldErr msg={payErrors.upi} />
-                    {upiId && /^[\w.\-_]{3,}@[a-zA-Z]{3,}$/.test(upiId.trim()) && (
-                      <p className="text-xs text-green-600 mt-1 flex items-center gap-1"><CheckCircle size={12} /> Valid UPI ID</p>
-                    )}
-                  </div>
                 </div>
               )}
 
@@ -525,7 +490,6 @@ export default function CheckoutPage() {
                     <p className="font-semibold text-gray-800 flex items-center gap-2">
                       {payMethod === 'razorpay' && <><CreditCard size={16} /> Razorpay (Card / Net Banking / UPI)</>}
                       {payMethod === 'emi'      && <><CalendarDays size={16} /> EMI — Pay in Instalments</>}
-                      {payMethod === 'upi'      && <><Smartphone size={16} /> UPI: {upiId}</>}
                     </p>
                   </div>
                   <button onClick={() => setStep(2)} className="text-sm text-maroon-700 hover:underline font-medium">Edit</button>
@@ -568,7 +532,7 @@ export default function CheckoutPage() {
                   className="btn-gold flex-1 py-3.5 flex items-center justify-center gap-2 text-base font-bold rounded-xl">
                   {placing
                     ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Processing...</>
-                    : <><Lock size={18} /> {payMethod === 'razorpay' ? 'Pay with Razorpay' : payMethod === 'emi' ? 'Choose EMI Plan' : 'Place Order'} · ₹{grandTotal.toLocaleString()}</>
+                    : <><Lock size={18} /> {payMethod === 'razorpay' ? 'Pay with Razorpay' : 'Choose EMI Plan'} · ₹{grandTotal.toLocaleString()}</>
                   }
                 </button>
               </div>

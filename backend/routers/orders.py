@@ -1,5 +1,8 @@
 import random
 import string
+import os
+import hmac
+import hashlib
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,6 +11,33 @@ from database import get_db
 import models, schemas, auth as auth_utils, notifications
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
+
+
+def _verify_razorpay_payment(payment: schemas.PaymentDetails):
+    """
+    Cryptographically verify the payment actually succeeded before an order
+    is allowed to be created. Every accepted payment method (razorpay, upi,
+    emi) is processed through Razorpay's checkout, so all three carry the
+    same order_id/payment_id/signature triple to check here.
+    """
+    if not (payment.razorpay_order_id and payment.razorpay_payment_id and payment.razorpay_signature):
+        raise HTTPException(
+            status_code=400,
+            detail="Payment not completed. Please complete payment before placing your order.",
+        )
+    razorpay_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
+    if not razorpay_secret:
+        raise HTTPException(status_code=503, detail="Payment gateway not configured")
+    expected_signature = hmac.new(
+        razorpay_secret.encode(),
+        f"{payment.razorpay_order_id}|{payment.razorpay_payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected_signature, payment.razorpay_signature):
+        raise HTTPException(
+            status_code=400,
+            detail="Payment verification failed. Invalid signature — order not placed.",
+        )
 
 
 def generate_order_number() -> str:
@@ -63,6 +93,10 @@ def place_order(
             "is_returnable": getattr(product, "is_returnable", True),
         })
 
+    # Payment must be verified BEFORE any order/stock mutation — no order is
+    # ever created on an unverified or missing payment.
+    _verify_razorpay_payment(payload.payment)
+
     shipping_fee = 49.0
     total = subtotal + shipping_fee
 
@@ -70,11 +104,7 @@ def place_order(
     while db.query(models.Order).filter(models.Order.order_number == order_number).first():
         order_number = generate_order_number()
 
-    # Use the real Razorpay payment ID (pay_xxx) if provided by frontend
-    transaction_id = (
-        payload.payment.razorpay_payment_id
-        or f"TXN{''.join(random.choices(string.digits, k=12))}"
-    )
+    transaction_id = payload.payment.razorpay_payment_id
     payment_status = "paid"
 
     order = models.Order(
@@ -109,8 +139,7 @@ def place_order(
     notifications.send_order_confirmation_email(current_user.email, current_user.full_name, order)
     notifications.send_order_sms(current_user.phone, order.order_number, order.total)
     notifications.send_order_whatsapp(current_user.phone, current_user.full_name, order, items_snapshot)
-    if order.payment_method != "cod":
-        notifications.send_payment_success_email(current_user.email, current_user.full_name, order)
+    notifications.send_payment_success_email(current_user.email, current_user.full_name, order)
 
     return order
 
