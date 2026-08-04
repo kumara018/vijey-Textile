@@ -239,7 +239,6 @@ export default function AdminPage() {
   const [supportRatings, setSupportRatings] = useState<any[]>([]);
   const [returns, setReturns] = useState<any[]>([]);
   const [admins, setAdmins] = useState<any[]>([]);
-  const [newAdminEmail, setNewAdminEmail] = useState('');
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   const [expandedReturn, setExpandedReturn] = useState<number | null>(null);
   const [returnUpdateForm, setReturnUpdateForm] = useState<Record<number, { status: string; admin_notes: string }>>({});
@@ -325,19 +324,6 @@ export default function AdminPage() {
       const res = await api.get('/api/admin/admins');
       setAdmins(res.data);
     } catch { toast.error('Failed to load admin accounts'); }
-  };
-
-  const grantAdmin = async () => {
-    if (!newAdminEmail.trim()) return toast.error('Enter an email address');
-    setAdminActionLoading(true);
-    try {
-      const res = await api.post('/api/admin/users/grant-admin', { email: newAdminEmail.trim().toLowerCase() });
-      toast.success(res.data.message);
-      setNewAdminEmail('');
-      loadAdmins();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to grant admin access');
-    } finally { setAdminActionLoading(false); }
   };
 
   const revokeAdmin = async (userId: number, email: string) => {
@@ -1036,7 +1022,6 @@ export default function AdminPage() {
                   <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Joined</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Admin Access</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-orange-50">
@@ -1051,23 +1036,6 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-gray-500 text-xs">{new Date(u.created_at).toLocaleDateString('en-IN')}</td>
                     <td className="px-4 py-3">
                       <span className={u.is_active ? 'badge-success' : 'badge-danger'}>{u.is_active ? 'Active' : 'Blocked'}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={async () => {
-                          if (!confirm(`Grant admin access to ${u.full_name} (${u.email})?`)) return;
-                          try {
-                            const res = await api.post('/api/admin/users/grant-admin', { email: u.email });
-                            toast.success(res.data.message);
-                            loadUsers();
-                          } catch (err: any) {
-                            toast.error(err?.response?.data?.detail || 'Failed to grant admin access');
-                          }
-                        }}
-                        className="text-xs bg-maroon-100 hover:bg-maroon-200 text-maroon-800 font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        🔐 Make Admin
-                      </button>
                     </td>
                   </tr>
                 ))}
@@ -1354,31 +1322,6 @@ export default function AdminPage() {
       {/* Admin Accounts Tab */}
       {tab === 'admins' && (
         <div className="space-y-6">
-          {/* Grant Admin Access */}
-          <div className="bg-white rounded-2xl shadow-sm border border-orange-100 p-6">
-            <h2 className="text-lg font-bold text-maroon-900 mb-1">Grant Admin Access</h2>
-            <p className="text-sm text-gray-500 mb-4">
-              The person must already have a registered account on vijeytextile.com. Enter their email to promote them to admin.
-            </p>
-            <div className="flex gap-3 flex-wrap">
-              <input
-                type="email"
-                value={newAdminEmail}
-                onChange={e => setNewAdminEmail(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && grantAdmin()}
-                placeholder="Enter registered email address..."
-                className="input-field flex-1 min-w-[260px]"
-              />
-              <button
-                onClick={grantAdmin}
-                disabled={adminActionLoading}
-                className="btn-primary px-6 disabled:opacity-60"
-              >
-                {adminActionLoading ? 'Adding...' : '+ Grant Admin Access'}
-              </button>
-            </div>
-          </div>
-
           {/* Current Admins List */}
           <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-orange-50 flex items-center justify-between">
@@ -1438,9 +1381,9 @@ export default function AdminPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
             <p className="font-semibold mb-1">ℹ️ How it works</p>
             <ul className="list-disc list-inside space-y-1 text-amber-700">
-              <li>All admin accounts have full dashboard access — same as the primary admin</li>
-              <li>The person must first register on vijeytextile.com before you can grant access</li>
-              <li>The primary admin account (<strong>admin@vijeytextile.com</strong>) cannot be revoked</li>
+              <li>This store runs on a single admin account (<strong>admin@vijeytextile.com</strong>) by design — there's no way to grant admin access from this dashboard</li>
+              <li>A second admin can only be added by a code/database change on the backend, never through the UI</li>
+              <li>The primary admin account cannot be revoked</li>
               <li>Revoked accounts return to regular customer accounts automatically</li>
             </ul>
           </div>

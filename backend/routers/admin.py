@@ -362,30 +362,6 @@ def get_all_admins(
     ]
 
 
-@router.post("/users/grant-admin")
-def grant_admin_access(
-    payload: dict,
-    db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_admin),
-):
-    """Grant admin access to an existing user by email."""
-    email = (payload.get("email") or "").strip().lower()
-    if not email:
-        raise HTTPException(400, "Email is required")
-    user = db.query(models.User).filter(models.User.email == email).first()
-    if not user:
-        raise HTTPException(404, f"No registered user found with email: {email}. The person must sign up first.")
-    if user.is_admin:
-        raise HTTPException(400, "This user already has admin access")
-    user.is_admin = True
-    db.commit()
-    # Notify the new admin by email and WhatsApp
-    notifications.send_admin_access_email(user.email, user.full_name)
-    if user.phone:
-        notifications.send_admin_access_whatsapp(user.phone, user.full_name)
-    return {"message": f"✅ Admin access granted to {user.full_name} ({email})", "user_id": user.id}
-
-
 @router.patch("/users/{user_id}/revoke-admin")
 def revoke_admin_access(
     user_id: int,
