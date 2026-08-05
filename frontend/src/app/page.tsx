@@ -135,51 +135,67 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* Hero — "Floating Heirloom": centered, symmetric, museum-case composition */}
-      <section className="relative min-h-[88vh] flex flex-col items-center justify-center text-center overflow-hidden bg-maroon-50 border-b border-maroon-200 px-6 py-10">
+      {/* Hero — "Heirloom Locket": full-bleed diagonal split, mirrored from Ammalu Tex's
+          layout (locket left / copy right, opposite angle) so both sites read as siblings
+          without either one carrying dead space on the sides. */}
+      <section className="relative min-h-[86vh] flex flex-col overflow-hidden border-b border-maroon-200">
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(80% 60% at 50% 30%, rgba(168,118,63,0.14), transparent 65%)' }}
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(100deg, #f4ede1 0%, #f4ede1 46%, rgba(168,118,63,0.18) 46.4%, #faf7f2 100%)',
+          }}
+        />
+        {/* Diagonal divider only makes sense once the layout actually splits left/right — md+ only */}
+        <div
+          className="hidden md:block absolute top-[-10%] bottom-[-10%] left-[45.6%] w-[2px]"
+          style={{
+            background: 'linear-gradient(180deg, transparent, #a8763f 30%, #a8763f 70%, transparent)',
+            transform: 'rotate(-11deg)', transformOrigin: 'top',
+            boxShadow: '0 0 24px 1px rgba(168,118,63,0.5)',
+          }}
         />
 
-        <motion.p
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-          className="relative text-[13px] font-bold tracking-[0.36em] uppercase text-maroon-500 mb-2"
-        >
-          Vijey Textile
-        </motion.p>
-        <div className="relative w-8 h-px bg-gold-500 mb-10" />
+        <div className="relative z-10 pt-16 md:pt-24 px-6 md:px-12 flex justify-center md:justify-end">
+          <p className="text-[12px] font-bold tracking-[0.16em] uppercase text-maroon-500 max-w-[240px] text-center md:text-right">
+            Baby Frocks · Chudithar · Frocks · Lehenga
+          </p>
+        </div>
 
-        {/* Real 3D hero moment */}
-        <div className="relative w-full mb-6" style={{ maxWidth: 'min(78vw, 460px)', height: 'min(46vh, 460px)' }}>
+        {/* Real 3D hero moment — normal flow + centered on mobile (avoids overlapping the
+            copy below), absolute + mirrored-left on desktop to match Ammalu's fullness */}
+        <div className="relative md:absolute md:z-[2] md:top-[14%] md:left-[6%] w-full md:w-[min(40vw,420px)] h-[280px] md:h-[56vh] mt-6 md:mt-0 px-10 md:px-0 mx-auto md:mx-0">
           <Hero3D />
         </div>
 
-        <motion.h1
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-          className="relative font-display font-black leading-[1.04] tracking-tight text-maroon-900 max-w-3xl mb-5"
-          style={{ fontSize: 'clamp(2.3rem, 6vw, 4.5rem)' }}
-        >
-          Heirloom pieces,<br />
-          <span className="text-gold-500">worn once, remembered always.</span>
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-          className="relative max-w-md text-maroon-500 font-medium mb-9 leading-relaxed"
-        >
-          Every stitch reviewed by hand before it leaves Erode — a capsule built for the moments you&apos;ll photograph for years.
-        </motion.p>
-        <motion.div
-          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.3 }}
-          className="relative flex flex-wrap justify-center gap-4"
-        >
-          <Link href="/products" className="btn-primary inline-flex items-center gap-2">
-            Shop Now <ArrowRight size={18} />
-          </Link>
-          <Link href="/products?featured=true" className="inline-flex items-center gap-2 font-semibold py-2.5 px-6 rounded-lg border-2 border-maroon-800 text-maroon-900 hover:bg-maroon-100 transition-all duration-200 active:scale-95">
-            View Featured
-          </Link>
-        </motion.div>
+        <div className="relative z-10 px-6 md:px-12 pb-16 md:pb-20 mt-8 md:mt-auto flex justify-center md:justify-end">
+          <div className="max-w-xl text-center md:text-left">
+            <motion.h1
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
+              className="font-display font-black leading-[0.95] tracking-tight text-maroon-900 mb-6"
+              style={{ fontSize: 'clamp(2.4rem, 7.5vw, 5.5rem)' }}
+            >
+              Heirloom pieces,<br />
+              <span className="text-gold-500">worn once, remembered always.</span>
+            </motion.h1>
+            <motion.p
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
+              className="max-w-md mx-auto md:mx-0 text-maroon-500 font-medium mb-8 leading-relaxed"
+            >
+              Every stitch reviewed by hand before it leaves Erode — a capsule built for the moments you&apos;ll photograph for years.
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
+              className="flex flex-wrap gap-4 justify-center md:justify-start"
+            >
+              <Link href="/products" className="btn-primary inline-flex items-center gap-2">
+                Shop Now <ArrowRight size={18} />
+              </Link>
+              <Link href="/products?featured=true" className="inline-flex items-center gap-2 font-semibold py-2.5 px-6 rounded-lg border-2 border-maroon-800 text-maroon-900 hover:bg-maroon-100 transition-all duration-200 active:scale-95">
+                View Featured
+              </Link>
+            </motion.div>
+          </div>
+        </div>
       </section>
 
       {/* Features bar — each tile is a clickable link */}
