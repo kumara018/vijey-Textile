@@ -30,9 +30,7 @@ export const STORE = {
   shippingFee: 49,
 
   // ── Social Media ─────────────────────────────────
-  facebook:    'https://facebook.com/vijeytextile',
   instagram:   'https://instagram.com/grandtreatforgirls',
-  twitter:     'https://x.com/vijeytextile',
 
   // ── Google Maps ───────────────────────────────────
   googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Texvalley+Gangapuram+Erode+Tamil+Nadu',

@@ -1,17 +1,9 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MapPin, Phone, Mail, Facebook, Instagram, MessageCircle, MapIcon } from 'lucide-react';
+import { MapPin, Phone, Mail, Instagram, MessageCircle, MapIcon } from 'lucide-react';
 import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL, CALL_URL2 } from '@/lib/config';
 import { LogoMark } from './Logo';
-
-function XIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.259 5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-    </svg>
-  );
-}
 
 const SHOP_CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 
@@ -50,17 +42,9 @@ export default function Footer() {
                 className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title={`WhatsApp: ${STORE.phone2}`}>
                 <MessageCircle size={16} />
               </a>
-              <a href={STORE.facebook} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-maroon-800 hover:bg-blue-700 rounded-lg transition-colors" title="Facebook">
-                <Facebook size={16} />
-              </a>
               <a href={STORE.instagram} target="_blank" rel="noopener noreferrer"
                 className="p-2 bg-maroon-800 hover:bg-pink-600 rounded-lg transition-colors" title="Instagram">
                 <Instagram size={16} />
-              </a>
-              <a href={STORE.twitter} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-maroon-800 hover:bg-gray-600 rounded-lg transition-colors" title="X (Twitter)">
-                <XIcon size={16} />
               </a>
             </div>
           </div>
