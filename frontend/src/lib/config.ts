@@ -31,7 +31,7 @@ export const STORE = {
 
   // ── Social Media ─────────────────────────────────
   facebook:    'https://facebook.com/vijeytextile',
-  instagram:   'https://instagram.com/vijeytextile',
+  instagram:   'https://instagram.com/grandtreatforgirls',
   twitter:     'https://x.com/vijeytextile',
 
   // ── Google Maps ───────────────────────────────────
