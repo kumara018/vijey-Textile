@@ -470,7 +470,7 @@ def request_deactivate_account(
 ):
     """Send OTP to confirm temporary account deactivation (7-day soft suspend)."""
     otp = _create_otp(db, current_user.email, otp_type="deactivate")
-    notifications.send_deletion_otp_email(current_user.email, current_user.full_name, otp)
+    notifications.send_deletion_otp_email(current_user.email, current_user.full_name, otp, window_text="7 days")
     hint = current_user.email[:3] + "***@" + current_user.email.split("@")[-1]
     return {
         "message": "OTP sent to your email to confirm temporary deactivation.",

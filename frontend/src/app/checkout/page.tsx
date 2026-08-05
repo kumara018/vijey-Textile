@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -44,8 +44,14 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [openBox, setOpenBox] = useState(false);
 
+  // Set synchronously the instant an order is confirmed — clearCart() empties
+  // `items`, which would otherwise race this effect's redirect-to-cart branch
+  // and bounce a customer who just paid back to an empty cart page.
+  const orderPlacedRef = useRef(false);
+
   useEffect(() => {
     if (authLoading || !user) return;
+    if (orderPlacedRef.current) return;
     if (items.length === 0) { router.push('/cart'); return; }
     // Load Razorpay script
     const script = document.createElement('script');
@@ -190,6 +196,7 @@ export default function CheckoutPage() {
         payment: { method, ...paymentProof },
         open_box_delivery: openBox,
       });
+      orderPlacedRef.current = true;
       await clearCart();
       toast.success('Order placed successfully!');
       router.push(`/orders/${res.data.id}?new=1`);

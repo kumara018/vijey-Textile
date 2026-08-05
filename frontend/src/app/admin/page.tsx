@@ -276,37 +276,43 @@ export default function AdminPage() {
     try {
       const res = await adminAPI.dashboard();
       setDash(res.data);
-    } catch {} finally { setLoading(false); }
+    } catch { toast.error('Failed to load dashboard. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const loadProducts = async () => {
     setLoading(true);
     try { const res = await adminAPI.getProducts(); setProducts(res.data); }
-    catch {} finally { setLoading(false); }
+    catch { toast.error('Failed to load products. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const loadOrders = async () => {
     setLoading(true);
     try { const res = await adminAPI.getOrders(); setOrders(res.data); }
-    catch {} finally { setLoading(false); }
+    catch { toast.error('Failed to load orders. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const loadUsers = async () => {
     setLoading(true);
     try { const res = await adminAPI.getUsers(); setUsers(res.data); }
-    catch {} finally { setLoading(false); }
+    catch { toast.error('Failed to load users. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const loadSupportRatings = async () => {
     setLoading(true);
     try { const res = await adminAPI.getSupportRatings(); setSupportRatings(res.data); }
-    catch {} finally { setLoading(false); }
+    catch { toast.error('Failed to load support ratings. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const loadReturns = async () => {
     setLoading(true);
     try { const res = await adminReturnsAPI.getAll(); setReturns(res.data); }
-    catch {} finally { setLoading(false); }
+    catch { toast.error('Failed to load returns. Please refresh and try again.'); }
+    finally { setLoading(false); }
   };
 
   const handleToggleFeatured = async (p: any) => {

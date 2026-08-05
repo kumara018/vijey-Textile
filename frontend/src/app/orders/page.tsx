@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle } from 'lucide-react';
+import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { ordersAPI } from '@/lib/api';
 import { Order } from '@/types';
 import { useAuth } from '@/context/AuthContext';
@@ -39,16 +39,25 @@ export default function OrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await ordersAPI.getAll();
+      setOrders(res.data);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading || !user) return;
-    const load = async () => {
-      try {
-        const res = await ordersAPI.getAll();
-        setOrders(res.data);
-      } catch {} finally { setLoading(false); }
-    };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading]);
 
   if (authLoading || !user) return null;
@@ -68,6 +77,17 @@ export default function OrdersPage() {
           </div>
         </div>
       ))}
+    </div>
+  );
+
+  if (error) return (
+    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+      <AlertCircle size={80} className="mx-auto text-red-200 mb-6" />
+      <h2 className="text-2xl font-bold text-gray-800 mb-3">Couldn&apos;t load your orders</h2>
+      <p className="text-gray-500 mb-8">Something went wrong on our end. Please try again.</p>
+      <button onClick={load} className="btn-primary inline-flex items-center gap-2">
+        <RefreshCw size={16} /> Try Again
+      </button>
     </div>
   );
 

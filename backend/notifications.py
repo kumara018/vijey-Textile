@@ -440,7 +440,12 @@ def send_review_request_email(email: str, name: str, order):
 
 
 # ── 7. Account deletion OTP ────────────────────────────────────────────────────
-def send_deletion_otp_email(email: str, name: str, otp: str):
+def send_deletion_otp_email(email: str, name: str, otp: str, window_text: str = None):
+    """Shared by both the permanent-deletion request (real window: DELETE_HOURS)
+    and the temporary-deactivation request (real window: 7 days) — window_text
+    must reflect whichever flow is actually calling this."""
+    if window_text is None:
+        window_text = f"{DELETE_HOURS} hours"
     first = name.split()[0]
     html = _wrap(f"""
       <h2 style="color:#dc2626;margin-top:0;font-size:22px;">⚠️ Account Deletion Request</h2>
@@ -454,10 +459,10 @@ def send_deletion_otp_email(email: str, name: str, otp: str):
       </div>
       <div style="background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:16px;margin:20px 0;">
         <p style="margin:0;color:#92400e;font-weight:bold;font-size:14px;">
-          ⏳ Your account will be permanently deleted after 24 hours.
+          ⏳ Your account will be permanently deleted after {window_text}.
         </p>
         <p style="margin:8px 0 0;color:#92400e;font-size:13px;">
-          To cancel: simply log in to your account within 24 hours.
+          To cancel: simply log in to your account within {window_text}.
         </p>
       </div>
       <p style="color:#888;font-size:13px;">
@@ -468,7 +473,9 @@ def send_deletion_otp_email(email: str, name: str, otp: str):
 
 
 # ── 8. Deletion scheduled (4-hour countdown) ──────────────────────────────────
-DELETE_HOURS = 4   # single source of truth — change here to adjust the window
+DELETE_HOURS = 24   # single source of truth — change here to adjust the window.
+                     # Must match the "24 hours" hardcoded in send_deletion_otp_email
+                     # below and in frontend/src/app/account/delete/page.tsx.
 
 def send_deletion_scheduled_email(email: str, name: str, delete_at):
     first = name.split()[0]

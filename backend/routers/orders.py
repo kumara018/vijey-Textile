@@ -48,6 +48,38 @@ def generate_order_number() -> str:
     return f"VJT-{suffix}"
 
 
+def _refund_uncredited_payment(payment_id: str, reason: str):
+    """Razorpay auto-captures payment inside the checkout widget, before this
+    endpoint is ever called — so if we discover here that the order can't
+    actually be fulfilled (e.g. stock ran out in the race between checkout
+    and payment), the customer has already been charged. Refund it rather
+    than leaving them charged with no order. Fetches the exact captured
+    amount from Razorpay itself so it can never mismatch what was taken."""
+    key_id     = os.getenv("RAZORPAY_KEY_ID", "")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
+    if not key_id or not key_secret:
+        print(f"[Razorpay] ⚠️ REFUND SKIPPED (no keys) — payment {payment_id} "
+              f"must be refunded MANUALLY. Reason: {reason}")
+        return None
+    try:
+        import razorpay as _rp
+        client = _rp.Client(auth=(key_id, key_secret))
+        captured = client.payment.fetch(payment_id)
+        amount = captured.get("amount")
+        if not amount:
+            print(f"[Razorpay] ❌ Could not fetch captured amount for {payment_id} — refund skipped.")
+            return None
+        refund = client.payment.refund(payment_id, {
+            "amount": amount, "speed": "normal", "notes": {"reason": reason},
+        })
+        refund_id = refund.get("id", "initiated")
+        print(f"[Razorpay] ✅ Refund {refund_id} initiated for undeliverable order — payment {payment_id}")
+        return refund_id
+    except Exception as e:
+        print(f"[Razorpay] ❌ Refund FAILED for payment {payment_id}: {e}")
+        return None
+
+
 @router.post("/", response_model=schemas.OrderOut, status_code=status.HTTP_201_CREATED)
 def place_order(
     payload: schemas.OrderCreate,
@@ -67,19 +99,16 @@ def place_order(
 
     items_snapshot = []
     subtotal = 0.0
+    stock_error = None
 
     for item in cart_items:
         product = item.product
         if not product or not product.is_active:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Product '{product.name if product else 'Unknown'}' is no longer available.",
-            )
+            stock_error = f"Product '{product.name if product else 'Unknown'}' is no longer available."
+            break
         if product.stock < item.quantity:
-            raise HTTPException(
-                status_code=400,
-                detail=f"'{product.name}' has only {product.stock} items left. Please update your cart.",
-            )
+            stock_error = f"'{product.name}' has only {product.stock} items left. Please update your cart."
+            break
         item_total = product.price * item.quantity
         subtotal += item_total
         items_snapshot.append({
@@ -94,6 +123,20 @@ def place_order(
             "subtotal": item_total,
             "is_returnable": getattr(product, "is_returnable", True),
         })
+
+    if stock_error:
+        # The frontend only calls this endpoint after Razorpay's widget has
+        # already captured payment — so if we can't fulfill the order, that
+        # money needs to come back rather than vanish into a failed request.
+        pay_id = payload.payment.razorpay_payment_id if payload.payment else None
+        if pay_id:
+            refund_id = _refund_uncredited_payment(pay_id, stock_error)
+            stock_error += (
+                " Your payment has been automatically refunded and should reflect in 5-7 business days."
+                if refund_id else
+                " Your payment will be refunded — our team has been notified."
+            )
+        raise HTTPException(status_code=400, detail=stock_error)
 
     # Payment must be verified BEFORE any order/stock mutation — no order is
     # ever created on an unverified or missing payment.

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL } from '@/lib/config';
 import Link from 'next/link';
 import {
@@ -43,6 +43,15 @@ function Accordion({
   color?: string;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  // Auto-expand when arriving via a #anchor link (e.g. footer "Shipping Policy")
+  // — a plain browser anchor only scrolls here, it doesn't know this section
+  // is collapsed by default. Runs client-side only, after the hash-safe
+  // initial render, so it can't cause a hydration mismatch.
+  useEffect(() => {
+    if (id && window.location.hash === `#${id}`) setOpen(true);
+  }, [id]);
+
   return (
     <div id={id} className="card overflow-hidden mb-4">
       <button

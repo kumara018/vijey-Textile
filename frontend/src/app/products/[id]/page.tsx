@@ -269,6 +269,16 @@ export default function ProductDetailPage() {
     load();
   }, [id, user]);
 
+  // "Write a Review" links here with #reviews, but the Reviews section is
+  // tab state, not a real DOM anchor — a plain hash link would just scroll
+  // to the (still-collapsed) tab bar. Switch to that tab once loaded.
+  useEffect(() => {
+    if (!loading && window.location.hash === '#reviews') {
+      setTab('reviews');
+      document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading]);
+
   const handleAddToCart = async () => {
     if (!user) { promptLogin('Sign in to add this item to your cart and place an order.'); return; }
     let hasErr = false;
@@ -506,7 +516,7 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="mt-12 card overflow-hidden">
+      <div id="reviews" className="mt-12 card overflow-hidden">
         <div className="flex border-b border-maroon-100 overflow-x-auto">
           {TABS.map((t) => (
             <button key={t.key} onClick={() => setTab(t.key as any)}
