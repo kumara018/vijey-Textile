@@ -21,14 +21,6 @@ function LoginPageInner() {
   // transition, which previously caused a false redirect to the dashboard)
   const isAddMode = searchParams.get('add') === '1';
 
-  // Redirect if already logged in — but NOT when adding another account (?add=1)
-  // Wait for auth to finish loading before redirecting (avoids flash on refresh)
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
-    if (!isAddMode) router.replace(user.is_admin ? '/admin' : '/');
-  }, [user, authLoading, router, isAddMode]);
-
   // ── Step 1 fields ─────────────────────────────────────────────────────────
   const [identifier, setIdentifier] = useState('');
   const [password,   setPassword]   = useState('');
@@ -43,6 +35,19 @@ function LoginPageInner() {
   const [step,    setStep]    = useState<Step>('credentials');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
+
+  // True once the visitor has typed anything — never yank them away mid-keystroke
+  // just because a background auth refresh resolved a stale/cached session.
+  const hasStartedForm = Boolean(identifier || password || otp);
+
+  // Redirect if already logged in — but NOT when adding another account (?add=1)
+  // Wait for auth to finish loading before redirecting (avoids flash on refresh)
+  useEffect(() => {
+    if (authLoading) return;
+    if (hasStartedForm) return;
+    if (!user) return;
+    if (!isAddMode) router.replace(user.is_admin ? '/admin' : '/');
+  }, [user, authLoading, router, isAddMode, hasStartedForm]);
 
   // ── Retry state (replaces the old infinite-loop setTimeout) ───────────────
   const [retryIn,   setRetryIn]   = useState(0);   // countdown seconds

@@ -136,15 +136,6 @@ function RegisterPageInner() {
   // before they could fill out the "Create your account" form.
   const isAddMode = searchParams.get('add') === '1';
 
-  // Redirect if already logged in (wait for auth to finish loading first)
-  // Skip redirect in add/switch mode — user wants to register a NEW account
-  useEffect(() => {
-    if (authLoading) return;
-    if (user && !isAddMode) {
-      router.replace(user.is_admin ? '/admin' : '/');
-    }
-  }, [user, authLoading, router, isAddMode]);
-
   const [fullName,    setFullName]    = useState('');
   const [email,       setEmail]       = useState('');
   const [countryCode, setCountryCode] = useState('+91');
@@ -157,6 +148,23 @@ function RegisterPageInner() {
   const [loading,     setLoading]     = useState(false);
   const [errors,      setErrors]      = useState<Record<string, string>>({});
   const [apiError,    setApiError]    = useState('');
+
+  // True once the visitor has typed anything into the form. Once this is true
+  // we must NEVER redirect them away — an already-logged-in admin/user landing
+  // here to test/create a new account should never get yanked mid-keystroke
+  // into their own dashboard just because a background auth refresh resolved.
+  const hasStartedForm = Boolean(fullName || email || phone || password || confirm);
+
+  // Redirect if already logged in (wait for auth to finish loading first)
+  // Skip redirect in add/switch mode — user wants to register a NEW account
+  // Skip redirect once the form has any input — never abandon in-progress typing
+  useEffect(() => {
+    if (authLoading) return;
+    if (hasStartedForm) return;
+    if (user && !isAddMode) {
+      router.replace(user.is_admin ? '/admin' : '/');
+    }
+  }, [user, authLoading, router, isAddMode, hasStartedForm]);
 
   const clearErr = (key: string) =>
     setErrors(prev => ({ ...prev, [key]: '' }));
