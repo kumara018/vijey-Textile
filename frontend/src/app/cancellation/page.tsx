@@ -58,7 +58,7 @@ export default function CancellationPage() {
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">2. Return (for Refund) — within 4 hours of delivery</h2>
           <div className="space-y-4">
-            <div className="p-4 bg-orange-50 rounded-xl">
+            <div className="p-4 bg-maroon-50 rounded-xl">
               <p className="font-semibold text-gray-800 mb-2">When can I request a return?</p>
               <ul className="list-disc pl-5 space-y-1 text-gray-600">
                 <li>The size doesn't fit, <strong>or</strong></li>
@@ -66,7 +66,7 @@ export default function CancellationPage() {
               </ul>
               <p className="text-gray-500 text-xs mt-2">These are the only two valid reasons. You'll need to upload 2–3 clear photos of the product as proof — requests without valid proof are rejected.</p>
             </div>
-            <div className="p-4 bg-orange-50 rounded-xl">
+            <div className="p-4 bg-maroon-50 rounded-xl">
               <p className="font-semibold text-gray-800 mb-2">How it works</p>
               <ol className="list-decimal pl-5 space-y-1 text-gray-600">
                 <li>Raise a return request within 4 hours of delivery, with photos and a clear reason.</li>
@@ -82,7 +82,7 @@ export default function CancellationPage() {
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">3. Exchange / Replacement — within 12 hours of delivery</h2>
           <div className="space-y-4">
-            <div className="p-4 bg-orange-50 rounded-xl">
+            <div className="p-4 bg-maroon-50 rounded-xl">
               <p className="font-semibold text-gray-800 mb-2">When can I request an exchange?</p>
               <ul className="list-disc pl-5 space-y-1 text-gray-600">
                 <li>The size doesn't fit, <strong>or</strong></li>
@@ -90,7 +90,7 @@ export default function CancellationPage() {
               </ul>
               <p className="text-gray-500 text-xs mt-2">Same two valid reasons as a return, with 2–3 photos as proof — but instead of a refund, you get a replacement.</p>
             </div>
-            <div className="p-4 bg-orange-50 rounded-xl">
+            <div className="p-4 bg-maroon-50 rounded-xl">
               <p className="font-semibold text-gray-800 mb-2">Choosing your replacement</p>
               <ul className="list-disc pl-5 space-y-1 text-gray-600">
                 <li>You are <strong>not limited</strong> to the same product — you can exchange for a different size, colour, or an entirely different product.</li>
@@ -135,7 +135,7 @@ export default function CancellationPage() {
 
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">7. Contact for Cancellation, Return & Exchange</h2>
-          <div className="mt-2 p-4 bg-orange-50 rounded-xl text-sm">
+          <div className="mt-2 p-4 bg-maroon-50 rounded-xl text-sm">
             <p className="font-semibold text-gray-800 mb-2">{STORE.name} — Customer Support</p>
             <p>📧 Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a></p>
             <p>📱 WhatsApp: <a href={WHATSAPP_URL} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone1}</a> / <a href={WHATSAPP_URL2} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone2}</a></p>

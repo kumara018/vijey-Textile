@@ -93,7 +93,7 @@ export default function CartPage() {
             <div key={item.id} className="card p-4">
               <div className="flex gap-4">
                 {/* Image */}
-                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-maroon-100 to-gold-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {item.product.images?.[0] && !item.product.images[0].includes('placeholder') ? (
                     <img
                       src={item.product.images[0].startsWith('http') ? item.product.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${item.product.images[0]}`}
@@ -178,7 +178,7 @@ export default function CartPage() {
                 <span>Shipping</span>
                 <span className="font-medium">₹{shipping}</span>
               </div>
-              <div className="border-t border-orange-100 pt-3 flex justify-between font-bold text-lg">
+              <div className="border-t border-maroon-200 pt-3 flex justify-between font-bold text-lg">
                 <span className="text-maroon-900">Total</span>
                 <span className="text-maroon-900">₹{grandTotal.toLocaleString()}</span>
               </div>
@@ -192,7 +192,7 @@ export default function CartPage() {
               ← Continue Shopping
             </Link>
 
-            <div className="mt-5 pt-4 border-t border-orange-100">
+            <div className="mt-5 pt-4 border-t border-maroon-200">
               <p className="text-xs text-gray-400 text-center">🔒 Secure checkout with SSL encryption</p>
             </div>
           </div>

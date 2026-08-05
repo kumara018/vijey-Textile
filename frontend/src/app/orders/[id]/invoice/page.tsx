@@ -7,6 +7,7 @@ import { Order } from '@/types';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { ArrowLeft, Download, Mail, Share2, Printer } from 'lucide-react';
+import { LogoMark } from '@/components/Logo';
 
 const PAY_LABEL: Record<string, string> = {
   razorpay: 'Online Payment (Razorpay)',
@@ -106,8 +107,12 @@ function InvoiceContent() {
         <div className="bg-gradient-to-r from-maroon-900 via-maroon-800 to-maroon-700 px-8 py-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             {/* Logo on white card */}
-            <div className="bg-white rounded-2xl px-4 py-3 shadow-lg">
-              <img src="/logo.png" alt="Vijey Textile" className="h-20 w-auto" />
+            <div className="bg-white rounded-2xl px-5 py-3.5 shadow-lg flex items-center gap-2.5">
+              <LogoMark size={40} className="text-gold-500 flex-shrink-0" />
+              <div className="flex flex-col leading-tight">
+                <span className="font-bold text-maroon-900 uppercase" style={{ fontSize: '13px', letterSpacing: '0.04em' }}>Vijey Textile</span>
+                <span className="text-maroon-500 font-semibold uppercase mt-0.5" style={{ fontSize: '8px', letterSpacing: '0.1em' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
+              </div>
             </div>
             {/* Invoice details */}
             <div className="text-right">
@@ -135,7 +140,7 @@ function InvoiceContent() {
               <p className="text-sm text-gray-600 mt-0.5">{user?.email}</p>
               <p className="text-sm text-gray-600">{user?.phone}</p>
             </div>
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4">
+            <div className="bg-maroon-50 border border-maroon-200 rounded-xl p-4">
               <p className="text-xs font-bold text-orange-700 uppercase tracking-wider mb-3">Ship To</p>
               <p className="font-bold text-gray-900">{addr.full_name}</p>
               <p className="text-sm text-gray-600 mt-0.5">{addr.address_line1}</p>
@@ -163,10 +168,10 @@ function InvoiceContent() {
                     : null;
                   const emoji = item.category === 'Baby Frocks' ? '👶' : item.category === 'Chudithar' ? '👘' : item.category === 'Frocks' ? '👗' : item.category === 'Western Dresses' ? '👒' : item.category === 'Lehenga' ? '💃' : item.category === 'Party Wear' ? '✨' : '👗';
                   return (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-orange-50/40'}>
+                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-maroon-50/40'}>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center text-lg flex-shrink-0 overflow-hidden border border-orange-100">
+                          <div className="w-10 h-10 rounded-lg bg-maroon-50 flex items-center justify-center text-lg flex-shrink-0 overflow-hidden border border-maroon-200">
                             {imgSrc
                               ? <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; }} />
                               : <span>{emoji}</span>}
@@ -277,10 +282,10 @@ function InvoiceContent() {
         <div className="bg-gradient-to-r from-maroon-900 to-maroon-800 px-8 py-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
+              <LogoMark size={36} className="text-white flex-shrink-0" />
               <div>
-                <p className="text-white font-bold tracking-widest" style={{ fontFamily: 'Georgia, serif', fontSize: '14px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</p>
-                <p className="text-maroon-300 text-[9px] tracking-widest uppercase mb-1">Luxury Kid&apos;s &amp; Girls Clothing</p>
+                <p className="text-white font-bold uppercase" style={{ fontSize: '14px', letterSpacing: '0.04em' }}>Vijey Textile</p>
+                <p className="text-maroon-300 text-[9px] font-semibold tracking-widest uppercase mb-1">Luxury Kid&apos;s &amp; Girls Clothing</p>
                 <p className="text-white/60 text-xs">Shop Ground Floor No 131, Texvalley Gangapuram</p>
                 <p className="text-white/60 text-xs">vijeytextile.com · support@vijeytextile.com</p>
               </div>

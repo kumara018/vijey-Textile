@@ -42,13 +42,13 @@ export default function SupportRatePage() {
   };
 
   if (loading) return (
-    <div className="min-h-screen bg-[#fff9f2] flex items-center justify-center">
+    <div className="min-h-screen bg-maroon-100 flex items-center justify-center">
       <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-maroon-800" />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#fff9f2] flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-maroon-100 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-6">
@@ -56,7 +56,7 @@ export default function SupportRatePage() {
           <p className="text-xs text-maroon-600 font-medium uppercase tracking-widest mt-1">{STORE.tagline}</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-orange-100 p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-sm border border-maroon-200 p-8 text-center">
           {error ? (
             /* Error / Already rated */
             <div>
@@ -81,7 +81,7 @@ export default function SupportRatePage() {
           ) : (
             /* Rating form */
             <div>
-              <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⭐</div>
+              <div className="w-16 h-16 bg-maroon-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⭐</div>
               <h2 className="text-xl font-bold text-gray-800 mb-1">How was your experience?</h2>
               {info?.cs_name && (
                 <p className="text-sm text-gray-500 mb-1">

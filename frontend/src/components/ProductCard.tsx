@@ -101,7 +101,7 @@ export default function ProductCard({ product }: Props) {
 
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
-          className="relative bg-gradient-to-br from-orange-50 to-pink-50 aspect-[3/4] overflow-hidden"
+          className="relative bg-gradient-to-br from-maroon-100 to-gold-50 aspect-[3/4] overflow-hidden"
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={handleMouseLeave}
           onTouchStart={onTouchStart}

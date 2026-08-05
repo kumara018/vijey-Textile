@@ -283,8 +283,8 @@ function ProductsContent() {
 
       {/* Fuzzy match banner */}
       {!loading && fuzzyMatch && filters.search && (
-        <div className="mb-4 flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 text-sm">
-          <Search size={15} className="text-orange-500 flex-shrink-0" />
+        <div className="mb-4 flex items-center gap-2 bg-gold-50 border border-gold-200 rounded-xl px-4 py-3 text-sm">
+          <Search size={15} className="text-gold-600 flex-shrink-0" />
           <span className="text-gray-600">
             No exact results for <strong>&ldquo;{filters.search}&rdquo;</strong>. Showing results for{' '}
             <span className="font-bold text-maroon-700">&ldquo;{fuzzyMatch}&rdquo;</span> instead.

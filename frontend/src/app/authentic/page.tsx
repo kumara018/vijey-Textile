@@ -128,9 +128,9 @@ export default function AuthenticPage() {
       </div>
 
       {/* Not happy? */}
-      <div className="card p-6 mb-10 bg-orange-50 border-orange-100">
+      <div className="card p-6 mb-10 bg-maroon-50 border-maroon-200">
         <p className="font-bold text-gray-800 mb-2 flex items-center gap-2">
-          <Award size={18} className="text-orange-600" /> Not Satisfied? We'll Make It Right.
+          <Award size={18} className="text-gold-600" /> Not Satisfied? We'll Make It Right.
         </p>
         <p className="text-sm text-gray-600 leading-relaxed mb-3">
           If a product arrives with a genuine size issue or damage, you can request a{' '}

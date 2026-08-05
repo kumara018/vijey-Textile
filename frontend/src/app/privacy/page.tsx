@@ -95,7 +95,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="text-lg font-bold text-gray-900 mb-3">10. Contact Us</h2>
           <p>If you have questions about this Privacy Policy, contact us at:</p>
-          <div className="mt-2 p-4 bg-orange-50 rounded-xl text-sm">
+          <div className="mt-2 p-4 bg-maroon-50 rounded-xl text-sm">
             <p className="font-semibold text-gray-800">{STORE.name}</p>
             <p>{STORE.shopNo}, {STORE.area}</p>
             <p>{STORE.city}, {STORE.state} — {STORE.pincode}</p>

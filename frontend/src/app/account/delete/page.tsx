@@ -73,7 +73,7 @@ export default function DeleteAccountPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fff9f2]">
+      <div className="min-h-screen flex items-center justify-center bg-maroon-100">
         <div className="text-center">
           <p className="text-gray-600 mb-4">Please sign in to manage your account.</p>
           <Link href="/auth/login" className="btn-primary px-6 py-2">Sign In</Link>
@@ -83,7 +83,7 @@ export default function DeleteAccountPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fff9f2] px-4 py-12">
+    <div className="min-h-screen bg-maroon-100 px-4 py-12">
       <div className="max-w-lg mx-auto">
 
         {/* Breadcrumb */}
@@ -113,7 +113,7 @@ export default function DeleteAccountPage() {
             {/* Option 1 — Deactivate */}
             <button
               onClick={() => { setMode('deactivate'); setStep('warning'); }}
-              className="w-full mb-4 p-5 rounded-xl border-2 border-orange-200 hover:border-orange-400 hover:bg-orange-50 text-left transition-all group"
+              className="w-full mb-4 p-5 rounded-xl border-2 border-orange-200 hover:border-orange-400 hover:bg-maroon-50 text-left transition-all group"
             >
               <div className="flex items-start gap-4">
                 <div className="p-2.5 bg-orange-100 rounded-xl group-hover:bg-orange-200 transition-colors flex-shrink-0">
@@ -186,7 +186,7 @@ export default function DeleteAccountPage() {
             {/* What happens */}
             <div className={`rounded-xl p-4 mb-5 border ${
               mode === 'deactivate'
-                ? 'bg-orange-50 border-orange-200'
+                ? 'bg-maroon-50 border-orange-200'
                 : 'bg-red-50 border-red-200'
             }`}>
               <p className={`font-semibold flex items-center gap-2 mb-2 ${
@@ -352,7 +352,7 @@ export default function DeleteAccountPage() {
                 <p className="text-gray-500 text-sm mb-4">
                   Your account has been temporarily suspended.
                 </p>
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4">
+                <div className="bg-maroon-50 border border-orange-200 rounded-xl p-4 mb-4">
                   <p className="text-orange-800 text-sm font-medium">
                     🕐 You have <strong>7 days</strong> to reactivate.
                   </p>

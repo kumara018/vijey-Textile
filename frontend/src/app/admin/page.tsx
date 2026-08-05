@@ -81,7 +81,7 @@ function CSInteractionsTab() {
               <button onClick={() => setShowForm(false)} className="text-maroon-200 hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
-              <p className="text-xs text-gray-500 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2">
+              <p className="text-xs text-gray-500 bg-maroon-50 border border-maroon-200 rounded-lg px-3 py-2">
                 After saving, the customer will receive a <b>unique rating link</b> via email + WhatsApp. Only they can use it.
               </p>
 
@@ -153,7 +153,7 @@ function CSInteractionsTab() {
                   No interactions logged yet. Click "Log CS Interaction" to start.
                 </td></tr>
               ) : interactions.map(i => (
-                <tr key={i.id} className="hover:bg-orange-50">
+                <tr key={i.id} className="hover:bg-maroon-50">
                   <td className="px-4 py-3">
                     <p className="font-semibold text-gray-800">{i.cs_name}</p>
                     {i.cs_phone && <p className="text-xs text-gray-500">{i.cs_phone}</p>}
@@ -179,7 +179,7 @@ function CSInteractionsTab() {
                         {i.rating_comment && <p className="text-xs text-gray-500 mt-0.5 italic line-clamp-1">"{i.rating_comment}"</p>}
                       </div>
                     ) : (
-                      <span className="text-xs text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full">⏳ Awaiting</span>
+                      <span className="text-xs text-orange-500 bg-maroon-50 border border-orange-200 px-2 py-0.5 rounded-full">⏳ Awaiting</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
@@ -645,7 +645,7 @@ export default function AdminPage() {
 
             {/* Notification Dropdown */}
             {notifOpen && (
-              <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-orange-100 z-50 overflow-hidden">
+              <div className="absolute right-0 top-12 w-96 bg-white rounded-2xl shadow-2xl border border-maroon-200 z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 bg-maroon-800">
                   <span className="text-white font-bold text-sm">Notifications</span>
                   <div className="flex items-center gap-2">
@@ -674,7 +674,7 @@ export default function AdminPage() {
                         if (dest === 'cancellations') loadOrders();
                         else loadReturns();
                       }}
-                      className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-orange-50 transition-colors ${!n.is_read ? 'bg-rose-50' : ''}`}
+                      className={`px-4 py-3 flex gap-3 cursor-pointer hover:bg-maroon-50 transition-colors ${!n.is_read ? 'bg-rose-50' : ''}`}
                     >
                       <span className="text-xl flex-shrink-0 mt-0.5">{NOTIF_ICONS[n.type] || '📋'}</span>
                       <div className="flex-1 min-w-0">
@@ -728,7 +728,7 @@ export default function AdminPage() {
             {[
               { label: 'Active Products', value: dash.active_products, icon: Package,     color: 'bg-purple-50 text-purple-700' },
               { label: 'Total Customers', value: dash.total_users,     icon: Users,       color: 'bg-blue-50 text-blue-700' },
-              { label: 'Total Orders',    value: dash.total_orders,    icon: ShoppingBag, color: 'bg-orange-50 text-orange-700' },
+              { label: 'Total Orders',    value: dash.total_orders,    icon: ShoppingBag, color: 'bg-maroon-50 text-orange-700' },
               { label: 'Pending Orders',  value: dash.pending_orders,  icon: Package,     color: 'bg-yellow-50 text-yellow-700' },
               { label: 'Total Revenue',   value: `₹${dash.total_revenue.toLocaleString()}`, icon: TrendingUp, color: 'bg-green-50 text-green-700' },
               { label: 'All Products',    value: dash.total_products,  icon: Package,     color: 'bg-maroon-50 text-maroon-700' },
@@ -747,7 +747,7 @@ export default function AdminPage() {
             <h3 className="font-bold text-maroon-900 mb-4">Recent Orders</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead><tr className="text-left text-gray-500 border-b border-orange-100">
+                <thead><tr className="text-left text-gray-500 border-b border-maroon-200">
                   <th className="pb-3 pr-4">Order #</th>
                   <th className="pb-3 pr-4">Amount</th>
                   <th className="pb-3 pr-4">Status</th>
@@ -755,7 +755,7 @@ export default function AdminPage() {
                 </tr></thead>
                 <tbody className="divide-y divide-orange-50">
                   {dash.recent_orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-orange-50">
+                    <tr key={o.id} className="hover:bg-maroon-50">
                       <td className="py-3 pr-4 font-mono font-medium text-maroon-800">{o.order_number}</td>
                       <td className="py-3 pr-4 font-semibold">₹{o.total.toLocaleString()}</td>
                       <td className="py-3 pr-4"><span className="capitalize badge badge-info">{o.status}</span></td>
@@ -797,7 +797,7 @@ export default function AdminPage() {
                     'Western Dresses':'👒','Lehenga':'💃','Party Wear':'✨',
                   };
                   return (
-                  <tr key={p.id} className={`hover:bg-orange-50 ${!p.is_active ? 'opacity-50' : ''}`}>
+                  <tr key={p.id} className={`hover:bg-maroon-50 ${!p.is_active ? 'opacity-50' : ''}`}>
                     {/* ID */}
                     <td className="px-4 py-3 text-xs font-mono text-gray-400 whitespace-nowrap">#{p.id}</td>
 
@@ -805,7 +805,7 @@ export default function AdminPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {/* Thumbnail */}
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-orange-50 to-pink-50 flex-shrink-0 flex items-center justify-center border border-orange-100">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gradient-to-br from-maroon-100 to-gold-50 flex-shrink-0 flex items-center justify-center border border-maroon-200">
                           {imgSrc ? (
                             <img
                               src={imgSrc}
@@ -893,7 +893,7 @@ export default function AdminPage() {
                 {loading ? Array(5).fill(0).map((_, i) => (
                   <tr key={i}><td colSpan={7} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
                 )) : orders.map((o) => (
-                  <tr key={o.id} className="hover:bg-orange-50">
+                  <tr key={o.id} className="hover:bg-maroon-50">
                     <td className="px-4 py-3 font-mono font-medium text-maroon-800 text-xs">{o.order_number}</td>
                     <td className="px-4 py-3 text-gray-700">{(o.shipping_address as any)?.full_name}</td>
                     <td className="px-4 py-3 font-bold text-maroon-900">₹{o.total.toLocaleString()}</td>
@@ -903,7 +903,7 @@ export default function AdminPage() {
                           {o.payment_method === 'razorpay' ? 'Razorpay' : o.payment_method === 'upi' ? 'UPI' : o.payment_method === 'emi' ? 'EMI' : 'COD'}
                         </span>
                         {o.payment_status === 'paid' && <span className="text-[10px] font-bold text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded w-fit">✅ PAID</span>}
-                        {o.payment_status === 'refund_initiated' && <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded w-fit">🔄 REFUND INITIATED</span>}
+                        {o.payment_status === 'refund_initiated' && <span className="text-[10px] font-bold text-orange-600 bg-maroon-50 border border-orange-200 px-1.5 py-0.5 rounded w-fit">🔄 REFUND INITIATED</span>}
                         {o.payment_status === 'refunded' && <span className="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded w-fit">💜 REFUNDED</span>}
                         {o.payment_status === 'pending' && <span className="text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded w-fit">⏳ PENDING</span>}
                       </div>
@@ -971,7 +971,7 @@ export default function AdminPage() {
                           <button
                             onClick={() => handleInitiateRefund(o.id, o.order_number, o.total)}
                             disabled={initiatingRefund === o.id}
-                            className="text-xs bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap disabled:opacity-60"
+                            className="text-xs bg-maroon-50 border border-orange-300 text-orange-700 hover:bg-orange-100 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap disabled:opacity-60"
                             title="Initiate Razorpay refund — customer gets email + WhatsApp notification"
                           >
                             {initiatingRefund === o.id ? '⏳...' : '💸 Initiate Refund'}
@@ -979,7 +979,7 @@ export default function AdminPage() {
                         )}
                         {/* Refund Initiated badge — auto-updates to Refunded via Razorpay webhook */}
                         {o.status === 'cancelled' && o.payment_method !== 'cod' && o.payment_status === 'refund_initiated' && (
-                          <span className="text-[10px] bg-orange-50 border border-orange-200 text-orange-600 rounded-lg px-2 py-1.5 font-medium whitespace-nowrap" title="Razorpay is processing this refund. Status will automatically update to Refunded and customer will be notified once credited (5–7 business days).">
+                          <span className="text-[10px] bg-maroon-50 border border-orange-200 text-orange-600 rounded-lg px-2 py-1.5 font-medium whitespace-nowrap" title="Razorpay is processing this refund. Status will automatically update to Refunded and customer will be notified once credited (5–7 business days).">
                             🔄 Refund Initiated
                           </span>
                         )}
@@ -1026,7 +1026,7 @@ export default function AdminPage() {
               </thead>
               <tbody className="divide-y divide-orange-50">
                 {loading ? null : users.map((u) => (
-                  <tr key={u.id} className="hover:bg-orange-50">
+                  <tr key={u.id} className="hover:bg-maroon-50">
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">#{u.id}</span>
                     </td>
@@ -1066,7 +1066,7 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-gray-500 border-b border-orange-100 text-xs uppercase tracking-wide">
+                  <tr className="text-left text-gray-500 border-b border-maroon-200 text-xs uppercase tracking-wide">
                     <th className="pb-3 pr-4">Order #</th>
                     <th className="pb-3 pr-4">Customer</th>
                     <th className="pb-3 pr-4">Date</th>
@@ -1187,7 +1187,7 @@ export default function AdminPage() {
                     const isExpanded = expandedReturn === r.id;
                     return (
                       <>
-                        <tr key={r.id} className="hover:bg-orange-50 cursor-pointer" onClick={() => {
+                        <tr key={r.id} className="hover:bg-maroon-50 cursor-pointer" onClick={() => {
                           setExpandedReturn(isExpanded ? null : r.id);
                           if (!returnUpdateForm[r.id]) {
                             setReturnUpdateForm(prev => ({ ...prev, [r.id]: { status: r.status, admin_notes: r.admin_notes || '' } }));
@@ -1216,14 +1216,14 @@ export default function AdminPage() {
                         </tr>
                         {isExpanded && (
                           <tr key={`${r.id}-expand`}>
-                            <td colSpan={8} className="px-4 py-4 bg-orange-50 border-b border-orange-100">
+                            <td colSpan={8} className="px-4 py-4 bg-maroon-50 border-b border-maroon-200">
                               <div className="max-w-2xl space-y-4">
                                 {/* Exchange details — what they want instead */}
                                 {r.new_product && (
                                   <div>
                                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Wants to Exchange Into</p>
                                     <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2.5">
-                                      <div className="w-12 h-12 rounded-lg bg-orange-50 overflow-hidden flex-shrink-0">
+                                      <div className="w-12 h-12 rounded-lg bg-maroon-50 overflow-hidden flex-shrink-0">
                                         {r.new_product.images?.[0] && <img src={r.new_product.images[0]} alt={r.new_product.name} className="w-full h-full object-cover" />}
                                       </div>
                                       <div className="flex-1 min-w-0">
@@ -1323,7 +1323,7 @@ export default function AdminPage() {
       {tab === 'admins' && (
         <div className="space-y-6">
           {/* Current Admins List */}
-          <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-maroon-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-orange-50 flex items-center justify-between">
               <h2 className="text-lg font-bold text-maroon-900">Current Admin Accounts ({admins.length})</h2>
               <button onClick={loadAdmins} className="text-xs text-maroon-600 hover:underline">Refresh</button>
@@ -1344,7 +1344,7 @@ export default function AdminPage() {
                     <tr><td colSpan={5} className="px-5 py-8 text-center text-gray-400">No admin accounts found</td></tr>
                   )}
                   {admins.map((a: any) => (
-                    <tr key={a.id} className="border-t border-gray-50 hover:bg-orange-50/30">
+                    <tr key={a.id} className="border-t border-gray-50 hover:bg-maroon-50/30">
                       <td className="px-5 py-4 font-semibold text-gray-900">{a.full_name}</td>
                       <td className="px-5 py-4 text-gray-600">{a.email}</td>
                       <td className="px-5 py-4 text-gray-600">{a.phone}</td>
@@ -1394,7 +1394,7 @@ export default function AdminPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-2xl my-4 shadow-2xl">
-            <div className="flex items-center justify-between p-6 border-b border-orange-100">
+            <div className="flex items-center justify-between p-6 border-b border-maroon-200">
               <h2 className="font-bold text-xl text-maroon-900">{editing ? 'Edit Product' : 'Add New Product'}</h2>
               <button onClick={() => setShowForm(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
             </div>
@@ -1565,14 +1565,14 @@ export default function AdminPage() {
                   className="input-field resize-none" />
               </div>
 
-              <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-orange-50">
+              <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-maroon-50">
                 <input type="checkbox" checked={form.is_featured} onChange={e => setForm(f => ({ ...f, is_featured: e.target.checked }))} className="w-4 h-4 accent-maroon-800" />
                 <div>
                   <p className="font-medium text-sm text-gray-800">Mark as Featured</p>
                   <p className="text-xs text-gray-500">Featured products appear on the homepage</p>
                 </div>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-orange-50">
+              <label className="flex items-center gap-3 cursor-pointer p-3 border border-gray-200 rounded-xl hover:bg-maroon-50">
                 <input type="checkbox" checked={form.is_new_arrival} onChange={e => setForm(f => ({ ...f, is_new_arrival: e.target.checked }))} className="w-4 h-4 accent-maroon-800" />
                 <div>
                   <p className="font-medium text-sm text-gray-800">Mark as New Arrival</p>
@@ -1587,7 +1587,7 @@ export default function AdminPage() {
                 </div>
               </label>
             </div>
-            <div className="p-6 border-t border-orange-100 flex gap-3">
+            <div className="p-6 border-t border-maroon-200 flex gap-3">
               <button onClick={() => setShowForm(false)} className="btn-secondary flex-1 py-3">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2">
                 {saving ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Saving...</> : <><CheckCircle size={16} /> {editing ? 'Save Changes' : 'Add Product'}</>}
@@ -1654,7 +1654,7 @@ export default function AdminPage() {
 
               {/* Delivery Person (for Out for Delivery) */}
               {shipForm.status === 'out_for_delivery' && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
+                <div className="bg-maroon-50 border border-orange-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-orange-800">🚴 Delivery Agent (OTP will be auto-sent to customer)</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>

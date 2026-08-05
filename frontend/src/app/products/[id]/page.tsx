@@ -149,7 +149,7 @@ function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUr
   return (
     <div className="select-none">
       <div
-        className="relative bg-gradient-to-br from-rose-50 to-pink-50 rounded-2xl overflow-hidden mb-3 cursor-grab active:cursor-grabbing"
+        className="relative bg-gradient-to-br from-maroon-100 to-gold-50 rounded-2xl overflow-hidden mb-3 cursor-grab active:cursor-grabbing"
         style={{ aspectRatio: '1/1' }}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
@@ -460,7 +460,7 @@ export default function ProductDetailPage() {
           {product.stock === 0 ? (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 text-red-700 text-sm font-medium">❌ This product is currently out of stock. Check back later.</div>
           ) : product.stock <= 5 ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-orange-700 text-sm">⚠️ Only {product.stock} left in stock — order soon!</div>
+            <div className="bg-maroon-50 border border-orange-200 rounded-xl p-3 mb-4 text-orange-700 text-sm">⚠️ Only {product.stock} left in stock — order soon!</div>
           ) : null}
 
           <div className="flex gap-3 mb-6">
@@ -564,19 +564,19 @@ export default function ProductDetailPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 {product.fit && (
-                  <div className="bg-rose-50 rounded-2xl p-5 border border-rose-100">
+                  <div className="bg-maroon-50 rounded-2xl p-5 border border-maroon-200">
                     <div className="flex items-center gap-2 mb-3"><span className="text-2xl">👗</span><p className="font-bold text-maroon-900 text-sm uppercase tracking-wide">Fit</p></div>
                     <p className="text-gray-700 font-medium">{product.fit}</p>
                   </div>
                 )}
                 {product.fabric && (
-                  <div className="bg-rose-50 rounded-2xl p-5 border border-rose-100">
+                  <div className="bg-maroon-50 rounded-2xl p-5 border border-maroon-200">
                     <div className="flex items-center gap-2 mb-3"><span className="text-2xl">🧵</span><p className="font-bold text-maroon-900 text-sm uppercase tracking-wide">Fabric</p></div>
                     <p className="text-gray-700 font-medium">{product.fabric}</p>
                   </div>
                 )}
                 {product.material && (
-                  <div className="bg-rose-50 rounded-2xl p-5 border border-rose-100">
+                  <div className="bg-maroon-50 rounded-2xl p-5 border border-maroon-200">
                     <div className="flex items-center gap-2 mb-3"><span className="text-2xl">🔬</span><p className="font-bold text-maroon-900 text-sm uppercase tracking-wide">Material / Composition</p></div>
                     <p className="text-gray-700 font-medium">{product.material}</p>
                   </div>
@@ -618,7 +618,7 @@ export default function ProductDetailPage() {
                 </div>
               )}
               {user && canReview && (
-                <div className="bg-gradient-to-br from-maroon-50 to-rose-50 border border-maroon-200 rounded-2xl p-6">
+                <div className="bg-gradient-to-br from-maroon-50 to-gold-50 border border-maroon-200 rounded-2xl p-6">
                   <h3 className="font-bold text-maroon-900 mb-4 flex items-center gap-2">
                     <Star size={18} className="text-yellow-500 fill-yellow-500" /> Rate this product
                   </h3>

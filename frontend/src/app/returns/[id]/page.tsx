@@ -142,7 +142,7 @@ function ReturnDetailContent() {
         <div className="card p-5 mb-5">
           <h3 className="font-bold text-maroon-900 mb-3">Exchanging Into</h3>
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-lg bg-orange-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-14 h-14 rounded-lg bg-maroon-50 flex items-center justify-center overflow-hidden flex-shrink-0">
               {rr.new_product.images?.[0]
                 ? <img src={rr.new_product.images[0]} alt={rr.new_product.name} className="w-full h-full object-cover" />
                 : <Package size={22} className="text-gray-300" />}
@@ -154,7 +154,7 @@ function ReturnDetailContent() {
             <p className="text-sm font-bold text-maroon-800">₹{rr.new_product.price.toLocaleString()}</p>
           </div>
           {rr.price_difference > 0 && (
-            <div className="mt-3 pt-3 border-t border-orange-100 flex justify-between text-sm">
+            <div className="mt-3 pt-3 border-t border-maroon-200 flex justify-between text-sm">
               <span className="text-gray-500">Price difference paid</span>
               <span className="font-semibold text-green-700">₹{rr.price_difference.toLocaleString()} ✓</span>
             </div>
@@ -280,7 +280,7 @@ function ReturnDetailContent() {
           <div className="grid grid-cols-3 gap-3">
             {rr.images.map((url, i) => (
               <button key={i} onClick={() => setLightbox(url)}
-                className="aspect-square rounded-xl overflow-hidden border-2 border-orange-100 hover:border-maroon-400 transition-colors">
+                className="aspect-square rounded-xl overflow-hidden border-2 border-maroon-200 hover:border-maroon-400 transition-colors">
                 <img src={url} alt={`Return photo ${i+1}`} className="w-full h-full object-cover" />
               </button>
             ))}

@@ -12,7 +12,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; b
   confirmed:        { label: 'Confirmed',         icon: CheckCircle,  color: 'text-blue-600',   badge: 'badge-info',    banner: 'bg-blue-50 border-blue-200 text-blue-800' },
   processing:       { label: 'Processing',        icon: Package,      color: 'text-purple-600', badge: 'badge-default', banner: 'bg-purple-50 border-purple-200 text-purple-800' },
   shipped:          { label: 'Shipped',           icon: Truck,        color: 'text-blue-700',   badge: 'badge-info',    banner: 'bg-blue-50 border-blue-200 text-blue-800' },
-  out_for_delivery: { label: 'Out for Delivery',  icon: Truck,        color: 'text-orange-600', badge: 'badge-warning', banner: 'bg-orange-50 border-orange-200 text-orange-800' },
+  out_for_delivery: { label: 'Out for Delivery',  icon: Truck,        color: 'text-orange-600', badge: 'badge-warning', banner: 'bg-maroon-50 border-orange-200 text-orange-800' },
   delivered:        { label: 'Delivered',         icon: CheckCircle,  color: 'text-green-600',  badge: 'badge-success', banner: 'bg-green-50 border-green-200 text-green-800' },
   cancelled:        { label: 'Cancelled',         icon: XCircle,      color: 'text-red-600',    badge: 'badge-danger',  banner: 'bg-red-50 border-red-200 text-red-800' },
 };
@@ -131,7 +131,7 @@ export default function OrdersPage() {
                       {items.slice(0, 4).map((item: any, idx: number) => (
                         <div
                           key={idx}
-                          className="w-9 h-9 rounded-lg bg-gradient-to-br from-orange-50 to-pink-50 border border-white flex items-center justify-center text-lg shadow-sm"
+                          className="w-9 h-9 rounded-lg bg-gradient-to-br from-maroon-100 to-gold-50 border border-white flex items-center justify-center text-lg shadow-sm"
                           title={item.name}
                         >
                           {getCategoryEmoji(item.category)}

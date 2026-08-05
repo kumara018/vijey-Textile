@@ -60,7 +60,7 @@ function Accordion({
           : <ChevronDown size={20} className="text-gray-400 flex-shrink-0" />}
       </button>
       {open && (
-        <div className="px-5 pb-6 pt-4 border-t border-orange-100 bg-white">
+        <div className="px-5 pb-6 pt-4 border-t border-maroon-200 bg-white">
           {children}
         </div>
       )}
@@ -72,10 +72,10 @@ function Accordion({
 function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border border-orange-100 rounded-xl overflow-hidden mb-2">
+    <div className="border border-maroon-200 rounded-xl overflow-hidden mb-2">
       <button
         onClick={() => setOpen(!open)}
-        className={`w-full flex justify-between items-start gap-4 px-4 py-3.5 text-left transition-colors ${open ? 'bg-orange-50' : 'bg-white hover:bg-gray-50'}`}
+        className={`w-full flex justify-between items-start gap-4 px-4 py-3.5 text-left transition-colors ${open ? 'bg-maroon-50' : 'bg-white hover:bg-gray-50'}`}
       >
         <span className="font-semibold text-gray-800 text-sm leading-snug">{q}</span>
         {open
@@ -83,7 +83,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
           : <ChevronDown size={17} className="text-gray-400 flex-shrink-0 mt-0.5" />}
       </button>
       {open && (
-        <div className="px-4 pb-4 pt-3 text-sm text-gray-600 leading-relaxed border-t border-orange-100 bg-white">
+        <div className="px-4 pb-4 pt-3 text-sm text-gray-600 leading-relaxed border-t border-maroon-200 bg-white">
           {a}
         </div>
       )}
@@ -140,7 +140,7 @@ export default function SupportPage() {
 
         <a href={MAIL_URL}
           className="card p-4 text-center hover:shadow-md transition-shadow group">
-          <div className="inline-flex p-2.5 bg-orange-50 rounded-xl mb-2 text-orange-700 group-hover:bg-orange-100 transition-colors">
+          <div className="inline-flex p-2.5 bg-maroon-50 rounded-xl mb-2 text-orange-700 group-hover:bg-orange-100 transition-colors">
             <Mail size={20} />
           </div>
           <p className="font-bold text-gray-800 text-sm mb-0.5">Email Us</p>
@@ -190,7 +190,7 @@ export default function SupportPage() {
         ].map(({ label, rows }) => (
           <div className="mb-5" key={label}>
             <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">{label}</p>
-            <div className="overflow-x-auto rounded-xl border border-orange-100">
+            <div className="overflow-x-auto rounded-xl border border-maroon-200">
               <table className="w-full text-sm">
                 <thead className="bg-maroon-50">
                   <tr className="text-maroon-800 font-semibold text-xs uppercase tracking-wide">
@@ -202,7 +202,7 @@ export default function SupportPage() {
                 </thead>
                 <tbody className="divide-y divide-orange-50">
                   {rows.map((row) => (
-                    <tr key={row.size} className="hover:bg-orange-50 transition-colors">
+                    <tr key={row.size} className="hover:bg-maroon-50 transition-colors">
                       <td className="px-4 py-3 font-bold text-maroon-900">{row.size}</td>
                       <td className="px-4 py-3 text-gray-700">{row.chest}</td>
                       <td className="px-4 py-3 text-gray-700">{row.waist}</td>

@@ -237,7 +237,7 @@ export default function Navbar() {
                     </button>
                   </div>
                   {searchHistory.map((term) => (
-                    <div key={term} className="flex items-center gap-3 px-4 py-3 hover:bg-orange-50 border-b border-gray-50 last:border-0 cursor-pointer group">
+                    <div key={term} className="flex items-center gap-3 px-4 py-3 hover:bg-maroon-50 border-b border-gray-50 last:border-0 cursor-pointer group">
                       <Search size={14} className="text-gray-400 flex-shrink-0" />
                       <button
                         className="flex-1 text-left text-sm text-gray-800 font-medium group-hover:text-maroon-800"
@@ -264,7 +264,7 @@ export default function Navbar() {
                     <button
                       key={p.id}
                       onClick={() => goToProduct(p.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-50 border-b border-gray-50 last:border-0 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-maroon-50 border-b border-gray-50 last:border-0 text-left"
                     >
                       {p.images?.[0] && (
                         <img
@@ -282,7 +282,7 @@ export default function Navbar() {
                   ))}
                   <button
                     onClick={() => { router.push(`/products?search=${encodeURIComponent(search.trim())}`); setShowDrop(false); setSearch(''); }}
-                    className="w-full px-4 py-3 text-center text-sm text-maroon-700 hover:bg-orange-50 font-semibold border-t border-gray-100"
+                    className="w-full px-4 py-3 text-center text-sm text-maroon-700 hover:bg-maroon-50 font-semibold border-t border-gray-100"
                   >
                     <Search size={14} className="inline mr-1.5" />
                     See all results for &quot;{search}&quot;
@@ -329,10 +329,10 @@ export default function Navbar() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-1 w-72 bg-white rounded-xl shadow-xl border border-orange-100 py-2 text-gray-800 z-50 max-h-[90vh] overflow-y-auto">
+                    <div className="absolute right-0 mt-1 w-72 bg-white rounded-xl shadow-xl border border-maroon-200 py-2 text-gray-800 z-50 max-h-[90vh] overflow-y-auto">
 
                       {/* ── Current account ── */}
-                      <div className="px-4 py-3 border-b border-orange-100">
+                      <div className="px-4 py-3 border-b border-maroon-200">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-maroon-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
                             {user.full_name.charAt(0).toUpperCase()}
@@ -348,33 +348,33 @@ export default function Navbar() {
                         </span>
                       </div>
 
-                      <hr className="border-orange-100 my-1" />
+                      <hr className="border-maroon-200 my-1" />
 
                       {/* ── Navigation ── */}
-                      <Link href="/" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                      <Link href="/" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                         <Home size={16} className="text-maroon-700" /> Home
                       </Link>
 
                       {user.is_admin && (
-                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm font-semibold text-maroon-800" onClick={() => setUserMenuOpen(false)}>
+                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm font-semibold text-maroon-800" onClick={() => setUserMenuOpen(false)}>
                           <LayoutDashboard size={16} className="text-maroon-700" /> Admin Dashboard
                         </Link>
                       )}
 
-                      <Link href="/orders" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                      <Link href="/orders" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                         <Package size={16} className="text-maroon-700" /> My Orders
                       </Link>
 
-                      <Link href="/account" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                      <Link href="/account" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                         <UserCog size={16} className="text-maroon-700" /> Account Settings
                       </Link>
 
-                      <Link href="/support" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                      <Link href="/support" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                         <HelpCircle size={16} className="text-maroon-700" /> Help &amp; Policies
                       </Link>
 
                       {user.is_admin && (
-                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                           <Settings size={16} className="text-maroon-700" /> Manage Products
                         </Link>
                       )}
@@ -383,12 +383,12 @@ export default function Navbar() {
                         <UserX size={16} /> Delete Account
                       </Link>
 
-                      <hr className="border-orange-100 my-1" />
+                      <hr className="border-maroon-200 my-1" />
 
                       {/* ── Switch Account ── */}
                       <p className="px-4 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Switch Account</p>
                       {sessions.filter(s => s.user.id !== user.id).map(session => (
-                        <div key={session.user.id} className="flex items-center gap-1 px-2 hover:bg-orange-50 transition-colors group">
+                        <div key={session.user.id} className="flex items-center gap-1 px-2 hover:bg-maroon-50 transition-colors group">
                           <button
                             onClick={async () => {
                               setUserMenuOpen(false);
@@ -421,13 +421,13 @@ export default function Navbar() {
                       <Link
                         href="/auth/login?add=1"
                         onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-orange-50 text-sm text-gray-600"
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm text-gray-600"
                       >
                         <UserPlus size={15} className="text-gray-500" />
                         Add Another Account
                       </Link>
 
-                      <hr className="border-orange-100 my-1" />
+                      <hr className="border-maroon-200 my-1" />
 
                       <button
                         onClick={handleSignOut}
@@ -512,7 +512,7 @@ export default function Navbar() {
                   <ChevronDown size={14} className={`transition-transform duration-200 ${catMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {catMenuOpen && (
-                  <div className="absolute top-full left-0 w-56 bg-white shadow-xl rounded-b-xl border border-orange-100 py-2 z-50">
+                  <div className="absolute top-full left-0 w-56 bg-white shadow-xl rounded-b-xl border border-maroon-200 py-2 z-50">
                     {CATEGORIES.map((cat) => (
                       <button
                         key={cat}
@@ -520,7 +520,7 @@ export default function Navbar() {
                           setCatMenuOpen(false);
                           router.push(`/products?category=${encodeURIComponent(cat)}`);
                         }}
-                        className="w-full text-left block px-4 py-2.5 text-gray-800 hover:bg-orange-50 hover:text-maroon-800 text-sm font-medium transition-colors"
+                        className="w-full text-left block px-4 py-2.5 text-gray-800 hover:bg-maroon-50 hover:text-maroon-800 text-sm font-medium transition-colors"
                       >
                         {cat}
                       </button>
@@ -681,7 +681,7 @@ export default function Navbar() {
             </div>
 
             {/* Current user card */}
-            <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-5 flex items-center gap-3">
+            <div className="bg-maroon-50 border border-maroon-200 rounded-xl p-3 mb-5 flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-maroon-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
                 {user?.full_name.charAt(0).toUpperCase()}
               </div>

@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; b
   confirmed:        { label: 'Confirmed',          icon: CheckCircle,  color: 'text-blue-700',   bg: 'bg-blue-50',    ring: 'border-blue-400' },
   processing:       { label: 'Being Packed',       icon: Package,      color: 'text-purple-700', bg: 'bg-purple-50',  ring: 'border-purple-400' },
   shipped:          { label: 'Shipped',            icon: Truck,        color: 'text-indigo-700', bg: 'bg-indigo-50',  ring: 'border-indigo-400' },
-  out_for_delivery: { label: 'Out for Delivery',   icon: Truck,        color: 'text-orange-700', bg: 'bg-orange-50',  ring: 'border-orange-400' },
+  out_for_delivery: { label: 'Out for Delivery',   icon: Truck,        color: 'text-orange-700', bg: 'bg-maroon-50',  ring: 'border-orange-400' },
   delivered:        { label: 'Delivered',          icon: CheckCircle,  color: 'text-green-700',  bg: 'bg-green-50',   ring: 'border-green-400' },
   cancelled:        { label: 'Cancelled',          icon: XCircle,      color: 'text-red-700',    bg: 'bg-red-50',     ring: 'border-red-400' },
 };
@@ -439,7 +439,7 @@ function OrderDetailContent() {
 
               {/* Tracking number + courier */}
               {(order.tracking_number || order.awb_code) && (
-                <div className="mt-4 pt-4 border-t border-orange-100 space-y-2">
+                <div className="mt-4 pt-4 border-t border-maroon-200 space-y-2">
                   {order.courier_name && (
                     <p className="text-sm text-gray-600">Courier: <span className="font-semibold text-maroon-800">{order.courier_name}</span></p>
                   )}
@@ -459,7 +459,7 @@ function OrderDetailContent() {
                       </a>
                     )}
                     <button onClick={fetchTracking} disabled={trackLoading}
-                      className="inline-flex items-center gap-1.5 text-sm text-maroon-700 border border-maroon-300 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60">
+                      className="inline-flex items-center gap-1.5 text-sm text-maroon-700 border border-maroon-300 hover:bg-maroon-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60">
                       <RefreshCw size={13} className={trackLoading ? 'animate-spin' : ''} />
                       {trackLoading ? 'Loading...' : 'Refresh Tracking'}
                     </button>
@@ -573,7 +573,7 @@ function OrderDetailContent() {
                   </div>
                 </div>
               ) : order.payment_status === 'refund_initiated' ? (
-                <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3 bg-maroon-50 border border-orange-200 rounded-xl px-4 py-3">
                   <RotateCcw size={18} className="text-orange-600 flex-shrink-0 animate-spin" style={{animationDuration:'3s'}} />
                   <div>
                     <p className="text-sm font-bold text-orange-800">Refund Initiated 🔄</p>
@@ -581,7 +581,7 @@ function OrderDetailContent() {
                   </div>
                 </div>
               ) : order.payment_method !== 'cod' && (
-                <p className="text-sm text-orange-700 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+                <p className="text-sm text-orange-700 bg-maroon-50 border border-orange-200 rounded-xl px-4 py-2.5">
                   💰 Refund will be initiated within 24 hours and credited within 5–7 business days.
                 </p>
               )}
@@ -597,7 +597,7 @@ function OrderDetailContent() {
                 const imgSrc = item.image ? (item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL}${item.image}`) : null;
                 return (
                   <div key={i} className="flex items-start gap-4 pb-4 border-b border-orange-50 last:border-0 last:pb-0">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden border border-orange-100">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-maroon-100 to-gold-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden border border-maroon-200">
                       {imgSrc ? (
                         <img src={imgSrc} alt={item.name} className="w-full h-full object-cover"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
@@ -640,7 +640,7 @@ function OrderDetailContent() {
               {order.discount > 0 && (
                 <div className="flex justify-between text-green-600"><span>Discount</span><span>-₹{order.discount.toLocaleString()}</span></div>
               )}
-              <div className="border-t border-orange-100 pt-2.5 flex justify-between font-bold text-base">
+              <div className="border-t border-maroon-200 pt-2.5 flex justify-between font-bold text-base">
                 <span>Total Paid</span><span className="text-maroon-900">₹{order.total.toLocaleString()}</span>
               </div>
             </div>
@@ -656,7 +656,7 @@ function OrderDetailContent() {
               <p className="text-xs flex items-center gap-1.5">
                 <span className={`inline-block font-bold px-2 py-0.5 rounded-full text-[10px] border
                   ${order.payment_status === 'paid'             ? 'text-green-700 bg-green-50 border-green-300'     :
-                    order.payment_status === 'refund_initiated' ? 'text-orange-700 bg-orange-50 border-orange-300'  :
+                    order.payment_status === 'refund_initiated' ? 'text-orange-700 bg-maroon-50 border-orange-300'  :
                     order.payment_status === 'refunded'         ? 'text-purple-700 bg-purple-50 border-purple-300'  :
                     'text-amber-700 bg-amber-50 border-amber-300'}`}>
                   {order.payment_status === 'paid'             ? '✅ PAID'                 :
@@ -665,7 +665,7 @@ function OrderDetailContent() {
                 </span>
               </p>
               {order.payment_status === 'refund_initiated' && (
-                <p className="text-[10px] text-orange-600 bg-orange-50 border border-orange-100 rounded-lg px-2 py-1.5 mt-1">
+                <p className="text-[10px] text-orange-600 bg-maroon-50 border border-maroon-200 rounded-lg px-2 py-1.5 mt-1">
                   ⏱️ Refund initiated — will be credited to your account within <b>5–7 business days</b>.
                 </p>
               )}
@@ -768,7 +768,7 @@ function OrderDetailContent() {
         <div className="fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4" onClick={resetReturnModal}>
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-5 border-b border-orange-100">
+            <div className="flex items-center justify-between p-5 border-b border-maroon-200">
               <div>
                 <h3 className="font-bold text-maroon-900 text-lg">{returnKind === 'return' ? 'Return Request' : returnKind === 'exchange' ? 'Exchange Request' : 'Return / Exchange'}</h3>
                 <p className="text-xs text-gray-500">{order.order_number} · Step {stepPosition} of {stepTotal}</p>
@@ -811,7 +811,7 @@ function OrderDetailContent() {
                     {(order.items_snapshot as OrderItem[]).map((it, idx) => (
                       <button key={idx} onClick={() => { setSelectedItem(it); setReturnStep(3); }}
                         className="w-full flex items-center gap-3 p-3 rounded-xl border-2 border-gray-200 hover:border-maroon-400 text-left transition-all">
-                        <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center text-xl flex-shrink-0 overflow-hidden">
+                        <div className="w-12 h-12 rounded-lg bg-maroon-50 flex items-center justify-center text-xl flex-shrink-0 overflow-hidden">
                           {it.image ? <img src={it.image} alt={it.name} className="w-full h-full object-cover" /> : '👗'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -833,7 +833,7 @@ function OrderDetailContent() {
                   <p className="text-xs text-gray-500 mb-4">Select the most appropriate reason</p>
                   <div className="space-y-2 mb-4">
                     {EXCHANGE_REASONS.map(r => (
-                      <label key={r.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${returnReason === r.value ? 'border-maroon-500 bg-orange-50' : 'border-gray-200 hover:border-maroon-300'}`}>
+                      <label key={r.value} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${returnReason === r.value ? 'border-maroon-500 bg-maroon-50' : 'border-gray-200 hover:border-maroon-300'}`}>
                         <input type="radio" name="return_reason" value={r.value} checked={returnReason === r.value}
                           onChange={() => setReturnReason(r.value)} className="accent-maroon-700" />
                         <div>
@@ -886,8 +886,8 @@ function OrderDetailContent() {
                         const tooCheap = p.price < (selectedItem?.price || 0);
                         return (
                           <button key={p.id} disabled={tooCheap} onClick={() => selectNewProduct(p)}
-                            className={`text-left p-2.5 rounded-xl border-2 transition-all ${newProduct?.id === p.id ? 'border-maroon-700 bg-orange-50' : tooCheap ? 'border-gray-100 opacity-40 cursor-not-allowed' : 'border-gray-200 hover:border-maroon-300'}`}>
-                            <div className="w-full aspect-square rounded-lg bg-orange-50 mb-1.5 overflow-hidden flex items-center justify-center">
+                            className={`text-left p-2.5 rounded-xl border-2 transition-all ${newProduct?.id === p.id ? 'border-maroon-700 bg-maroon-50' : tooCheap ? 'border-gray-100 opacity-40 cursor-not-allowed' : 'border-gray-200 hover:border-maroon-300'}`}>
+                            <div className="w-full aspect-square rounded-lg bg-maroon-50 mb-1.5 overflow-hidden flex items-center justify-center">
                               {p.images?.[0] ? <img src={p.images[0]} alt={p.name} className="w-full h-full object-cover" /> : <span className="text-2xl">👗</span>}
                             </div>
                             <p className="text-xs font-medium text-gray-800 truncate">{p.name}</p>
@@ -900,7 +900,7 @@ function OrderDetailContent() {
                   )}
 
                   {newProduct && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 space-y-3">
+                    <div className="bg-maroon-50 border border-orange-200 rounded-xl p-3 mb-4 space-y-3">
                       <p className="text-sm font-semibold text-gray-800">Selected: {newProduct.name}</p>
                       {newProduct.size_options?.length > 0 && (
                         <div>
@@ -952,7 +952,7 @@ function OrderDetailContent() {
                 <div>
                   <p className="font-semibold text-gray-800 mb-1 flex items-center gap-2"><Lock size={16} className="text-green-600" /> Pay Price Difference</p>
                   <p className="text-xs text-gray-500 mb-4">Your replacement costs more than the original item. This must be paid upfront before your exchange request is submitted.</p>
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
+                  <div className="bg-maroon-50 border border-orange-200 rounded-xl p-4 mb-4 text-center">
                     <p className="text-xs text-gray-500 uppercase tracking-wide">Amount Due</p>
                     <p className="text-2xl font-bold text-maroon-800">₹{priceDifference.toLocaleString()}</p>
                   </div>
@@ -985,7 +985,7 @@ function OrderDetailContent() {
                   <p className="text-xs text-gray-500 mb-4">At least 2 photos are required as proof. Max 3.</p>
 
                   {/* Summary */}
-                  <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs text-gray-600 space-y-0.5">
+                  <div className="bg-maroon-50 border border-orange-200 rounded-xl p-3 mb-4 text-xs text-gray-600 space-y-0.5">
                     <p><span className="font-semibold">Type:</span> {returnKind === 'return' ? 'Return (Refund)' : 'Exchange'}</p>
                     <p><span className="font-semibold">Item:</span> {selectedItem?.name}</p>
                     <p><span className="font-semibold">Reason:</span> {EXCHANGE_REASONS.find(r => r.value === returnReason)?.label}</p>
@@ -1072,7 +1072,7 @@ function OrderDetailContent() {
             {/* Reason selector */}
             <div className="space-y-2 mb-4">
               {CANCEL_REASONS.map(reason => (
-                <label key={reason} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${cancelReason === reason ? 'border-maroon-500 bg-orange-50' : 'border-gray-200 hover:border-maroon-300'}`}>
+                <label key={reason} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${cancelReason === reason ? 'border-maroon-500 bg-maroon-50' : 'border-gray-200 hover:border-maroon-300'}`}>
                   <input type="radio" name="cancel_reason" value={reason} checked={cancelReason === reason}
                     onChange={() => setCancelReason(reason)} className="accent-maroon-700" />
                   <span className="text-sm text-gray-700">{reason}</span>

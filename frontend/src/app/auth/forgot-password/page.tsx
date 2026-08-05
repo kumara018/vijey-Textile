@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeft, KeyRound, Send } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { LogoMark } from '@/components/Logo';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -51,14 +52,14 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-[#fff9f2]">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-maroon-100">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-3 mb-4">
-            <img src="/logo.png" alt="Vijey Textile" style={{ height: '52px', width: 'auto', mixBlendMode: 'multiply', display: 'block' }} />
+            <LogoMark size={34} className="text-gold-500 flex-shrink-0" />
             <div className="flex flex-col text-left">
-              <span className="font-bold text-maroon-900 leading-tight" style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px' }}>VIJEY TEXTILE</span>
-              <span className="text-maroon-500 leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '1.5px' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
+              <span className="font-bold text-maroon-900 uppercase leading-tight" style={{ fontSize: '15px', letterSpacing: '0.04em' }}>Vijey Textile</span>
+              <span className="text-maroon-500 font-semibold uppercase leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
             </div>
           </Link>
           <h2 className="text-2xl font-bold text-gray-900">
@@ -149,7 +150,7 @@ export default function ForgotPasswordPage() {
             </form>
           )}
 
-          <div className="mt-6 pt-5 border-t border-orange-100 text-center">
+          <div className="mt-6 pt-5 border-t border-maroon-200 text-center">
             <Link href="/auth/login" className="flex items-center justify-center gap-1 text-sm text-gray-600 hover:text-maroon-800">
               <ArrowLeft size={14} /> Back to Sign In
             </Link>

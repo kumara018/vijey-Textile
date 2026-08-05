@@ -118,7 +118,7 @@ export default function WishlistPage() {
               <div key={item.id} className="card p-4 flex gap-4">
                 {/* Image */}
                 <Link href={`/products/${p.id}`} className="flex-shrink-0">
-                  <div className="w-24 h-28 rounded-xl overflow-hidden bg-orange-50">
+                  <div className="w-24 h-28 rounded-xl overflow-hidden bg-maroon-50">
                     {p.images?.[0] && !p.images[0].includes('placeholder') ? (
                       <img
                         src={p.images[0].startsWith('http') ? p.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${p.images[0]}`}

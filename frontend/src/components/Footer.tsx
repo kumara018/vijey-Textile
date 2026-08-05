@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Phone, Mail, Facebook, Instagram, MessageCircle, MapIcon } from 'lucide-react';
 import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL, CALL_URL2 } from '@/lib/config';
+import { LogoMark } from './Logo';
 
 function XIcon({ size = 16 }: { size?: number }) {
   return (
@@ -24,21 +25,15 @@ export default function Footer() {
 
           {/* Brand + Social */}
           <div>
-            {/* Logo in footer — dark rose bg on logo so white disappears, brand text visible */}
             <Link href="/" className="flex items-center gap-3 mb-4">
-              <img
-                src="/logo.png"
-                alt="Vijey Textile"
-                className="h-20 w-auto"
-                style={{ mixBlendMode: 'multiply', display: 'block' }}
-              />
+              <LogoMark size={40} className="text-white flex-shrink-0" />
               <div>
-                <p style={{ fontFamily: 'Georgia, serif', fontSize: '18px', letterSpacing: '1.5px', fontWeight: 'bold' }}
-                   className="text-white leading-tight">
-                  VIJEY TEXTILE
+                <p style={{ fontSize: '15px', letterSpacing: '0.04em', fontWeight: 'bold' }}
+                   className="text-white uppercase leading-tight">
+                  Vijey Textile
                 </p>
-                <p className="text-maroon-300 leading-tight mt-1"
-                   style={{ fontSize: '10px', letterSpacing: '1.5px' }}>
+                <p className="text-maroon-300 font-semibold uppercase leading-tight mt-1"
+                   style={{ fontSize: '9.5px', letterSpacing: '0.1em' }}>
                   Luxury Kid&apos;s &amp; Girls Clothing
                 </p>
               </div>
