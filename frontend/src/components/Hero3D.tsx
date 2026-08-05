@@ -27,7 +27,7 @@ export default function Hero3D() {
         <div
           className="absolute inset-0 rounded-sm"
           style={{
-            transform: 'translateZ(-26px) scale(0.88)', opacity: 0.5,
+            transform: 'translateZ(-26px) translateX(-16px) translateY(10px) rotateZ(-7deg) scale(0.9)', opacity: 0.55,
             background: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%)',
             border: '1px solid rgba(168,118,63,0.6)',
             boxShadow: '0 50px 90px -34px rgba(0,0,0,0.4)',
@@ -36,7 +36,7 @@ export default function Hero3D() {
         <div
           className="absolute inset-0 rounded-sm"
           style={{
-            transform: 'translateZ(0px) scale(0.94)', opacity: 0.75,
+            transform: 'translateZ(0px) translateX(9px) translateY(-6px) rotateZ(5deg) scale(0.95)', opacity: 0.8,
             background: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%)',
             border: '1px solid rgba(168,118,63,0.6)',
             boxShadow: '0 50px 90px -34px rgba(0,0,0,0.5)',
@@ -45,7 +45,7 @@ export default function Hero3D() {
         <div
           className="absolute inset-0 rounded-sm"
           style={{
-            transform: 'translateZ(26px)',
+            transform: 'translateZ(26px) rotateZ(-1.5deg)',
             background: 'linear-gradient(165deg, #a8763f 0%, #ece0cd 75%)',
             border: '1px solid rgba(168,118,63,0.7)',
             boxShadow: '0 50px 90px -34px rgba(0,0,0,0.6)',
