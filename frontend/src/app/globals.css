@@ -18,14 +18,14 @@
 }
 
 :root {
-  --primary: #e11d48;
-  --primary-dark: #9f1239;
-  --gold: #94a3b8;
-  --bg: #fff1f2;
-  --card: #ffffff;
-  --border: #fecdd3;
-  --text: #1a000e;
-  --muted: #64748b;
+  --primary: #a8763f;
+  --primary-dark: #6f4d28;
+  --gold: #c99a5f;
+  --bg: #f4ede1;
+  --card: #fffdfa;
+  --border: #ddcfb8;
+  --text: #1c1712;
+  --muted: #7a6c5c;
 }
 
 * { box-sizing: border-box; }
@@ -39,7 +39,8 @@ a:active, button:active { transform: scale(0.97); }
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 500;
   min-height: 100vh;
 }
 
@@ -63,9 +64,9 @@ body {
   }
 
   .input-field {
-    @apply w-full px-4 py-3 rounded-lg border border-orange-200 bg-white text-gray-900
+    @apply w-full px-4 py-3 rounded-lg border border-maroon-200 bg-white text-maroon-900
            focus:outline-none focus:ring-2 focus:ring-maroon-800 focus:border-transparent
-           placeholder:text-gray-400 transition-all duration-200;
+           placeholder:text-maroon-400 transition-all duration-200;
   }
 
   .input-error {
@@ -77,7 +78,7 @@ body {
   }
 
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden;
+    @apply bg-white rounded-2xl shadow-sm border border-maroon-200 overflow-hidden;
   }
 
   .section-title {
@@ -103,6 +104,6 @@ body {
 .star-empty  { color: #d1d5db; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #ffe4e6; }
-::-webkit-scrollbar-thumb { background: #e11d48; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #9f1239; }
+::-webkit-scrollbar-track { background: #ece0cd; }
+::-webkit-scrollbar-thumb { background: #a8763f; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6f4d28; }
