@@ -136,7 +136,7 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero — "Floating Heirloom": centered, symmetric, museum-case composition */}
-      <section className="relative min-h-[92vh] flex flex-col items-center justify-center text-center overflow-hidden bg-maroon-50 border-b border-maroon-200 px-6 py-16">
+      <section className="relative min-h-[88vh] flex flex-col items-center justify-center text-center overflow-hidden bg-maroon-50 border-b border-maroon-200 px-6 py-10">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ background: 'radial-gradient(80% 60% at 50% 30%, rgba(168,118,63,0.14), transparent 65%)' }}
@@ -151,7 +151,7 @@ export default function HomePage() {
         <div className="relative w-8 h-px bg-gold-500 mb-10" />
 
         {/* Real 3D hero moment */}
-        <div className="relative w-full max-w-[300px] h-[300px] mb-6">
+        <div className="relative w-full mb-6" style={{ maxWidth: 'min(78vw, 460px)', height: 'min(46vh, 460px)' }}>
           <Hero3D />
         </div>
 
