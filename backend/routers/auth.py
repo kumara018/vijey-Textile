@@ -3,7 +3,7 @@ from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
 import notifications
 import device_utils
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas, auth as auth_utils
@@ -274,7 +274,25 @@ def login(payload: schemas.UserLogin, request: Request, db: Session = Depends(ge
 # ── GET ME ────────────────────────────────────────────────────────────────────
 
 @router.get("/me", response_model=schemas.UserOut)
-def get_me(current_user: models.User = Depends(auth_utils.get_current_user)):
+def get_me(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    # Tokens issued before device-session tracking shipped have no "sid"
+    # claim, so they never show up in Linked Devices even though they're
+    # actively signed in. Silently upgrade them here — the frontend picks
+    # up the new token from this header on its next /me call, no re-login
+    # required. Skipped (not an error) if they're already at the device cap.
+    if not _current_session_token(request):
+        try:
+            session_token = _create_session_or_409(db, current_user, request)
+            response.headers["X-New-Token"] = auth_utils.create_access_token(
+                {"sub": current_user.id, "sid": session_token}
+            )
+        except HTTPException:
+            pass
     return current_user
 
 

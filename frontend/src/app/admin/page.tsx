@@ -204,8 +204,13 @@ const emptyProduct = {
 };
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const router = useRouter();
+  // True once we've confirmed admin status against a FRESH /me response —
+  // the cached localStorage user (e.g. right after being promoted to admin
+  // on another device) can briefly read is_admin:false before the background
+  // refresh catches up, which was bouncing real admins to the customer site.
+  const [confirmedFresh, setConfirmedFresh] = useState(false);
   type TabKey = 'dash'|'products'|'orders'|'cancellations'|'users'|'ratings'|'returns'|'admins';
   const [tab, setTab] = useState<TabKey>('dash');
 
@@ -267,10 +272,16 @@ export default function AdminPage() {
   useEffect(() => {
     if (authLoading) return;            // wait for localStorage restore
     if (!user) return;                  // middleware already blocked non-users
-    if (!user.is_admin) { router.push('/'); return; }  // block non-admins
-    loadDash();
-    loadNotifications();
-  }, [user, authLoading]);
+    if (user.is_admin) { loadDash(); loadNotifications(); return; }
+    if (!confirmedFresh) {
+      // Cached user data can be stale — confirm with the server once before
+      // bouncing a real admin to the customer site.
+      setConfirmedFresh(true);
+      refresh();
+      return;
+    }
+    router.push('/');  // still not admin after a fresh check — block non-admins
+  }, [user, authLoading, confirmedFresh]);
 
   const loadDash = async () => {
     try {

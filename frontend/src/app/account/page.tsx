@@ -22,6 +22,13 @@ function deviceIcon(type?: string) {
   return Laptop;
 }
 
+function deviceTypeLabel(type?: string) {
+  if (type === 'mobile') return 'Mobile';
+  if (type === 'tablet') return 'Tablet';
+  if (type === 'desktop') return 'Desktop';
+  return 'Device';
+}
+
 function fmtWhen(iso?: string) {
   if (!iso) return 'Unknown';
   const d = new Date(iso);
@@ -446,7 +453,7 @@ export default function AccountPage() {
                         )}
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {s.location || 'Unknown location'} · {fmtWhen(s.last_active_at || s.created_at)}
+                        {deviceTypeLabel(s.device_type)} · {s.location || 'Unknown location'} · {fmtWhen(s.last_active_at || s.created_at)}
                       </p>
                     </div>
                     <button

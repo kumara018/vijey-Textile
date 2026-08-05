@@ -61,7 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetch(`${API}/api/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       })
-        .then(res => (res.ok ? res.json() : null))
+        .then(res => {
+          if (!res.ok) return null;
+          // Tokens issued before device-session tracking have no "sid" claim —
+          // the backend silently upgrades them here so this device shows up
+          // in Linked Devices without forcing a logout/login.
+          const newToken = res.headers.get('X-New-Token');
+          if (newToken) _applyRefreshedToken(newToken);
+          return res.json();
+        })
         .then(fresh => {
           if (!fresh) return;
           setUser(fresh);
@@ -95,6 +103,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Helpers ───────────────────────────────────────────────────────────────
   const _setCookie = (t: string) => {
     document.cookie = `auth_token=${t}; path=/; max-age=2592000; SameSite=Lax`;
+  };
+  // Swap in a server-issued token upgrade (see the X-New-Token header on /me) —
+  // used to silently migrate pre-device-tracking tokens without a re-login.
+  const _applyRefreshedToken = (newToken: string) => {
+    localStorage.setItem('token', newToken);
+    _setCookie(newToken);
+    setToken(newToken);
   };
   const _clearCookie = () => {
     document.cookie = 'auth_token=; path=/; max-age=0';
@@ -198,6 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refresh = async () => {
     try {
       const res = await authAPI.getMe();
+      const newToken = res.headers?.['x-new-token'];
+      if (newToken) _applyRefreshedToken(newToken);
       const fresh = res.data as User;
       setUser(fresh);
       localStorage.setItem('user', JSON.stringify(fresh));
