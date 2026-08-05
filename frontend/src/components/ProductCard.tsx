@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -96,8 +97,16 @@ export default function ProductCard({ product }: Props) {
     : null;
 
   return (
-    <Link href={`/products/${product.id}`} className="group block">
-      <div className="card hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-40px' }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      whileHover={{ y: -6 }}
+      className="h-full"
+    >
+    <Link href={`/products/${product.id}`} className="group block h-full">
+      <div className="card hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
 
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
@@ -258,5 +267,6 @@ export default function ProductCard({ product }: Props) {
         </div>
       </div>
     </Link>
+    </motion.div>
   );
 }

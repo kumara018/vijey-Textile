@@ -175,19 +175,19 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 shadow-md">
 
       {/* Top bar */}
-      <div className="bg-maroon-800 text-white text-xs py-1.5 px-4 flex justify-between items-center">
+      <div className="bg-gold-50 border-b border-maroon-100 text-maroon-800 text-xs py-1.5 px-4 flex justify-between items-center">
         <div className="flex items-center gap-4">
-          <a href={STORE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
+          <a href={STORE.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-gold-700 transition-colors cursor-pointer">
             <MapPin size={11} /> {SHORT_ADDRESS}
           </a>
-          <a href={`tel:${STORE.phone1.replace(/\s/g,'')}`} className="hidden sm:flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
+          <a href={`tel:${STORE.phone1.replace(/\s/g,'')}`} className="hidden sm:flex items-center gap-1 hover:text-gold-700 transition-colors cursor-pointer">
             <Phone size={11} /> {STORE.phone1}
           </a>
-          <a href={`tel:${STORE.phone2.replace(/\s/g,'')}`} className="hidden md:flex items-center gap-1 hover:text-gold-300 transition-colors cursor-pointer">
+          <a href={`tel:${STORE.phone2.replace(/\s/g,'')}`} className="hidden md:flex items-center gap-1 hover:text-gold-700 transition-colors cursor-pointer">
             <Phone size={11} /> {STORE.phone2}
           </a>
         </div>
-        <a href="/shipping" className="text-gold-400 font-medium hover:text-gold-300 transition-colors">
+        <a href="/shipping" className="text-gold-700 font-semibold hover:text-gold-800 transition-colors">
           Fast delivery across India 🚚
         </a>
       </div>
@@ -490,14 +490,14 @@ export default function Navbar() {
         </div>
 
         {/* Category bar — desktop */}
-        <div className="bg-maroon-700 hidden md:block">
+        <div className="bg-maroon-50 border-t border-maroon-100 hidden md:block">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex items-center gap-1 h-10">
 
               {/* Home */}
               <Link
                 href="/"
-                className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-600 transition-colors"
+                className="flex items-center gap-1.5 px-4 h-full text-sm font-medium text-maroon-800 hover:bg-maroon-100 transition-colors"
               >
                 <Home size={15} /> Home
               </Link>
@@ -506,7 +506,7 @@ export default function Navbar() {
               <div className="relative h-full" ref={catMenuRef}>
                 <button
                   onClick={() => setCatMenuOpen(v => !v)}
-                  className="flex items-center gap-1.5 px-4 h-full text-sm font-medium hover:bg-maroon-600 transition-colors"
+                  className="flex items-center gap-1.5 px-4 h-full text-sm font-medium text-maroon-800 hover:bg-maroon-100 transition-colors"
                 >
                   <Menu size={16} /> All Categories
                   <ChevronDown size={14} className={`transition-transform duration-200 ${catMenuOpen ? 'rotate-180' : ''}`} />
@@ -531,14 +531,14 @@ export default function Navbar() {
 
               <Link
                 href="/orders"
-                className="px-4 h-full flex items-center text-sm font-medium hover:bg-maroon-700 transition-colors text-maroon-200"
+                className="px-4 h-full flex items-center text-sm font-medium text-maroon-800 hover:bg-maroon-100 transition-colors"
               >
                 My Orders
               </Link>
 
               <Link
                 href="/support"
-                className="ml-auto px-4 h-full flex items-center text-sm font-medium hover:bg-maroon-700 transition-colors text-maroon-200"
+                className="ml-auto px-4 h-full flex items-center text-sm font-medium text-maroon-800 hover:bg-maroon-100 transition-colors"
               >
                 Help
               </Link>

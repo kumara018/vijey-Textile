@@ -16,7 +16,7 @@ const OFFERS = [
     desc: 'Soft, gentle & cute baby frocks in sizes 14 to 24 — perfect for little ones.',
     btn: 'Shop Baby Frocks',
     href: '/products?category=Baby+Frocks',
-    bg: 'from-maroon-900 via-maroon-800 to-rose-900',
+    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
     accent: '🌸',
   },
   {
@@ -26,7 +26,7 @@ const OFFERS = [
     desc: 'Premium cotton & silk chudithar sets — classic style, modern comfort. Sizes 14–40.',
     btn: 'Shop Chudithar',
     href: '/products?category=Chudithar',
-    bg: 'from-maroon-950 via-maroon-800 to-indigo-900',
+    bg: 'from-gold-50 via-maroon-100 to-gold-50',
     accent: '🪷',
   },
   {
@@ -36,7 +36,7 @@ const OFFERS = [
     desc: 'Classic cotton frocks, umbrella frocks & lace frocks for every little girl.',
     btn: 'Shop Frocks',
     href: '/products?category=Frocks',
-    bg: 'from-purple-900 via-maroon-800 to-purple-900',
+    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
     accent: '💐',
   },
   {
@@ -46,7 +46,7 @@ const OFFERS = [
     desc: 'Stylish A-line dresses, denim pinafores & shirt dresses for modern girls.',
     btn: 'Shop Western',
     href: '/products?category=Western+Dresses',
-    bg: 'from-maroon-900 via-rose-900 to-maroon-900',
+    bg: 'from-gold-50 via-maroon-100 to-gold-50',
     accent: '⭐',
   },
   {
@@ -56,7 +56,7 @@ const OFFERS = [
     desc: 'Stunning silk & net lehengas for weddings, Diwali & all festive occasions.',
     btn: 'Shop Lehenga',
     href: '/products?category=Lehenga',
-    bg: 'from-teal-900 via-maroon-800 to-teal-900',
+    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
     accent: '🌺',
   },
   {
@@ -66,18 +66,18 @@ const OFFERS = [
     desc: 'Sequin gowns, tutu dresses & velvet frocks — every girl deserves to shine!',
     btn: 'Shop Party Wear',
     href: '/products?category=Party+Wear',
-    bg: 'from-amber-900 via-maroon-800 to-amber-900',
+    bg: 'from-gold-50 via-maroon-100 to-gold-50',
     accent: '🎉',
   },
 ];
 
 const CATEGORIES = [
-  { name: 'Baby Frocks',      emoji: '👶', desc: 'Soft & Cute Baby Wear',   gradient: 'from-violet-100 to-purple-200',  border: 'border-violet-300' },
-  { name: 'Chudithar',        emoji: '👘', desc: 'Traditional Elegance',    gradient: 'from-indigo-100 to-violet-200',  border: 'border-indigo-300' },
-  { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-purple-100 to-violet-200',  border: 'border-purple-300' },
-  { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-fuchsia-100 to-purple-200', border: 'border-fuchsia-300'},
-  { name: 'Lehenga',          emoji: '💃', desc: 'Festive & Bridal',        gradient: 'from-violet-100 to-indigo-200',  border: 'border-violet-400' },
-  { name: 'Party Wear',       emoji: '✨', desc: 'Glam & Celebrations',     gradient: 'from-yellow-100 to-amber-200',   border: 'border-yellow-400' },
+  { name: 'Baby Frocks',      emoji: '👶', desc: 'Soft & Cute Baby Wear',   gradient: 'from-maroon-50 to-maroon-100',   border: 'border-maroon-200' },
+  { name: 'Chudithar',        emoji: '👘', desc: 'Traditional Elegance',    gradient: 'from-gold-50 to-gold-100',       border: 'border-gold-200' },
+  { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-maroon-100 to-gold-50',     border: 'border-maroon-300' },
+  { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-gold-50 to-gold-100',       border: 'border-gold-200' },
+  { name: 'Lehenga',          emoji: '💃', desc: 'Festive & Bridal',        gradient: 'from-maroon-50 to-maroon-100',   border: 'border-maroon-200' },
+  { name: 'Party Wear',       emoji: '✨', desc: 'Glam & Celebrations',     gradient: 'from-maroon-100 to-gold-50',     border: 'border-maroon-300' },
 ];
 
 const FEATURES = [
@@ -214,16 +214,24 @@ export default function HomePage() {
           </div>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {CATEGORIES.map(({ name, emoji, desc, gradient, border }) => (
-            <Link
+          {CATEGORIES.map(({ name, emoji, desc, gradient, border }, i) => (
+            <motion.div
               key={name}
-              href={`/products?category=${encodeURIComponent(name)}`}
-              className={`group card bg-gradient-to-br ${gradient} border-2 ${border} hover:shadow-lg transition-all duration-300 hover:-translate-y-1 p-6 flex flex-col items-center text-center`}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
+              whileHover={{ y: -6, scale: 1.02 }}
             >
-              <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{emoji}</span>
-              <h3 className="font-bold text-maroon-900 text-sm leading-tight">{name}</h3>
-              <p className="text-xs text-maroon-600 mt-1">{desc}</p>
-            </Link>
+              <Link
+                href={`/products?category=${encodeURIComponent(name)}`}
+                className={`group card bg-gradient-to-br ${gradient} border-2 ${border} hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col items-center text-center h-full`}
+              >
+                <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{emoji}</span>
+                <h3 className="font-bold text-maroon-900 text-sm leading-tight">{name}</h3>
+                <p className="text-xs text-maroon-600 mt-1">{desc}</p>
+              </Link>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -273,7 +281,7 @@ export default function HomePage() {
 
       {/* Rotating Offer Banner */}
       <section className="max-w-7xl mx-auto px-4 py-10">
-        <div className={`bg-gradient-to-r ${OFFERS[offerIdx].bg} rounded-2xl p-8 md:p-12 text-white text-center relative overflow-hidden transition-all duration-700`}>
+        <div className={`bg-gradient-to-r ${OFFERS[offerIdx].bg} border border-maroon-200 rounded-2xl p-8 md:p-12 text-maroon-900 text-center relative overflow-hidden transition-all duration-700`}>
           {/* Big background emoji */}
           <div className="absolute inset-0 opacity-[0.06] text-[180px] flex items-center justify-center select-none pointer-events-none">
             {OFFERS[offerIdx].accent}
@@ -282,29 +290,29 @@ export default function HomePage() {
           {/* Prev / Next arrows */}
           <button
             onClick={prevOffer}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-maroon-800 flex items-center justify-center transition-colors z-10"
           >
             <ChevronLeft size={20} />
           </button>
           <button
             onClick={nextOffer}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors z-10"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-maroon-800 flex items-center justify-center transition-colors z-10"
           >
             <ChevronRight size={20} />
           </button>
 
           {/* Content */}
           <div className="relative z-10 transition-all duration-500">
-            <span className="inline-block bg-gold-500/20 border border-gold-400/30 text-gold-300 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">
+            <span className="inline-block bg-white/70 border border-gold-300 text-gold-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">
               {OFFERS[offerIdx].tag}
             </span>
-            <h2 className="text-2xl md:text-4xl font-display font-bold mb-3">
+            <h2 className="text-2xl md:text-4xl font-display font-black mb-3 text-maroon-900">
               {OFFERS[offerIdx].emoji} {OFFERS[offerIdx].title}
             </h2>
-            <p className="text-maroon-200 mb-6 max-w-xl mx-auto text-sm md:text-base">
+            <p className="text-maroon-600 mb-6 max-w-xl mx-auto text-sm md:text-base">
               {OFFERS[offerIdx].desc}
             </p>
-            <Link href={OFFERS[offerIdx].href} className="btn-gold inline-flex items-center gap-2">
+            <Link href={OFFERS[offerIdx].href} className="btn-primary inline-flex items-center gap-2">
               {OFFERS[offerIdx].btn} <ArrowRight size={18} />
             </Link>
           </div>
@@ -315,7 +323,7 @@ export default function HomePage() {
               <button
                 key={i}
                 onClick={() => { clearInterval(offerTimer.current); setOfferIdx(i); offerTimer.current = setInterval(() => setOfferIdx(j => (j + 1) % OFFERS.length), 3000); }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${i === offerIdx ? 'w-6 bg-gold-400' : 'w-1.5 bg-white/30'}`}
+                className={`h-1.5 rounded-full transition-all duration-300 ${i === offerIdx ? 'w-6 bg-gold-500' : 'w-1.5 bg-maroon-300'}`}
               />
             ))}
           </div>
