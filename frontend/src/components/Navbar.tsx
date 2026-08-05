@@ -420,6 +420,8 @@ export default function Navbar() {
                       ))}
                       <Link
                         href="/auth/login?add=1"
+                        target="_blank"
+                        rel="noopener noreferrer"
                         onClick={() => setUserMenuOpen(false)}
                         className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm text-gray-600"
                       >
@@ -630,6 +632,8 @@ export default function Navbar() {
                   ))}
                   <Link
                     href="/auth/login?add=1"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     onClick={() => setMobileOpen(false)}
                     className="px-4 py-2.5 rounded-lg hover:bg-maroon-700 text-sm font-medium text-maroon-200 flex items-center gap-2">
                     <UserPlus size={15} /> Add Another Account

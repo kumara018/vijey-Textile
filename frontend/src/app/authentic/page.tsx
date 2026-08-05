@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import {
-  Shield, CheckCircle, Star, Award,
+  Shield, CheckCircle, Award,
   ChevronRight, Headphones, Truck,
 } from 'lucide-react';
 
@@ -106,24 +106,6 @@ export default function AuthenticPage() {
               <CheckCircle size={15} className="text-green-500 flex-shrink-0" /> {item}
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Ratings trust */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-10 flex flex-col sm:flex-row items-center gap-6">
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Star size={32} className="text-yellow-400 fill-yellow-400" />
-          <div>
-            <p className="text-3xl font-bold text-gray-900">4.8</p>
-            <p className="text-xs text-gray-500">Average rating</p>
-          </div>
-        </div>
-        <div>
-          <p className="font-bold text-gray-800 mb-1">Rated by our customers</p>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Our verified buyer reviews reflect real experiences. We never delete or filter negative reviews —
-            transparency is core to who we are. You can see all reviews on each product page.
-          </p>
         </div>
       </div>
 

@@ -35,7 +35,7 @@ function fmtWhen(iso?: string) {
 }
 
 export default function AccountPage() {
-  const { user, loading: authLoading, refresh, logout } = useAuth();
+  const { user, loading: authLoading, refresh } = useAuth();
   const router = useRouter();
 
   // Redirect if not logged in — but wait for auth to restore from localStorage first
@@ -469,7 +469,7 @@ export default function AccountPage() {
         <h3 className="font-bold text-red-700 mb-3 text-sm uppercase tracking-wide">Danger Zone</h3>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
-            onClick={() => { logout(); window.location.href = '/auth/login'; }}
+            onClick={() => window.open('/auth/login?add=1', '_blank', 'noopener,noreferrer')}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors"
           >
             <RefreshCw size={15} /> Add Another Account

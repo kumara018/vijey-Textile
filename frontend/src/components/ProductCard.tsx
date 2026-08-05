@@ -105,7 +105,7 @@ export default function ProductCard({ product }: Props) {
       whileHover={{ y: -6 }}
       className="h-full"
     >
-    <Link href={`/products/${product.id}`} className="group block h-full">
+    <Link href={`/products/${product.id}`} target="_blank" rel="noopener noreferrer" className="group block h-full">
       <div className="card hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
 
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
