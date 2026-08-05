@@ -169,6 +169,10 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE products ADD COLUMN video_url VARCHAR(500)"))
                 conn.commit()
                 print("[Startup] Migrated: added video_url to products")
+            if "video_orientation" not in products_cols:
+                conn.execute(text("ALTER TABLE products ADD COLUMN video_orientation VARCHAR(20) DEFAULT 'landscape'"))
+                conn.commit()
+                print("[Startup] Migrated: added video_orientation to products")
             if "fit" not in products_cols:
                 conn.execute(text("ALTER TABLE products ADD COLUMN fit VARCHAR(100)"))
                 conn.commit()

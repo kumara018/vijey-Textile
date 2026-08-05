@@ -73,6 +73,7 @@ class Product(Base):
     colors        = Column(JSON, default=list)
     images        = Column(JSON, default=list)
     video_url          = Column(String(500), nullable=True)   # product video URL (YouTube/MP4)
+    video_orientation  = Column(String(20), nullable=True, default="landscape")  # "portrait" | "landscape" — admin choice
     fit                = Column(String(100), nullable=True)   # e.g. "Regular Fit", "Relaxed Fit"
     material           = Column(String(255), nullable=True)   # e.g. "100% Cotton"
     care_instructions  = Column(Text, nullable=True)          # washing & care instructions

@@ -110,7 +110,7 @@ export default function ProductCard({ product }: Props) {
 
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
-          className="relative bg-gradient-to-br from-maroon-100 to-gold-50 aspect-[3/4] overflow-hidden"
+          className="relative bg-gradient-to-br from-maroon-100 to-gold-50 aspect-[3/4] overflow-hidden p-4"
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={handleMouseLeave}
           onTouchStart={onTouchStart}
@@ -128,7 +128,7 @@ export default function ProductCard({ product }: Props) {
             <img
               src={currentImg}
               alt={product.name}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-maroon-200">

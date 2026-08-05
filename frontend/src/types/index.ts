@@ -25,6 +25,7 @@ export interface Product {
   colors: string[];
   images: string[];
   video_url?: string;
+  video_orientation?: 'portrait' | 'landscape';
   fit?: string;
   material?: string;
   care_instructions?: string;

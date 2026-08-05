@@ -199,7 +199,7 @@ function CSInteractionsTab() {
 const emptyProduct = {
   name:'', description:'', price:'', compare_price:'', category:'',
   fabric:'', size_options:[] as string[], colors:[] as string[],
-  images:[] as string[], video_url:'', fit:'', material:'', care_instructions:'',
+  images:[] as string[], video_url:'', video_orientation:'landscape', fit:'', material:'', care_instructions:'',
   stock:'', is_featured:false, is_new_arrival:false, is_returnable:true,
 };
 
@@ -378,7 +378,7 @@ export default function AdminPage() {
       compare_price: p.compare_price ? String(p.compare_price) : '',
       category: p.category, fabric: p.fabric || '',
       size_options: p.size_options || [], colors: p.colors || [],
-      images: p.images || [], video_url: p.video_url || '',
+      images: p.images || [], video_url: p.video_url || '', video_orientation: p.video_orientation || 'landscape',
       fit: p.fit || '', material: p.material || '', care_instructions: p.care_instructions || '',
       stock: String(p.stock),
       is_featured: p.is_featured, is_new_arrival: p.is_new_arrival || false,
@@ -404,6 +404,7 @@ export default function AdminPage() {
         colors: form.colors,
         images: form.images,
         video_url: (form as any).video_url?.trim() || null,
+        video_orientation: (form as any).video_orientation || 'landscape',
         fit: (form as any).fit?.trim() || null,
         material: (form as any).material?.trim() || null,
         care_instructions: (form as any).care_instructions?.trim() || null,
@@ -1543,6 +1544,28 @@ export default function AdminPage() {
                   <span className="text-xs text-gray-400">Max 100MB · MP4, MOV, WebM</span>
                 </div>
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} />
+
+                {/* Video orientation — controls how the video frames on the product page */}
+                <div className="mt-3">
+                  <label className="label">Video Orientation</label>
+                  <div className="inline-flex rounded-lg border border-maroon-200 overflow-hidden">
+                    {(['landscape', 'portrait'] as const).map(orient => (
+                      <button
+                        key={orient}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, video_orientation: orient } as any))}
+                        className={`px-4 py-1.5 text-sm font-medium transition-colors ${
+                          ((form as any).video_orientation || 'landscape') === orient
+                            ? 'bg-maroon-800 text-white'
+                            : 'bg-white text-maroon-700 hover:bg-maroon-50'
+                        }`}
+                      >
+                        {orient === 'landscape' ? 'Landscape (16:9)' : 'Portrait (9:16)'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Landscape for studio/runway shots, portrait for reels-style try-on videos.</p>
+                </div>
               </div>
 
               {/* Fit, Material, Care */}

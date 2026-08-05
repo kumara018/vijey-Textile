@@ -112,7 +112,7 @@ function VideoSlide({ url }: { url: string }) {
 }
 
 // ── Carousel ──────────────────────────────────────────────────────────────────
-function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUrl?: string; name: string }) {
+function ProductCarousel({ images, videoUrl, videoOrientation, name }: { images: string[]; videoUrl?: string; videoOrientation?: string; name: string }) {
   const slides: Array<{ type: 'image' | 'video'; src: string }> = [
     ...images.map(img => ({ type: 'image' as const, src: resolveUrl(img) })),
     ...(videoUrl ? [{ type: 'video' as const, src: videoUrl }] : []),
@@ -149,13 +149,18 @@ function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUr
   return (
     <div className="select-none">
       <div
-        className="relative bg-gradient-to-br from-maroon-100 to-gold-50 rounded-2xl overflow-hidden mb-3 cursor-grab active:cursor-grabbing"
-        style={{ aspectRatio: '1/1' }}
+        className={`relative bg-gradient-to-br from-maroon-100 to-gold-50 rounded-2xl overflow-hidden mb-3 mx-auto cursor-grab active:cursor-grabbing ${current.type === 'image' ? 'p-6' : ''}`}
+        style={{
+          aspectRatio: current.type === 'video'
+            ? (videoOrientation === 'portrait' ? '9/16' : '16/9')
+            : '1/1',
+          maxWidth: current.type === 'video' && videoOrientation === 'portrait' ? '420px' : undefined,
+        }}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
         onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
       >
         {current.type === 'image' ? (
-          <img src={current.src} alt={`${name} — view ${active + 1}`} className="w-full h-full object-cover" draggable={false} />
+          <img src={current.src} alt={`${name} — view ${active + 1}`} className="w-full h-full object-contain" draggable={false} />
         ) : (
           <VideoSlide url={current.src} />
         )}
@@ -198,9 +203,9 @@ function ProductCarousel({ images, videoUrl, name }: { images: string[]; videoUr
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {slides.map((s, i) => (
             <button key={i} onClick={() => go(i)}
-              className={`relative flex-shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all ${i === active ? 'border-maroon-800 ring-2 ring-maroon-300' : 'border-gray-200 hover:border-maroon-400'}`}>
+              className={`relative flex-shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden bg-gradient-to-br from-maroon-50 to-gold-50 transition-all ${i === active ? 'border-maroon-800 ring-2 ring-maroon-300' : 'border-gray-200 hover:border-maroon-400'}`}>
               {s.type === 'image' ? (
-                <img src={s.src} alt="" className="w-full h-full object-cover" />
+                <img src={s.src} alt="" className="w-full h-full object-contain p-1" />
               ) : (
                 <div className="w-full h-full bg-gray-900 flex items-center justify-center">
                   <Play size={20} className="text-white" fill="white" />
@@ -348,7 +353,7 @@ export default function ProductDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         {/* Carousel */}
         <div>
-          <ProductCarousel images={product.images || []} videoUrl={product.video_url} name={product.name} />
+          <ProductCarousel images={product.images || []} videoUrl={product.video_url} videoOrientation={product.video_orientation} name={product.name} />
         </div>
 
         {/* Details */}
