@@ -21,6 +21,7 @@ class User(Base):
     pincode       = Column(String(10),  nullable=True)
     is_admin             = Column(Boolean, default=False)
     is_active            = Column(Boolean, default=True)
+    is_verified          = Column(Boolean, default=False)          # False until signup OTP is confirmed
     is_deactivated       = Column(Boolean, default=False)          # user-initiated soft suspend
     deactivated_at       = Column(DateTime(timezone=True), nullable=True)
     scheduled_delete_at  = Column(DateTime(timezone=True), nullable=True)   # account deletion
@@ -31,6 +32,7 @@ class User(Base):
     orders     = relationship("Order",    back_populates="user")
     reviews    = relationship("Review",   back_populates="user")
     addresses  = relationship("Address",  back_populates="user", cascade="all, delete-orphan")
+    sessions   = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
 
 
 class Category(Base):
@@ -44,6 +46,27 @@ class Category(Base):
     is_active   = Column(Boolean, default=True)
     sort_order  = Column(Integer, default=0)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class UserSession(Base):
+    """One row per logged-in device — powers the 4-device cap and the
+    'Linked Devices' dashboard (WhatsApp-style device list)."""
+    __tablename__ = "user_sessions"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    user_id        = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    session_token  = Column(String(64), unique=True, index=True, nullable=False)  # embedded in the JWT as "sid"
+    device_name    = Column(String(150), nullable=True)   # e.g. "Chrome on Windows"
+    os_name        = Column(String(50),  nullable=True)   # Windows | macOS | Linux | iOS | Android
+    browser_name   = Column(String(50),  nullable=True)   # Chrome | Safari | Firefox | Edge
+    device_type    = Column(String(20),  nullable=True)   # desktop | mobile | tablet
+    ip_address     = Column(String(64),  nullable=True)
+    location       = Column(String(150), nullable=True)   # "Chennai, Tamil Nadu, India"
+    created_at     = Column(DateTime(timezone=True), server_default=func.now())
+    last_active_at = Column(DateTime(timezone=True), server_default=func.now())
+    revoked_at     = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", back_populates="sessions")
 
 
 class OTPStore(Base):

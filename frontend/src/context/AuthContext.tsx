@@ -163,6 +163,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // If other saved sessions exist → auto-switch to the next one (like Amazon/Google).
   // If no other sessions → fully log out.
   const logout = () => {
+    // Revoke the device session server-side (fire-and-forget — never block
+    // the local sign-out on a network round trip).
+    authAPI.logout().catch(() => {});
+
     const currentId = user?.id;
     const remaining = sessions.filter(s => s.user.id !== currentId);
 

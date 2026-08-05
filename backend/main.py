@@ -85,6 +85,12 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE users ADD COLUMN deactivated_at TIMESTAMP WITH TIME ZONE"))
                 conn.commit()
                 print("[Startup] Migrated: added deactivated_at to users")
+            if "is_verified" not in user_cols:
+                # DEFAULT TRUE so every existing customer stays able to log in —
+                # only brand-new signups start unverified and go through OTP.
+                conn.execute(text("ALTER TABLE users ADD COLUMN is_verified BOOLEAN NOT NULL DEFAULT TRUE"))
+                conn.commit()
+                print("[Startup] Migrated: added is_verified to users")
         except Exception as e:
             print(f"[Startup] User migration note: {e}")
 

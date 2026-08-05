@@ -618,29 +618,72 @@ def send_login_otp_email(email: str, name: str, otp: str):
     _bg(email, f"Your Vijey Textile sign-in code", html)
 
 
+# ── 9a2. Registration verification OTP ─────────────────────────────────────────
+def send_register_otp_email(email: str, name: str, otp: str):
+    first = name.split()[0]
+    html = _wrap(f"""
+      <h2 style="color:#a8763f;margin-top:0;font-size:22px;">✨ Verify your new account</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;">
+        Hi {first}, welcome to <strong>{STORE_NAME}</strong>! Enter the code below to verify your
+        email and mobile number and finish creating your account.
+      </p>
+      <div style="background:#f4ede1;border:2px solid #a8763f;border-radius:12px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Verification Code</p>
+        <p style="margin:14px 0 6px;font-size:46px;font-weight:bold;color:#a8763f;letter-spacing:14px;font-family:monospace;">{otp}</p>
+        <p style="margin:0;color:#999;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
+      </div>
+      <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:20px 0;">
+        <p style="margin:0;color:#92400e;font-size:13px;line-height:1.6;">
+          🛡️ <strong>Security tip:</strong> Never share this code with anyone.
+          Vijey Textile staff will never ask for it.
+        </p>
+      </div>
+      <p style="color:#888;font-size:13px;line-height:1.6;">
+        Didn't create an account with us? You can safely ignore this email.
+      </p>
+    """)
+    _bg(email, f"Verify your Vijey Textile account", html)
+
+
 # ── 9b. Login success notification (sent after every completed sign-in) ───────
-def send_login_notification_email(email: str, name: str):
+def send_login_notification_email(email: str, name: str, device_name: str = None, location: str = None):
     first = name.split()[0]
     when = datetime.now().strftime("%d %b %Y, %I:%M %p")
+    detail_rows = f"""
+        <tr><td style="padding:6px 0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Sign-in time</td></tr>
+        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#1c1712;">{when}</td></tr>
+    """
+    if device_name:
+        detail_rows += f"""
+        <tr><td style="padding:6px 0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Device</td></tr>
+        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#1c1712;">{device_name}</td></tr>
+        """
+    if location:
+        detail_rows += f"""
+        <tr><td style="padding:6px 0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Approximate location</td></tr>
+        <tr><td style="padding:0;font-size:16px;font-weight:bold;color:#1c1712;">{location}</td></tr>
+        """
     html = _wrap(f"""
       <div style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 20px;margin-bottom:20px;">
         <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ New Sign-In</span>
       </div>
       <h2 style="color:#1c1712;margin-top:0;font-size:22px;">Hi {first}, you just signed in</h2>
       <p style="color:#444;font-size:14px;line-height:1.7;">
-        Your <strong>{STORE_NAME}</strong> account was just signed into successfully.
+        Your <strong>{STORE_NAME}</strong> account was just signed into successfully on a device.
       </p>
-      <div style="background:#f8f4f0;border-radius:8px;padding:16px;margin:20px 0;">
-        <p style="margin:0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Sign-in time</p>
-        <p style="margin:6px 0 0;font-size:16px;font-weight:bold;color:#1c1712;">{when}</p>
-      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f4f0;border-radius:8px;padding:16px;margin:20px 0;border-collapse:collapse;">
+        <tr><td style="padding:16px;">
+          <table cellpadding="0" cellspacing="0">{detail_rows}</table>
+        </td></tr>
+      </table>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:20px 0;">
         <p style="margin:0;color:#92400e;font-size:13px;line-height:1.6;">
-          🛡️ <strong>Wasn't you?</strong> Reset your password immediately and contact
+          🛡️ <strong>Wasn't you?</strong> Open <em>Linked Devices</em> in your account to sign that device out,
+          reset your password immediately, and contact
           <a href="mailto:{SUPPORT_EMAIL}" style="color:#a8763f;">{SUPPORT_EMAIL}</a>.
         </p>
       </div>
-      {_btn("View Account →", f"{STORE_URL}/account")}
+      {_btn("View Linked Devices →", f"{STORE_URL}/account#devices")}
     """)
     _bg(email, f"New sign-in to your {STORE_NAME} account", html)
 

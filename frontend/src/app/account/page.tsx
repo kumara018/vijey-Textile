@@ -5,14 +5,34 @@ import Link from 'next/link';
 import {
   User, Mail, Phone, Lock, Eye, EyeOff, Save, Package,
   MapPin, HelpCircle, UserX, LogOut, ShieldCheck, AlertCircle,
-  CheckCircle, RefreshCw, Home, ChevronRight,
+  CheckCircle, RefreshCw, Home, ChevronRight, Laptop, Smartphone,
+  Tablet, MonitorSmartphone,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
 import { performLogout } from '@/lib/auth';
+import { DeviceSession } from '@/types';
 import toast from 'react-hot-toast';
 
-type Tab = 'profile' | 'password';
+type Tab = 'profile' | 'password' | 'devices';
+
+function deviceIcon(type?: string) {
+  if (type === 'mobile') return Smartphone;
+  if (type === 'tablet') return Tablet;
+  return Laptop;
+}
+
+function fmtWhen(iso?: string) {
+  if (!iso) return 'Unknown';
+  const d = new Date(iso);
+  const diffMs = Date.now() - d.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Active now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? '' : 's'} ago`;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export default function AccountPage() {
   const { user, loading: authLoading, refresh, logout } = useAuth();
@@ -86,6 +106,49 @@ export default function AccountPage() {
     }
   };
 
+  // ── Linked Devices ────────────────────────────────────────────────────────
+  const [sessions,      setSessions]      = useState<DeviceSession[]>([]);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [revokingId,    setRevokingId]    = useState<number | null>(null);
+
+  const loadSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const res = await authAPI.getSessions();
+      setSessions(res.data);
+    } catch {
+      toast.error('Could not load your linked devices. Please try again.');
+    } finally {
+      setSessionsLoading(false);
+      setSessionsLoaded(true);
+    }
+  };
+
+  // Load once eagerly (powers the summary count on Profile too), not just on tab click
+  useEffect(() => {
+    if (user && !sessionsLoaded) loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleRevoke = async (session: DeviceSession) => {
+    setRevokingId(session.id);
+    try {
+      await authAPI.revokeSession(session.id);
+      if (session.is_current) {
+        toast.success('Signed out.');
+        performLogout();
+        return;
+      }
+      toast.success(`Signed out of ${session.device_name || 'that device'}.`);
+      setSessions(prev => prev.filter(s => s.id !== session.id));
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not sign out that device.');
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
   if (!user) return null; // wait for redirect
 
   return (
@@ -112,6 +175,25 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* ── Linked Devices notice bar ───────────────────────────────────── */}
+      {sessionsLoaded && (
+        <button
+          onClick={() => setTab('devices')}
+          className="w-full mb-6 flex items-center gap-3 card p-4 hover:shadow-md hover:border-maroon-200 border-2 border-transparent transition-shadow text-left"
+        >
+          <div className="w-10 h-10 rounded-full bg-maroon-100 flex items-center justify-center flex-shrink-0">
+            <MonitorSmartphone size={18} className="text-maroon-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">
+              Signed in on {sessions.length} of 4 devices
+            </p>
+            <p className="text-xs text-gray-500">Tap to see where and when — sign out of any device you don&apos;t recognize.</p>
+          </div>
+          <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+        </button>
+      )}
+
       {/* ── Quick links ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         {[
@@ -133,6 +215,7 @@ export default function AccountPage() {
         {([
           { key: 'profile',  label: 'Profile Info',    icon: User },
           { key: 'password', label: 'Change Password', icon: Lock },
+          { key: 'devices',  label: 'Linked Devices',  icon: MonitorSmartphone },
         ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -323,6 +406,61 @@ export default function AccountPage() {
                 : <><Lock size={16} /> Update Password</>}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* ── Linked Devices Tab ───────────────────────────────────────── */}
+      {tab === 'devices' && (
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-bold text-gray-800 text-lg">Linked Devices</h2>
+            <button onClick={loadSessions} disabled={sessionsLoading}
+              className="text-xs font-medium text-maroon-700 hover:underline flex items-center gap-1 disabled:text-gray-400">
+              <RefreshCw size={12} className={sessionsLoading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 mb-5">
+            Every device currently signed in to your account — up to 4 at a time. Don&apos;t recognize one? Sign it out immediately.
+          </p>
+
+          {sessionsLoading && sessions.length === 0 ? (
+            <div className="py-8 flex justify-center">
+              <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-maroon-700" />
+            </div>
+          ) : sessions.length === 0 ? (
+            <p className="text-sm text-gray-400 py-6 text-center">No active devices found.</p>
+          ) : (
+            <div className="space-y-2.5">
+              {sessions.map(s => {
+                const Icon = deviceIcon(s.device_type);
+                return (
+                  <div key={s.id} className={`flex items-center gap-3 p-4 rounded-xl border ${s.is_current ? 'border-maroon-300 bg-maroon-50' : 'border-gray-200'}`}>
+                    <div className="w-11 h-11 rounded-full bg-white border border-maroon-100 flex items-center justify-center flex-shrink-0">
+                      <Icon size={19} className="text-maroon-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-gray-900">{s.device_name || 'Unknown device'}</p>
+                        {s.is_current && (
+                          <span className="text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 px-2 py-0.5 rounded-full">This device</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {s.location || 'Unknown location'} · {fmtWhen(s.last_active_at || s.created_at)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleRevoke(s)}
+                      disabled={revokingId === s.id}
+                      className="text-xs font-semibold text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 flex-shrink-0"
+                    >
+                      {revokingId === s.id ? 'Signing out…' : 'Sign out'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

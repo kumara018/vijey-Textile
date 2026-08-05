@@ -10,6 +10,8 @@ import os
 from database import get_db
 import models
 
+ACTION_TOKEN_EXPIRE_MINUTES = 5
+
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))  # 30 days
@@ -52,13 +54,55 @@ def get_current_user(
         if user_id_str is None:
             raise credentials_exc
         user_id = int(user_id_str)
+        session_token: Optional[str] = payload.get("sid")
     except (InvalidTokenError, ValueError):
         raise credentials_exc
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if user is None or not user.is_active:
         raise credentials_exc
+
+    # Tokens issued before the device-session feature have no "sid" claim —
+    # honor them until they naturally expire (backward compatible).
+    if session_token:
+        session = db.query(models.UserSession).filter(
+            models.UserSession.session_token == session_token,
+        ).first()
+        if session is None or session.revoked_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="You've been signed out of this device. Please log in again.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        # Throttled "last active" touch — avoid a DB write on every single request.
+        now = datetime.now(timezone.utc)
+        last = session.last_active_at
+        if last and last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        if not last or (now - last).total_seconds() > 60:
+            try:
+                session.last_active_at = now
+                db.commit()
+            except Exception:
+                db.rollback()
+
     return user
+
+
+def create_action_token(purpose: str, **claims) -> str:
+    """Short-lived (5 min) single-purpose token — e.g. completing a login
+    after evicting a device, without re-asking for a password."""
+    return create_access_token({"purpose": purpose, **claims}, expires_delta=timedelta(minutes=ACTION_TOKEN_EXPIRE_MINUTES))
+
+
+def decode_action_token(token: str, purpose: str) -> dict:
+    try:
+        payload = pyjwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="This request has expired. Please try again.")
+    if payload.get("purpose") != purpose:
+        raise HTTPException(status_code=401, detail="Invalid request.")
+    return payload
 
 
 def get_current_admin(current_user: models.User = Depends(get_current_user)) -> models.User:

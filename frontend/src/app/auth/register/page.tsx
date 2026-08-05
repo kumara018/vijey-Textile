@@ -1,13 +1,14 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, UserPlus, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, UserPlus, AlertCircle, CheckCircle, ShieldCheck, RefreshCw } from 'lucide-react';
 import { authAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import { LogoMark } from '@/components/Logo';
+import DeviceLimitModal from '@/components/DeviceLimitModal';
 
 // ─── Password rules ───────────────────────────────────────────────────────────
 const RULES = [
@@ -149,6 +150,30 @@ function RegisterPageInner() {
   const [errors,      setErrors]      = useState<Record<string, string>>({});
   const [apiError,    setApiError]    = useState('');
 
+  // ── OTP verification step (dual-channel: email + SMS/WhatsApp) ───────────
+  const [step,       setStep]       = useState<'form' | 'otp'>('form');
+  const [otp,        setOtp]        = useState('');
+  const [emailHint,  setEmailHint]  = useState('');
+  const [timer,      setTimer]      = useState(0);
+  const resendIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Device-limit (max 4 devices) state ────────────────────────────────────
+  const [deviceLimit, setDeviceLimit] = useState<{ pendingToken: string; sessions: any[] } | null>(null);
+  const [evicting,     setEvicting]   = useState(false);
+
+  useEffect(() => () => { if (resendIntervalRef.current) clearInterval(resendIntervalRef.current); }, []);
+
+  const startResendTimer = useCallback(() => {
+    setTimer(60);
+    if (resendIntervalRef.current) clearInterval(resendIntervalRef.current);
+    resendIntervalRef.current = setInterval(() => {
+      setTimer(t => {
+        if (t <= 1) { clearInterval(resendIntervalRef.current!); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+  }, []);
+
   // True once the visitor has typed anything into the form. Once this is true
   // we must NEVER redirect them away — an already-logged-in admin/user landing
   // here to test/create a new account should never get yanked mid-keystroke
@@ -218,10 +243,10 @@ function RegisterPageInner() {
         confirm_password: confirm,
         agree_terms:      agreeTerms,
       });
-      login(res.data.access_token, res.data.user);
-      toast.success('Account created! Welcome to Vijey Textile! 🎉');
-      // Hard navigation — signals Chrome/Safari to offer "Save Password"
-      window.location.href = '/';
+      setEmailHint(res.data.email_hint || email.trim());
+      setStep('otp');
+      startResendTimer();
+      toast.success('OTP sent to your email and mobile — enter it below to finish creating your account.');
     } catch (err: any) {
       if (!err.response) {
         setApiError('⏳ Server is starting up. Please wait 15 seconds and try again.');
@@ -232,6 +257,63 @@ function RegisterPageInner() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const completeSignUp = (access_token: string, newUser: any) => {
+    login(access_token, newUser);
+    toast.success('Account created! Welcome to Vijey Textile! 🎉');
+    // Hard navigation — signals Chrome/Safari to offer "Save Password"
+    window.location.href = '/';
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) { setApiError('Enter the 6-digit OTP sent to your email/mobile'); return; }
+    setLoading(true);
+    setApiError('');
+    try {
+      const res = await authAPI.verifyRegisterOtp({ identifier: email.trim().toLowerCase(), otp_code: otp });
+      completeSignUp(res.data.access_token, res.data.user);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail;
+      if (err.response?.status === 409 && detail?.code === 'device_limit') {
+        setDeviceLimit({ pendingToken: detail.pending_token, sessions: detail.sessions || [] });
+        return;
+      }
+      setApiError(typeof detail === 'string' ? detail : 'Invalid or expired OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (timer > 0 || loading) return;
+    setLoading(true);
+    setApiError('');
+    try {
+      await authAPI.resendRegisterOtp({ identifier: email.trim().toLowerCase() });
+      setOtp('');
+      startResendTimer();
+      toast.success('New OTP sent!');
+    } catch (err: any) {
+      setApiError(err.response?.data?.detail || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEvictAndLogin = async (sessionId: number) => {
+    if (!deviceLimit) return;
+    setEvicting(true);
+    try {
+      const res = await authAPI.evictAndLogin({ pending_token: deviceLimit.pendingToken, session_id: sessionId });
+      setDeviceLimit(null);
+      completeSignUp(res.data.access_token, res.data.user);
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not sign out that device. Please try again.');
+    } finally {
+      setEvicting(false);
     }
   };
 
@@ -296,8 +378,14 @@ function RegisterPageInner() {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-bold text-gray-900">Create your account</h2>
-          <p className="text-gray-500 text-sm mt-1">Join thousands of happy customers at Vijey Textile.</p>
+          <h2 className="text-2xl font-bold text-gray-900">
+            {step === 'form' ? 'Create your account' : 'Verify your account'}
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            {step === 'form'
+              ? 'Join thousands of happy customers at Vijey Textile.'
+              : `OTP sent to ${emailHint} and your mobile number.`}
+          </p>
         </div>
 
         <div className="card p-8 shadow-lg">
@@ -309,6 +397,7 @@ function RegisterPageInner() {
             </div>
           )}
 
+          {step === 'form' && (
           <form onSubmit={handleSubmit} noValidate autoComplete="on" className="space-y-4">
 
             {/* Full Name */}
@@ -463,6 +552,56 @@ function RegisterPageInner() {
                 : <><UserPlus size={18} /> Create Account</>}
             </button>
           </form>
+          )}
+
+          {step === 'otp' && (
+            <form onSubmit={handleVerifyOtp} noValidate className="space-y-5">
+              <div>
+                <label className="label">6-Digit OTP *</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={otp}
+                  onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setApiError(''); }}
+                  placeholder="• • • • • •"
+                  className="input-field text-center text-2xl tracking-[0.5em] font-mono"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Sent to <strong>{emailHint}</strong> and your mobile via SMS/WhatsApp. Check inbox + spam folder.
+                </p>
+              </div>
+
+              <button type="submit" disabled={loading || otp.length !== 6}
+                className="btn-primary w-full flex items-center justify-center gap-2 py-3 disabled:opacity-60">
+                {loading
+                  ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Verifying…</>
+                  : <><ShieldCheck size={18} /> Verify & Create Account</>}
+              </button>
+
+              <div className="flex items-center justify-between text-sm pt-1">
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={timer > 0 || loading}
+                  className="flex items-center gap-1.5 font-medium text-maroon-700 hover:underline disabled:text-gray-400 disabled:no-underline"
+                >
+                  <RefreshCw size={14} />
+                  {timer > 0 ? `Resend in ${timer}s` : 'Resend OTP'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setStep('form'); setOtp(''); setApiError(''); }}
+                  className="text-gray-500 hover:text-gray-700 hover:underline"
+                >
+                  ← Edit details
+                </button>
+              </div>
+            </form>
+          )}
 
           <div className="mt-6 pt-5 border-t border-maroon-200 text-center">
             <p className="text-sm text-gray-600">
@@ -475,6 +614,15 @@ function RegisterPageInner() {
         </div>
       </div>
       </div>
+
+      {deviceLimit && (
+        <DeviceLimitModal
+          sessions={deviceLimit.sessions}
+          loading={evicting}
+          onPick={handleEvictAndLogin}
+          onClose={() => setDeviceLimit(null)}
+        />
+      )}
     </div>
   );
 }

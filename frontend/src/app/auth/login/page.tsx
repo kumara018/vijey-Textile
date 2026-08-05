@@ -8,6 +8,7 @@ import { authAPI } from '@/lib/api';
 import { redirectAfterLogin } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { LogoMark } from '@/components/Logo';
+import DeviceLimitModal from '@/components/DeviceLimitModal';
 
 type Step = 'credentials' | 'otp';
 
@@ -35,6 +36,10 @@ function LoginPageInner() {
   const [step,    setStep]    = useState<Step>('credentials');
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState('');
+
+  // ── Device-limit (max 4 devices) state ────────────────────────────────────
+  const [deviceLimit, setDeviceLimit] = useState<{ pendingToken: string; sessions: any[] } | null>(null);
+  const [evicting,     setEvicting]   = useState(false);
 
   // True once the visitor has typed anything — never yank them away mid-keystroke
   // just because a background auth refresh resolved a stale/cached session.
@@ -154,6 +159,15 @@ function LoginPageInner() {
     }
   }, [identifier, password, cancelPendingRetry, startResendTimer]);
 
+  // ── Completes sign-in once we have a token — shared by OTP verify & device eviction ─
+  const completeSignIn = (access_token: string, user: any) => {
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(user));
+    login(access_token, user);
+    toast.success(`Welcome back, ${user.full_name.split(' ')[0]}! 👋`);
+    redirectAfterLogin(user.is_admin);
+  };
+
   // ── Step 2: verify OTP → login ────────────────────────────────────────────
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,16 +177,31 @@ function LoginPageInner() {
     setError('');
     try {
       const res = await authAPI.verifyLoginOtp({ identifier: identifier.trim(), otp_code: otp });
-      const { access_token, user } = res.data;
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
-      login(access_token, user);
-      toast.success(`Welcome back, ${user.full_name.split(' ')[0]}! 👋`);
-      redirectAfterLogin(user.is_admin);
+      completeSignIn(res.data.access_token, res.data.user);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid or expired OTP. Please try again.');
+      const detail = err.response?.data?.detail;
+      if (err.response?.status === 409 && detail?.code === 'device_limit') {
+        setDeviceLimit({ pendingToken: detail.pending_token, sessions: detail.sessions || [] });
+        return;
+      }
+      setError(typeof detail === 'string' ? detail : 'Invalid or expired OTP. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ── Sign out of a chosen device, then finish this sign-in ────────────────
+  const handleEvictAndLogin = async (sessionId: number) => {
+    if (!deviceLimit) return;
+    setEvicting(true);
+    try {
+      const res = await authAPI.evictAndLogin({ pending_token: deviceLimit.pendingToken, session_id: sessionId });
+      setDeviceLimit(null);
+      completeSignIn(res.data.access_token, res.data.user);
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not sign out that device. Please try again.');
+    } finally {
+      setEvicting(false);
     }
   };
 
@@ -402,6 +431,15 @@ function LoginPageInner() {
         </div>
       </div>
       </div>
+
+      {deviceLimit && (
+        <DeviceLimitModal
+          sessions={deviceLimit.sessions}
+          loading={evicting}
+          onPick={handleEvictAndLogin}
+          onClose={() => setDeviceLimit(null)}
+        />
+      )}
     </div>
   );
 }

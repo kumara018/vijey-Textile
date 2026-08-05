@@ -10,7 +10,20 @@ export interface User {
   pincode?: string;
   is_admin: boolean;
   is_active: boolean;
+  is_verified?: boolean;
   created_at: string;
+}
+
+export interface DeviceSession {
+  id: number;
+  device_name?: string;
+  os_name?: string;
+  browser_name?: string;
+  device_type?: 'desktop' | 'mobile' | 'tablet';
+  location?: string;
+  created_at: string;
+  last_active_at?: string;
+  is_current: boolean;
 }
 
 export interface Product {

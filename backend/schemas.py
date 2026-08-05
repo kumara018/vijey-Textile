@@ -189,6 +189,7 @@ class UserOut(BaseModel):
     pincode:       Optional[str] = None
     is_admin:      bool
     is_active:     bool
+    is_verified:   bool = True
     created_at:    datetime
 
     model_config = {"from_attributes": True}
@@ -198,6 +199,28 @@ class Token(BaseModel):
     access_token: str
     token_type:   str
     user:         UserOut
+
+
+class SessionOut(BaseModel):
+    """One linked device, for the account's device dashboard."""
+    id:             int
+    device_name:    Optional[str] = None
+    os_name:        Optional[str] = None
+    browser_name:   Optional[str] = None
+    device_type:    Optional[str] = None
+    location:       Optional[str] = None
+    created_at:     datetime
+    last_active_at: Optional[datetime] = None
+    is_current:     bool = False
+
+    model_config = {"from_attributes": True}
+
+
+class DeviceEvictLogin(BaseModel):
+    """Complete a login by revoking one existing device session first,
+    once the caller is already at the 4-device cap."""
+    pending_token: str
+    session_id:    int
 
 
 class UserUpdate(BaseModel):

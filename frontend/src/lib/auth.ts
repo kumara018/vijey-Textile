@@ -37,6 +37,9 @@ export async function performLogin(
 }
 
 export function performLogout() {
+  // Revoke the device session server-side (fire-and-forget).
+  authAPI.logout().catch(() => {});
+
   // Remove only the active session from saved sessions list
   try {
     const sessionsRaw = localStorage.getItem('sessions');
