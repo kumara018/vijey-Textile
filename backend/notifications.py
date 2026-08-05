@@ -146,29 +146,29 @@ def _bg(to: str, subject: str, html: str):
 
 # ── HTML helpers ───────────────────────────────────────────────────────────────
 # Shared brand header — pure HTML, no PNG image, renders perfectly in all clients
-# Exact navbar colors from tailwind.config:
-#   bg-brand-gradient = linear-gradient(135deg, #a8763f 0%, #6f4d28 100%)
-#   text-white        = #ffffff   (Vijey Textile brand name)
-#   text-gold-300     = #fde047   (tagline — same as navbar tagline)
-#   font-display      = Georgia   (same as Tailwind fontFamily.display)
-#   logo mark          = text-based medallion (no external image — always renders)
+# Matches the live navbar exactly (frontend/src/components/Navbar.tsx + Logo.tsx):
+#   bg          = maroon-50  #faf7f2   (light cream, same as navbar bg)
+#   brand text  = maroon-900 #1c1712   (dark ink, same as navbar text)
+#   tagline     = maroon-500 #8f7a5f
+#   accent/logo = gold-500   #a8763f   (outline medallion, same stroke color as Logo.tsx)
+#   font-display= Georgia    (brand name); apple-system (logo letter, matches Logo.tsx/favicon)
 _HEADER_HTML = f"""\
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
-           style="border-collapse:collapse;
-                  background:linear-gradient(135deg,#503a1e 0%,#6f4d28 60%,#8f6333 100%);">
+           style="border-collapse:collapse;background:#faf7f2;">
       <tr>
         <td style="padding:20px 28px;">
           <table width="100%" cellpadding="0" cellspacing="0" border="0"
                  style="border-collapse:collapse;">
             <tr>
-              <!-- Logo medallion — text-based so it always renders, no external image -->
+              <!-- Logo medallion — outline circle + letter, matches the site's Logo.tsx mark -->
               <td valign="middle" width="70" style="padding-right:18px;">
                 <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                   <tr>
-                    <td width="60" height="60" align="center" valign="middle"
-                        style="width:60px;height:60px;border-radius:50%;background:#ffffff;
-                               border:2px solid #c99a5f;font-family:Georgia,'Times New Roman',serif;
-                               font-weight:bold;font-size:30px;color:#a8763f;">
+                    <td width="58" height="58" align="center" valign="middle"
+                        style="width:58px;height:58px;border-radius:50%;background:#faf7f2;
+                               border:2px solid #a8763f;
+                               font-family:-apple-system,'SF Pro Display','Segoe UI',Helvetica,Arial,sans-serif;
+                               font-weight:900;font-size:28px;color:#a8763f;">
                       V
                     </td>
                   </tr>
@@ -177,17 +177,17 @@ _HEADER_HTML = f"""\
               <!-- Brand text -->
               <td valign="middle" style="text-align:left;">
                 <p style="margin:0 0 4px 0;font-family:Georgia,'Times New Roman',serif;
-                          font-size:22px;font-weight:bold;color:#ffffff;
+                          font-size:22px;font-weight:bold;color:#1c1712;
                           letter-spacing:2px;line-height:1.2;">
                   VIJEY TEXTILE
                 </p>
                 <p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;
-                          font-size:11px;color:#ddcfb8;letter-spacing:2px;
+                          font-size:11px;color:#8f7a5f;letter-spacing:2px;
                           text-transform:uppercase;">
                   Luxury Baby's &amp; Girls Clothing
                 </p>
                 <p style="margin:0;font-family:Arial,Helvetica,sans-serif;
-                          font-size:10px;color:#c99a5f;letter-spacing:1px;">
+                          font-size:10px;color:#6f4d28;letter-spacing:1px;">
                   📍 Texvalley Gangapuram, Erode &nbsp;|&nbsp; 📞 +91 94439 47853 / +91 75981 86790
                 </p>
               </td>
@@ -195,9 +195,9 @@ _HEADER_HTML = f"""\
           </table>
         </td>
       </tr>
-      <!-- Thin rose-gold accent strip -->
+      <!-- Thin gold accent strip, echoes the navbar's border-b -->
       <tr>
-        <td style="height:3px;background:linear-gradient(90deg,#c99a5f,#ddcfb8,#c99a5f);"></td>
+        <td style="height:3px;background:linear-gradient(90deg,#f4ede1,#a8763f,#f4ede1);"></td>
       </tr>
     </table>"""
 
