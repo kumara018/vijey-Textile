@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
-// ── Size data — Baby, Kids & Girls clothing (sizes 14–40) ────────────────────
+// ── Size data — Baby, Kids & Girls clothing (sizes 12–40) ────────────────────
 const BABY_SIZES = [
+  { size: '12', chest: '33 cm', waist: '32 cm', hip: '35 cm' },
   { size: '14', chest: '35 cm', waist: '34 cm', hip: '37 cm' },
   { size: '16', chest: '37 cm', waist: '36 cm', hip: '39 cm' },
   { size: '18', chest: '39 cm', waist: '38 cm', hip: '41 cm' },
@@ -188,12 +189,12 @@ export default function SupportPage() {
       {/* ── Size Guide ─────────────────────────────────────────────────── */}
       <Accordion id="size-guide" title="Size Guide" icon={Ruler} defaultOpen>
         <p className="text-sm text-gray-500 mb-5">
-          We follow standard Indian clothing sizes from 14 to 40.
+          We follow standard Indian clothing sizes from 12 to 40.
           Measure chest, waist and hip in a relaxed position and match with the chart below.
         </p>
 
         {[
-          { label: '👶 Baby — Sizes 14 to 24', rows: BABY_SIZES },
+          { label: '👶 Baby — Sizes 12 to 24', rows: BABY_SIZES },
           { label: '👧 Kids — Sizes 26 to 32',  rows: KIDS_SIZES },
           { label: '🌸 Girls — Sizes 34 to 40', rows: GIRLS_SIZES },
         ].map(({ label, rows }) => (
@@ -431,7 +432,7 @@ export default function SupportPage() {
           },
           {
             q: 'How do I choose the right size?',
-            a: 'Check the Size Guide above. We use standard Indian clothing sizes from 14 to 40 — Baby (14–24), Kids (26–32), and Girls (34–40). Measure chest, waist and hip, then compare with the chart. When in doubt, size up!',
+            a: 'Check the Size Guide above. We use standard Indian clothing sizes from 12 to 40 — Baby (12–24), Kids (26–32), and Girls (34–40). Measure chest, waist and hip, then compare with the chart. When in doubt, size up!',
           },
           {
             q: 'Can I change or cancel my order after placing it?',

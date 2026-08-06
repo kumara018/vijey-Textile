@@ -36,7 +36,7 @@ export const STORE = {
   googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=Texvalley+Gangapuram+Erode+Tamil+Nadu',
 
   // ── SEO / Meta ────────────────────────────────────
-  description: "Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for Baby, Kids & Girls (sizes 14–40) at Vijey Textile. Located at Shop Ground Floor No 131, Texvalley Gangapuram, Erode.",
+  description: "Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile. Located at Shop Ground Floor No 131, Texvalley Gangapuram, Erode.",
 };
 
 export const FULL_ADDRESS  = `${STORE.shopNo}, ${STORE.area}, ${STORE.city}, ${STORE.state} – ${STORE.pincode}`;

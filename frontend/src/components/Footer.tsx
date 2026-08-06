@@ -31,7 +31,7 @@ export default function Footer() {
               </div>
             </Link>
             <p className="text-sm text-maroon-300 leading-relaxed mb-5">
-              Luxury Baby, Kids &amp; Girls fashion — Chudithar, Frocks, Lehenga &amp; more in sizes 14–40. At Texvalley Gangapuram, Erode.
+              Luxury Baby, Kids &amp; Girls fashion — Chudithar, Frocks, Lehenga &amp; more in sizes 12–40. At Texvalley Gangapuram, Erode.
             </p>
             <div className="flex gap-2 flex-wrap">
               <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"

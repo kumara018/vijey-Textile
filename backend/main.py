@@ -327,10 +327,10 @@ def _migrate_db():
             print(f"[Startup] New table migration note: {e}")
 
     # Fix size options — Vijey Textile sells kids/girls clothing only.
-    # ALL products must use numeric sizes 16–40 (no adult letter sizes).
+    # ALL products must use numeric sizes 12–40 (no adult letter sizes).
     try:
         db = SessionLocal()
-        KIDS_SIZES = ["16", "18", "20", "22", "24", "26", "28",
+        KIDS_SIZES = ["12", "14", "16", "18", "20", "22", "24", "26", "28",
                       "30", "32", "34", "36", "38", "40"]
         updated = 0
         for product in db.query(models.Product).all():
@@ -339,7 +339,7 @@ def _migrate_db():
                 updated += 1
         if updated:
             db.commit()
-            print(f"[Startup] Fixed sizes: updated {updated} product(s) to kids sizes 16–40.")
+            print(f"[Startup] Fixed sizes: updated {updated} product(s) to kids sizes 12–40.")
 
         # Seed Half Saree products if none exist
         hs_count = db.query(models.Product).filter(models.Product.category == "Half Saree").count()

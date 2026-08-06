@@ -5,11 +5,11 @@ import re
 
 VALID_CATEGORIES = ["Baby Frocks", "Chudithar", "Frocks", "Western Dresses", "Lehenga", "Party Wear"]
 
-# Clothing sizes 14 to 40 — Baby, Kids & Girls
+# Clothing sizes 12 to 40 — Baby, Kids & Girls
 VALID_SIZES = [
-    "14", "16", "18", "20", "22", "24",   # Baby
-    "26", "28", "30", "32",               # Kids
-    "34", "36", "38", "40",               # Girls
+    "12", "14", "16", "18", "20", "22", "24",   # Baby
+    "26", "28", "30", "32",                     # Kids
+    "34", "36", "38", "40",                     # Girls
 ]
 
 

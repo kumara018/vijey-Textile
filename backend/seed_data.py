@@ -12,8 +12,8 @@ load_dotenv()
 
 Base.metadata.create_all(bind=engine)
 
-# ─── Size groups — standard Indian clothing sizes 14–40 ──────────────────────
-BABY_SIZES    = ["14", "16", "18", "20", "22", "24"]
+# ─── Size groups — standard Indian clothing sizes 12–40 ──────────────────────
+BABY_SIZES    = ["12", "14", "16", "18", "20", "22", "24"]
 KIDS_SIZES    = ["26", "28", "30", "32"]
 GIRLS_SIZES   = ["34", "36", "38", "40"]
 ALL_SIZES     = BABY_SIZES + KIDS_SIZES + GIRLS_SIZES
@@ -24,7 +24,7 @@ TODDLER_SIZES = BABY_SIZES
 
 PRODUCTS = [
     # ────────────────────────────────────────────────────────
-    # BABY FROCKS  (Sizes 14–24)
+    # BABY FROCKS  (Sizes 12–24)
     # ────────────────────────────────────────────────────────
     {"name": "Luxury Floral Organic Baby Frock",
      "description": "100% soft organic cotton baby frock with delicate floral embroidery. Snap buttons at back for easy dressing. Gentle on baby skin — perfect for everyday luxury wear.",
@@ -141,7 +141,7 @@ PRODUCTS = [
      "stock": 55, "sku": "FR-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
-    # WESTERN DRESSES  (Sizes 14–40)
+    # WESTERN DRESSES  (Sizes 12–40)
     # ────────────────────────────────────────────────────────
     {"name": "Floral A-Line Western Dress",
      "description": "Trendy floral A-line dress with a flared skirt for Baby, Kids & Girls. Cotton-polyester blend — comfortable for daily wear, playdates and school outings.",
@@ -162,7 +162,7 @@ PRODUCTS = [
      "stock": 50, "sku": "WD-002", "is_featured": True},
 
     {"name": "Striped Jersey T-Shirt Dress",
-     "description": "Fun striped jersey dress for active girls. Elasticated waist, machine washable — available in sizes 14 to 40 for Baby, Kids & Girls.",
+     "description": "Fun striped jersey dress for active girls. Elasticated waist, machine washable — available in sizes 12 to 40 for Baby, Kids & Girls.",
      "price": 499.0, "compare_price": 699.0,
      "category": "Western Dresses", "fabric": "Jersey Cotton",
      "size_options": ALL_SIZES,

@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 
 const CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 const ORDER_STATUSES = ['pending','confirmed','processing','shipped','out_for_delivery','delivered','cancelled'];
-const SIZE_OPTIONS   = ['14','16','18','20','22','24','26','28','30','32','34','36','38','40'];
+const SIZE_OPTIONS   = ['12','14','16','18','20','22','24','26','28','30','32','34','36','38','40'];
 
 interface DashData { total_products: number; active_products: number; total_users: number; total_orders: number; pending_orders: number; total_revenue: number; recent_orders: any[]; }
 
