@@ -29,8 +29,9 @@ def _ensure_admin():
         existing = db.query(models.User).filter(models.User.email == admin_email).first()
         if existing:
             existing.password_hash = hash_password(admin_password)
-            existing.is_admin  = True
-            existing.is_active = True
+            existing.is_admin    = True
+            existing.is_active   = True
+            existing.is_verified = True  # admin must never be locked out by the signup-OTP gate
             db.commit()
             print(f"[Startup] Admin password re-synced: {admin_email}")
         else:
@@ -41,6 +42,7 @@ def _ensure_admin():
                 password_hash = hash_password(admin_password),
                 is_admin      = True,
                 is_active     = True,
+                is_verified   = True,  # admin must never be locked out by the signup-OTP gate
             )
             db.add(admin)
             db.commit()
