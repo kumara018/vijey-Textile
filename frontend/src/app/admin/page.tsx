@@ -468,6 +468,14 @@ function AdminPageInner() {
     } catch { toast.error('Failed to deactivate product'); }
   };
 
+  const handleReactivate = async (p: any) => {
+    try {
+      await adminAPI.updateProduct(p.id, { is_active: true });
+      toast.success(`"${p.name}" is now visible on the site again`);
+      loadProducts();
+    } catch { toast.error('Failed to reactivate product'); }
+  };
+
   const handleOrderStatus = async (id: number, status: string) => {
     try {
       const res = await adminAPI.updateOrderStatus(id, { status });
@@ -891,9 +899,15 @@ function AdminPageInner() {
                         <button onClick={() => openEdit(p)} className="p-1.5 hover:bg-maroon-100 rounded-lg text-maroon-700 transition-colors" title={`Edit #${p.id}`}>
                           <Pencil size={15} />
                         </button>
-                        <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors" title="Deactivate">
-                          <Trash2 size={15} />
-                        </button>
+                        {p.is_active ? (
+                          <button onClick={() => handleDelete(p.id, p.name)} className="p-1.5 hover:bg-red-100 rounded-lg text-red-600 transition-colors" title="Deactivate (hide from site)">
+                            <Trash2 size={15} />
+                          </button>
+                        ) : (
+                          <button onClick={() => handleReactivate(p)} className="p-1.5 hover:bg-green-100 rounded-lg text-green-600 transition-colors" title="Reactivate (make visible on site)">
+                            <RotateCcw size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
