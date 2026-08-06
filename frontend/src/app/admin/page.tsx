@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
   Trash2, X, AlertCircle, CheckCircle, Star, Upload, ImagePlus,
@@ -203,9 +203,10 @@ const emptyProduct = {
   stock:'', is_featured:false, is_new_arrival:false, is_returnable:true,
 };
 
-export default function AdminPage() {
+function AdminPageInner() {
   const { user, loading: authLoading, refresh } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   // True once we've confirmed admin status against a FRESH /me response —
   // the cached localStorage user (e.g. right after being promoted to admin
   // on another device) can briefly read is_admin:false before the background
@@ -214,12 +215,25 @@ export default function AdminPage() {
   type TabKey = 'dash'|'products'|'orders'|'cancellations'|'users'|'ratings'|'returns'|'admins';
   const [tab, setTab] = useState<TabKey>('dash');
 
-  // Restore last-used tab from localStorage after mount (avoids SSR mismatch)
+  // A specific nav link (e.g. "Manage Products") always wins over whatever
+  // tab was last open — otherwise clicking it just restores your last-viewed
+  // tab (e.g. Customers) from localStorage instead of actually going to
+  // Products. Falls back to the last-used tab for a plain /admin visit.
+  // Reactive via useSearchParams — a one-time window.location.search read
+  // only fires on mount, so clicking "Manage Products" while ALREADY on
+  // /admin (same route, just a new query string) wouldn't re-run it since
+  // Next.js doesn't remount the page for a same-route navigation.
   useEffect(() => {
-    const saved = localStorage.getItem('admin_tab') as TabKey | null;
     const valid: TabKey[] = ['dash','products','orders','cancellations','users','ratings','returns','admins'];
+    const tabParam = searchParams.get('tab') as TabKey | null;
+    if (tabParam && valid.includes(tabParam)) {
+      setTab(tabParam);
+      localStorage.setItem('admin_tab', tabParam);
+      return;
+    }
+    const saved = localStorage.getItem('admin_tab') as TabKey | null;
     if (saved && valid.includes(saved)) setTab(saved);
-  }, []);
+  }, [searchParams]);
 
   // Notifications state
   const [notifications, setNotifications]   = useState<any[]>([]);
@@ -1722,5 +1736,13 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-maroon-100"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-maroon-700" /></div>}>
+      <AdminPageInner />
+    </Suspense>
   );
 }

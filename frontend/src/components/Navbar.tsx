@@ -356,7 +356,7 @@ export default function Navbar() {
                       </Link>
 
                       {user.is_admin && (
-                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm font-semibold text-maroon-800" onClick={() => setUserMenuOpen(false)}>
+                        <Link href="/admin?tab=dash" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm font-semibold text-maroon-800" onClick={() => setUserMenuOpen(false)}>
                           <LayoutDashboard size={16} className="text-maroon-700" /> Admin Dashboard
                         </Link>
                       )}
@@ -374,7 +374,7 @@ export default function Navbar() {
                       </Link>
 
                       {user.is_admin && (
-                        <Link href="/admin" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
+                        <Link href="/admin?tab=products" className="flex items-center gap-3 px-4 py-2.5 hover:bg-maroon-50 text-sm" onClick={() => setUserMenuOpen(false)}>
                           <Settings size={16} className="text-maroon-700" /> Manage Products
                         </Link>
                       )}
@@ -583,7 +583,7 @@ export default function Navbar() {
               {user ? (
                 <>
                   {user.is_admin && (
-                    <Link href="/admin" onClick={() => setMobileOpen(false)}
+                    <Link href="/admin?tab=dash" onClick={() => setMobileOpen(false)}
                       className="px-4 py-2.5 rounded-lg hover:bg-maroon-700 text-sm font-semibold text-gold-300 flex items-center gap-2">
                       <LayoutDashboard size={15} /> Admin Dashboard
                     </Link>
