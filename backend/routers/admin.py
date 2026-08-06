@@ -261,7 +261,37 @@ def update_order_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
+    was_cancelled = order.status == "cancelled"
     order.status = payload.status
+
+    # ── Cancelled by admin: restore stock and cancel the courier pickup ───────
+    # Mirrors the customer self-cancel flow in routers/orders.py::cancel_order —
+    # without this, the shipment stays live with the courier (still shows
+    # "ready for pickup" on Delhivery) even though the order is cancelled here.
+    if payload.status == "cancelled" and not was_cancelled:
+        order.cancelled_by = "admin"
+        if not order.cancel_reason:
+            order.cancel_reason = "Cancelled by admin"
+
+        for item in order.items_snapshot:
+            product = db.query(models.Product).filter(
+                models.Product.id == item["product_id"]
+            ).first()
+            if product:
+                product.stock += item["quantity"]
+
+        if order.awb_code:
+            courier = (order.courier_name or "").lower()
+            try:
+                if "delhivery" in courier or not courier:
+                    import delhivery as dl
+                    dl.cancel_shipment(order.awb_code)
+                    print(f"[Delhivery] Cancelled AWB {order.awb_code}")
+                elif order.shiprocket_order_id:
+                    from shiprocket import shiprocket as sr
+                    sr.cancel_order([int(order.shiprocket_order_id)])
+            except Exception as e:
+                print(f"[Courier cancel error] {e}")
 
     # Update tracking / courier info if provided
     if payload.tracking_number:
