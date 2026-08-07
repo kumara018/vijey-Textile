@@ -14,6 +14,21 @@ const CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Le
 const ORDER_STATUSES = ['pending','confirmed','processing','shipped','out_for_delivery','delivered','cancelled'];
 const SIZE_OPTIONS   = ['12','14','16','18','20','22','24','26','28','30','32','34','36','38','40'];
 
+// Mirrors backend courier_sync.STATUS_RANK — status only ever moves forward
+// (Amazon/Flipkart/Myntra style). Keeps the dropdown from even offering a
+// backward move rather than letting the admin pick one and get rejected.
+const STATUS_RANK: Record<string, number> = {
+  pending: 0, confirmed: 1, processing: 2, shipped: 3, out_for_delivery: 4, delivered: 5,
+};
+function validNextStatuses(current: string): string[] {
+  return ORDER_STATUSES.filter((s) => {
+    if (s === current) return true;
+    if (s === 'cancelled') return current !== 'delivered' && current !== 'cancelled';
+    if (current === 'cancelled') return false;
+    return (STATUS_RANK[s] ?? -1) >= (STATUS_RANK[current] ?? -1);
+  });
+}
+
 interface DashData { total_products: number; active_products: number; total_users: number; total_orders: number; pending_orders: number; total_revenue: number; recent_orders: any[]; }
 
 const CATEGORIES_WITH_HALF_SAREE = ['Baby Frocks', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
@@ -988,8 +1003,9 @@ function AdminPageInner() {
                           value={o.status}
                           onChange={(e) => handleOrderStatus(o.id, e.target.value)}
                           className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-maroon-500"
+                          title="Status only moves forward — Cancel is always available, but earlier stages disappear once passed"
                         >
-                          {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          {validNextStatuses(o.status).map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
                         <button
                           onClick={() => openShipModal(o)}
@@ -1687,7 +1703,7 @@ function AdminPageInner() {
               <div>
                 <label className="label">Order Status *</label>
                 <select value={shipForm.status} onChange={e => setShipForm(f => ({...f, status: e.target.value}))} className="input-field">
-                  {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {validNextStatuses(shipModal.status).map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 

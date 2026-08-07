@@ -5,6 +5,7 @@ import os, random
 from datetime import datetime, timezone
 from database import get_db
 import models, schemas, auth as auth_utils, notifications
+import courier_sync
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -260,6 +261,16 @@ def update_order_status(
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+
+    # Status only ever moves forward, matching Amazon/Flipkart/Myntra — once
+    # an order is Shipped it can't silently slide back to Processing. The
+    # one exception is Cancelled, which is reachable from anything except an
+    # order that's already Delivered or already Cancelled (see courier_sync).
+    if order.status != payload.status and not courier_sync.is_valid_transition(order.status, payload.status):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can't move an order from '{order.status}' back to '{payload.status}' — status only moves forward. Use Cancel if this order needs to be stopped.",
+        )
 
     was_cancelled = order.status == "cancelled"
     order.status = payload.status

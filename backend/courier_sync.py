@@ -21,6 +21,36 @@ import random
 import models
 import notifications
 
+# Canonical order-status lifecycle. Both the admin dropdown (routers/admin.py)
+# and this module's own automatic sync enforce the same rule off this table:
+# status only ever moves forward, matching Amazon/Flipkart/Myntra — once
+# "Shipped", an order can't silently slide back to "Processing".
+STATUS_RANK = {
+    "pending":          0,
+    "confirmed":        1,
+    "processing":       2,
+    "shipped":          3,
+    "out_for_delivery": 4,
+    "delivered":        5,
+}
+
+
+def is_valid_transition(from_status: str, to_status: str) -> bool:
+    """
+    "Cancelled" is the one exception to forward-only: reachable from any
+    state except an order that's already Delivered or already Cancelled —
+    cancelling something already in the customer's hands doesn't make
+    sense (that's what the returns/exchange flow is for), and a cancelled
+    order can't un-cancel back through this same dropdown.
+    """
+    if to_status == "cancelled":
+        return from_status not in ("delivered", "cancelled")
+    if from_status == "cancelled":
+        return False
+    if from_status not in STATUS_RANK or to_status not in STATUS_RANK:
+        return True  # unrecognised status string — let the caller's own validation reject it
+    return STATUS_RANK[to_status] >= STATUS_RANK[from_status]
+
 
 def sync_order_from_delhivery(order, current: dict, db) -> str | None:
     """
@@ -60,7 +90,7 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
     # must run before the broad "deliver" catch-all below, or every
     # out-for-delivery scan would get misread as a completed delivery.
     if "out for delivery" in status_l or "dispatched for delivery" in status_l or "ofd" in status_l:
-        if order.status != "out_for_delivery":
+        if order.status != "out_for_delivery" and is_valid_transition(order.status, "out_for_delivery"):
             order.status = "out_for_delivery"
             if not order.delivery_otp:
                 order.delivery_otp = str(random.randint(100000, 999999))
@@ -83,7 +113,7 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
         action = "delivered_awaiting_otp"
 
     elif "transit" in status_l or "dispatch" in status_l or "manifest" in status_l or "picked" in status_l:
-        if order.status not in ("shipped", "out_for_delivery"):
+        if order.status not in ("shipped", "out_for_delivery") and is_valid_transition(order.status, "shipped"):
             order.status = "shipped"
             changed = True
             action = "shipped"
