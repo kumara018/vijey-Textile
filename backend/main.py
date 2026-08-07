@@ -376,12 +376,12 @@ def _migrate_db():
         cat_count = db.query(models.Category).count()
         if cat_count == 0:
             DEFAULT_CATEGORIES = [
-                {"name": "Chudithar",   "emoji": "👘", "description": "Traditional & Casual",  "sort_order": 1},
-                {"name": "Tops",        "emoji": "👕", "description": "Trendy & Stylish",       "sort_order": 2},
-                {"name": "Lehenga",     "emoji": "👗", "description": "Bridal & Festive",       "sort_order": 3},
-                {"name": "Half Saree",  "emoji": "🥻", "description": "Traditional & Elegant",  "sort_order": 4},
-                {"name": "Crop Tops",   "emoji": "🎽", "description": "Casual & Modern",        "sort_order": 5},
-                {"name": "Party Wears", "emoji": "✨", "description": "Glam & Elegant",         "sort_order": 6},
+                {"name": "Baby Frocks",     "emoji": "👶", "description": "Soft & Cute Baby Wear", "sort_order": 1},
+                {"name": "Chudithar",       "emoji": "👘", "description": "Traditional Elegance",  "sort_order": 2},
+                {"name": "Frocks",          "emoji": "👗", "description": "Classic & Printed",     "sort_order": 3},
+                {"name": "Western Dresses", "emoji": "👒", "description": "Modern & Trendy",       "sort_order": 4},
+                {"name": "Lehenga",         "emoji": "💃", "description": "Festive & Bridal",      "sort_order": 5},
+                {"name": "Party Wear",      "emoji": "✨", "description": "Glam & Celebrations",   "sort_order": 6},
             ]
             for c in DEFAULT_CATEGORIES:
                 db.add(models.Category(**c))
