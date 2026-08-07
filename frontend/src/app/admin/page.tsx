@@ -477,15 +477,20 @@ function AdminPageInner() {
   };
 
   const handleOrderStatus = async (id: number, status: string) => {
+    const hadAwb = orders.find(o => o.id === id)?.awb_code;
     try {
       const res = await adminAPI.updateOrderStatus(id, { status });
       if (status === 'out_for_delivery' && res.data?.delivery_otp) {
         toast.success(`Status updated! Delivery OTP: ${res.data.delivery_otp}`, { duration: 8000 });
+      } else if (status === 'shipped' && !hadAwb && res.data?.awb_code) {
+        toast.success(`Shipped — Delhivery AWB ${res.data.awb_code} created, customer notified`, { duration: 8000 });
       } else {
         toast.success('Order status updated — customer notified');
       }
       loadOrders();
-    } catch { toast.error('Failed to update status'); }
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to update status');
+    }
   };
 
   const openShipModal = (order: any) => {
@@ -998,9 +1003,9 @@ function AdminPageInner() {
                             onClick={() => handleCreateDelhivery(o.id, o.order_number)}
                             disabled={creatingDelhivery === o.id}
                             className="text-xs bg-green-50 border border-green-300 text-green-700 hover:bg-green-100 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap disabled:opacity-60"
-                            title="Auto-create shipment on Delhivery"
+                            title="Marking the order Shipped now creates this automatically — use this only to retry after a failure, or to create it early"
                           >
-                            {creatingDelhivery === o.id ? '⏳...' : '🚚 Delhivery'}
+                            {creatingDelhivery === o.id ? '⏳...' : '🚚 Delhivery (manual)'}
                           </button>
                         )}
                         {o.awb_code && (

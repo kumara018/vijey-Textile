@@ -121,6 +121,25 @@ STEP 4 — SET UP RAZORPAY WEBHOOK
 4. Copy the Webhook Secret → add as RAZORPAY_WEBHOOK_SECRET in Render
 
 ================================================================
+STEP 4B — ACTIVATE DELHIVERY'S PUSH API (tracking webhook)
+================================================================
+Not self-service — Delhivery's integration team has to turn this on for
+your account. Without it, order status still syncs from Delhivery via a
+15-minute background poll and whenever a customer opens their tracking
+page, but the webhook makes it near-instant.
+
+1. Email Delhivery's integration/API support team (via your account
+   manager, or support@delhivery.com) asking to activate Push API /
+   webhook tracking for your account.
+2. Give them:
+     Endpoint URL : https://vijey-textile.onrender.com/api/webhooks/delhivery
+     Method       : POST, expects a 200 OK response
+     Sample AWBs  : 1-2 of your own past waybill numbers, for their test push
+3. Documented turnaround is 5-6 working days. No further setup needed on
+   this end once they confirm it's live — the endpoint above is already
+   built and ready to receive it.
+
+================================================================
 STEP 5 — FIRST LOGIN
 ================================================================
 After deploy:

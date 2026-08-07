@@ -291,15 +291,24 @@ def parse_tracking_events(raw: dict) -> list:
 
 
 def parse_current_status(raw: dict) -> dict:
-    """Extract current status and EDD from raw tracking response."""
+    """
+    Extract current status and EDD from a Delhivery response. Handles both
+    shapes this app receives: track_awb()'s `{"ShipmentData": [{"Shipment": {...}}]}`
+    and the Push API webhook's flatter `{"Shipment": {...}}` (no ShipmentData
+    wrapper, no list) — same inner "Shipment" object either way.
+    """
     try:
-        shipment = raw["ShipmentData"][0]["Shipment"]
-        status   = shipment.get("Status", {})
+        if "ShipmentData" in raw:
+            shipment = raw["ShipmentData"][0]["Shipment"]
+        else:
+            shipment = raw["Shipment"]
+        status = shipment.get("Status", {})
         return {
             "status":           status.get("Status", ""),
             "location":         status.get("StatusLocation", ""),
             "datetime":         status.get("StatusDateTime", ""),
             "expected_delivery":shipment.get("ExpectedDeliveryDate", ""),
+            "awb":              shipment.get("AWB", ""),
         }
     except Exception:
         return {}

@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from dotenv import load_dotenv
 
@@ -9,7 +10,7 @@ load_dotenv()
 
 from database import engine, Base, SessionLocal
 import models
-from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist
+from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks
 
 
 os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
@@ -399,6 +400,51 @@ def _cleanup_deleted_accounts():
         db.close()
 
 
+def _sync_delhivery_statuses():
+    """
+    Runs on a timer (see lifespan below): pulls live tracking for every order
+    with an open Delhivery shipment and advances its status via
+    courier_sync.sync_order_from_delhivery — the piece that makes Shipped ->
+    Out for Delivery move on its own instead of needing an admin to notice a
+    courier scan and update it by hand.
+
+    Best-effort only, while this process happens to be awake — the Delhivery
+    webhook receiver (routers/webhooks.py) and the opportunistic sync on the
+    customer's own tracking-page view (routers/orders.py) cover the gaps if
+    this host is asleep when a status actually changes.
+    """
+    import delhivery as dl
+    import courier_sync
+
+    if not dl.is_configured():
+        return
+    db = SessionLocal()
+    try:
+        open_orders = db.query(models.Order).filter(
+            models.Order.awb_code.isnot(None),
+            models.Order.status.notin_(["delivered", "cancelled"]),
+        ).all()
+        for order in open_orders:
+            courier = (order.courier_name or "").lower()
+            if courier and "delhivery" not in courier:
+                continue  # manually-entered non-Delhivery courier (BlueDart/DTDC) — nothing to poll
+            try:
+                raw = dl.track_awb(order.awb_code)
+                if not raw:
+                    continue
+                current = dl.parse_current_status(raw)
+                action = courier_sync.sync_order_from_delhivery(order, current, db)
+                if action and action != "location_only":
+                    print(f"[Delhivery Poll] {order.order_number}: {action}")
+            except Exception as e:
+                print(f"[Delhivery Poll] error syncing order {order.id}: {e}")
+    finally:
+        db.close()
+
+
+_scheduler = BackgroundScheduler()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Create all tables
@@ -410,7 +456,11 @@ async def lifespan(app: FastAPI):
     # Always ensure admin + products exist
     _ensure_admin()
     _ensure_products()
+
+    _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
+    _scheduler.start()
     yield
+    _scheduler.shutdown(wait=False)
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -451,6 +501,7 @@ app.include_router(addresses.router)
 app.include_router(support.router)
 app.include_router(returns.router)
 app.include_router(wishlist.router)
+app.include_router(webhooks.router)
 # Tracking is wired into orders router (/api/orders/{id}/track)
 
 

@@ -412,6 +412,7 @@ def track_order(
             courier = (order.courier_name or "").lower()
             if "delhivery" in courier or not courier:
                 import delhivery as dl
+                import courier_sync
                 raw = dl.track_awb(order.awb_code)
                 if raw:
                     result["tracking_events"]   = dl.parse_tracking_events(raw)
@@ -424,6 +425,12 @@ def track_order(
                     if current.get("location"):
                         result["status_location"] = current["location"]
                     result["raw_data"] = raw
+                    # Persist it — whoever opens this tracking view nudges the
+                    # order's own status forward too, not just this response.
+                    # (Any error here is caught by the outer try/except below.)
+                    action = courier_sync.sync_order_from_delhivery(order, current, db)
+                    if action and action != "location_only":
+                        result["status"] = order.status
             else:
                 from shiprocket import shiprocket as sr
                 data = sr.track_awb(order.awb_code)

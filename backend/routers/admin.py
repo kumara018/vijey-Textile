@@ -293,6 +293,18 @@ def update_order_status(
             except Exception as e:
                 print(f"[Courier cancel error] {e}")
 
+    # ── Marked Shipped: hand it to Delhivery automatically ────────────────────
+    # Previously "Shipped" was just a label — the courier was never actually
+    # told, only a separate "🚚 Delhivery" button did that. Marking an order
+    # Shipped now *is* the handoff, matching how Amazon/Flipkart/Myntra work.
+    # Skipped if a courier was already set (existing AWB, or the admin is
+    # manually recording a non-Delhivery courier in this same request via the
+    # Ship Details modal) — and if Delhivery's API call fails, this raises,
+    # which aborts the whole request so the order is never left saying
+    # "Shipped" with nothing actually shipped.
+    if payload.status == "shipped" and not order.awb_code and not payload.awb_code:
+        _create_delhivery_shipment_for_order(order, db)
+
     # Update tracking / courier info if provided
     if payload.tracking_number:
         order.tracking_number = payload.tracking_number
@@ -358,6 +370,7 @@ def update_order_status(
     return {
         "message": f"Order {order.order_number} updated to {payload.status}",
         "delivery_otp": order.delivery_otp if payload.status == "out_for_delivery" else None,
+        "awb_code": order.awb_code,
     }
 
 
@@ -515,33 +528,26 @@ def create_shiprocket_shipment(
     }
 
 
-@router.post("/orders/{order_id}/create-delhivery-shipment")
-def create_delhivery_shipment(
-    order_id: int,
-    db: Session = Depends(get_db),
-    _: models.User = Depends(auth_utils.get_current_admin),
-):
+def _create_delhivery_shipment_for_order(order, db: Session) -> str:
     """
-    Create a shipment on Delhivery Direct for this order.
-    Requires DELHIVERY_API_TOKEN in Render env vars.
-    Also requires a pickup location named 'Primary' (or set DELHIVERY_PICKUP_NAME)
-    set up in your Delhivery dashboard.
+    Calls Delhivery's create-shipment API for `order`, validates the
+    response, and saves awb_code/courier_name/tracking_url onto it.
+
+    Raises HTTPException on any failure — callers must let that propagate
+    rather than swallow it, since a "Shipped" order with no real shipment
+    behind it is exactly the bug this whole flow exists to prevent.
+
+    Does not touch order.status and does not commit — the caller decides
+    the resulting status and commits, since the two call sites (the
+    dedicated create-shipment endpoint, and auto-creation when an admin
+    marks an order Shipped) want different status transitions.
     """
     import delhivery as dl
 
     if not dl.is_configured():
         raise HTTPException(400, "Delhivery not configured. Add DELHIVERY_API_TOKEN to Render env vars.")
 
-    order = db.query(models.Order).filter(models.Order.id == order_id).first()
-    if not order:
-        raise HTTPException(404, "Order not found")
-    if order.status == "cancelled":
-        raise HTTPException(400, "Cannot create shipment for a cancelled order")
-    if order.awb_code:
-        raise HTTPException(400, f"Shipment already created. AWB: {order.awb_code}")
-
     user = db.query(models.User).filter(models.User.id == order.user_id).first()
-
     result = dl.create_shipment(order, user)
     if not result:
         raise HTTPException(502, "Delhivery API call failed. Check Render logs for details.")
@@ -571,10 +577,34 @@ def create_delhivery_shipment(
     if not awb:
         raise HTTPException(502, f"Delhivery did not return an AWB. Full response: {result}")
 
-    # Save to order
     order.awb_code     = awb
     order.courier_name = "Delhivery"
     order.tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+    return awb
+
+
+@router.post("/orders/{order_id}/create-delhivery-shipment")
+def create_delhivery_shipment(
+    order_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """
+    Create a shipment on Delhivery Direct for this order.
+    Requires DELHIVERY_API_TOKEN in Render env vars.
+    Also requires a pickup location named 'Primary' (or set DELHIVERY_PICKUP_NAME)
+    set up in your Delhivery dashboard.
+    """
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.status == "cancelled":
+        raise HTTPException(400, "Cannot create shipment for a cancelled order")
+    if order.awb_code:
+        raise HTTPException(400, f"Shipment already created. AWB: {order.awb_code}")
+
+    awb = _create_delhivery_shipment_for_order(order, db)
+
     if order.status in ["pending", "confirmed"]:
         order.status = "processing"
 
@@ -591,9 +621,7 @@ def create_delhivery_shipment(
         "message":      "Shipment created on Delhivery ✅",
         "awb_code":     awb,
         "courier":      "Delhivery",
-        "tracking_url": f"https://www.delhivery.com/track/package/{awb}",
-        "packages":     packages,
-        "raw_response": result,
+        "tracking_url": order.tracking_url,
     }
 
 
