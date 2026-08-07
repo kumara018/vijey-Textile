@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(storedToken);
       try { setUser(JSON.parse(storedUser)); } catch {}
       setSessions(parsedSessions);
-      document.cookie = `auth_token=${storedToken}; path=/; max-age=2592000; SameSite=Lax`;
+      document.cookie = `auth_token=${storedToken}; path=/; max-age=7776000; SameSite=Lax`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
 
       // Always fetch fresh user data from server to pick up role changes (e.g. is_admin)
       const API = process.env.NEXT_PUBLIC_API_URL || 'https://vijey-textile.onrender.com';
