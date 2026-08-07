@@ -66,17 +66,24 @@ def get_client_ip(request) -> str:
 
 def geolocate_ip(ip: str) -> str | None:
     """Best-effort city/region/country lookup. Returns None on any failure —
-    a missing location must never block login."""
+    a missing location must never block login. Logged (not raised) so a
+    string of "Unknown location" entries in Render logs is actually
+    diagnosable instead of a silent guess — get_current_user retries this
+    on a device's next active use, so a transient failure here is not
+    permanent for that session."""
     if not ip or ip in ("127.0.0.1", "::1") or ip.startswith("192.168.") or ip.startswith("10."):
         return None
     try:
-        resp = requests.get(f"https://ipapi.co/{ip}/json/", timeout=3)
+        resp = requests.get(f"https://ipapi.co/{ip}/json/", timeout=5)
         if resp.status_code != 200:
+            print(f"[GeoIP] {ip}: HTTP {resp.status_code} from ipapi.co — {resp.text[:200]}")
             return None
         data = resp.json()
         if data.get("error"):
+            print(f"[GeoIP] {ip}: ipapi.co returned error — {data.get('reason', data)}")
             return None
         parts = [p for p in (data.get("city"), data.get("region"), data.get("country_name")) if p]
         return ", ".join(parts) if parts else None
-    except Exception:
+    except Exception as e:
+        print(f"[GeoIP] {ip}: lookup failed — {e}")
         return None

@@ -32,10 +32,27 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Sliding session: the backend silently re-issues a fresh, longer-lived
+// token on any authenticated call once the current one is due for renewal
+// (see auth.py::get_current_user) — pick it up here so it applies no matter
+// which API call triggered it, not just /me. This is what keeps a device
+// signed in indefinitely as long as it's actually being used, matching
+// Amazon/Flipkart rather than forcing a re-login once a fixed window passes.
+function _applyNewTokenHeader(res: any) {
+  const newToken = res?.headers?.['x-new-token'];
+  if (newToken && typeof window !== 'undefined') {
+    localStorage.setItem('token', newToken);
+    document.cookie = `auth_token=${newToken}; path=/; max-age=7776000; SameSite=Lax`; // 90 days
+  }
+}
+
 // Auto-logout on 401 — but NEVER on auth endpoints or page-load API calls.
 // Only redirect to login if /api/auth/me ALSO fails (token truly invalid).
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    _applyNewTokenHeader(res);
+    return res;
+  },
   async (err) => {
     const url    = err.config?.url || '';
     const status = err.response?.status;

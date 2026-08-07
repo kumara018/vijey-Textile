@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const _setCookie = (t: string) => {
-    document.cookie = `auth_token=${t}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `auth_token=${t}; path=/; max-age=7776000; SameSite=Lax`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
   };
   // Swap in a server-issued token upgrade (see the X-New-Token header on /me) —
   // used to silently migrate pre-device-tracking tokens without a re-login.

@@ -5,6 +5,7 @@ import notifications
 import device_utils
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from database import get_db
 import models, schemas, auth as auth_utils
 
@@ -108,9 +109,21 @@ def _verify_otp(db: Session, identifier: str, otp_code: str, otp_type: str = "re
 
 
 def _active_sessions(db: Session, user_id: int):
+    """
+    "Active" = not signed out AND not past its sliding expiry. NULL
+    expires_at is treated as not-expired (covers rows from before this
+    column existed) — get_current_user backfills a real value onto it the
+    next time that session is actually used, so this only matters for a
+    session that's been fully quiet since before the migration ran.
+    """
+    now = datetime.now(timezone.utc)
     return (
         db.query(models.UserSession)
-        .filter(models.UserSession.user_id == user_id, models.UserSession.revoked_at.is_(None))
+        .filter(
+            models.UserSession.user_id == user_id,
+            models.UserSession.revoked_at.is_(None),
+            or_(models.UserSession.expires_at.is_(None), models.UserSession.expires_at > now),
+        )
         .order_by(models.UserSession.last_active_at.desc())
         .all()
     )
@@ -159,6 +172,7 @@ def _create_session_or_409(db: Session, user: models.User, request: Request) -> 
         device_type=info["device_type"],
         ip_address=ip,
         location=location,
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     db.add(row)
     db.commit()

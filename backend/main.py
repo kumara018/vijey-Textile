@@ -327,6 +327,26 @@ def _migrate_db():
         except Exception as e:
             print(f"[Startup] New table migration note: {e}")
 
+        # ── user_sessions columns ──────────────────────────────────────────
+        try:
+            session_cols = [c["name"] for c in inspector.get_columns("user_sessions")]
+            if "expires_at" not in session_cols:
+                conn.execute(text("ALTER TABLE user_sessions ADD COLUMN expires_at TIMESTAMP WITH TIME ZONE"))
+                conn.commit()
+                # Give every currently-valid session a fresh expiry as of this
+                # deploy rather than leaving it NULL — a NULL is treated as
+                # "not expired" downstream so nothing breaks either way, but
+                # backfilling means the sliding-window logic has a real value
+                # to extend from the next time each session is used.
+                conn.execute(text(
+                    "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '90 days' "
+                    "WHERE expires_at IS NULL AND revoked_at IS NULL"
+                ))
+                conn.commit()
+                print("[Startup] Migrated: added expires_at to user_sessions")
+        except Exception as e:
+            print(f"[Startup] user_sessions migration note: {e}")
+
     # Fix size options — Vijey Textile sells kids/girls clothing only.
     # ALL products must use numeric sizes 12–40 (no adult letter sizes).
     try:

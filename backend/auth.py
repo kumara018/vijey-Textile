@@ -3,18 +3,24 @@ from typing import Optional
 import jwt as pyjwt
 from jwt.exceptions import InvalidTokenError
 import bcrypt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
 from database import get_db
 import models
+import device_utils
 
 ACTION_TOKEN_EXPIRE_MINUTES = 5
 
 SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "43200"))  # 30 days
+# Sliding session, like Amazon/Flipkart: this is the length of each renewal,
+# not a hard logout deadline — get_current_user re-issues a fresh token (and
+# pushes UserSession.expires_at forward by the same amount) on every active
+# use, so a user who keeps using the site never hits this ceiling. Only a
+# device that goes fully unused for the whole window actually logs out.
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "129600"))  # 90 days
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -42,6 +48,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
+    response: Response = None,
 ) -> models.User:
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -74,7 +81,12 @@ def get_current_user(
                 detail="You've been signed out of this device. Please log in again.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        # Throttled "last active" touch — avoid a DB write on every single request.
+        # Throttled "last active" touch — avoid a DB write on every single
+        # request. This is also where the sliding session renews: as long as
+        # a device makes at least one request within the window, its expiry
+        # keeps pushing forward and it never has to log back in — same as
+        # Amazon/Flipkart. A device that goes fully quiet for the whole
+        # window is the only way this naturally logs out on its own.
         now = datetime.now(timezone.utc)
         last = session.last_active_at
         if last and last.tzinfo is None:
@@ -82,7 +94,20 @@ def get_current_user(
         if not last or (now - last).total_seconds() > 60:
             try:
                 session.last_active_at = now
+                session.expires_at = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+                # A transient geo-IP failure at login shouldn't leave a
+                # device stuck showing "Unknown location" forever — retry
+                # opportunistically until it succeeds.
+                if not session.location and session.ip_address:
+                    session.location = device_utils.geolocate_ip(session.ip_address)
+
                 db.commit()
+
+                if response is not None:
+                    response.headers["X-New-Token"] = create_access_token(
+                        {"sub": user.id, "sid": session_token}
+                    )
             except Exception:
                 db.rollback()
 
