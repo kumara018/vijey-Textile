@@ -162,6 +162,24 @@ def _create_session_or_409(db: Session, user: models.User, request: Request) -> 
     ip = device_utils.get_client_ip(request) if request else ""
     location = device_utils.geolocate_ip(ip)
 
+    # Logging in again from a browser/device that already has an active
+    # session (e.g. it signed out client-side without hitting /logout, or a
+    # previous session just lapsed) replaces that old entry instead of
+    # sitting alongside it — otherwise the same physical device shows up
+    # twice in Linked Devices, which is exactly the "why is my old login
+    # still here" confusion this is meant to prevent.
+    same_device = [
+        s for s in active
+        if s.device_name == info["device_name"]
+        and s.os_name == info["os_name"]
+        and s.browser_name == info["browser_name"]
+        and s.device_type == info["device_type"]
+    ]
+    for s in same_device:
+        s.revoked_at = datetime.now(timezone.utc)
+    if same_device:
+        db.commit()
+
     session_token = secrets.token_urlsafe(32)
     row = models.UserSession(
         user_id=user.id,
@@ -567,6 +585,23 @@ def list_sessions(
     WhatsApp-style 'Linked Devices' dashboard."""
     current_token = _current_session_token(request)
     active = _active_sessions(db, current_user.id)
+
+    # Being able to make this authenticated request at all proves the
+    # current session is genuinely valid right now — it must never be
+    # missing from its own device list because of an expiry edge case
+    # (e.g. a row created before expires_at existed, or one whose sliding
+    # refresh hasn't landed on this exact request yet). Self-heal it here.
+    if current_token and not any(s.session_token == current_token for s in active):
+        current = db.query(models.UserSession).filter(
+            models.UserSession.session_token == current_token,
+            models.UserSession.user_id == current_user.id,
+            models.UserSession.revoked_at.is_(None),
+        ).first()
+        if current:
+            current.expires_at = datetime.now(timezone.utc) + timedelta(minutes=auth_utils.ACCESS_TOKEN_EXPIRE_MINUTES)
+            db.commit()
+            active.insert(0, current)
+
     out = []
     for s in active:
         d = schemas.SessionOut.model_validate(s)
