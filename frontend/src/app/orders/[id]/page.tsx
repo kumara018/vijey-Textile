@@ -595,8 +595,8 @@ function OrderDetailContent() {
               {(order.items_snapshot as any[]).map((item, i) => {
                 const emoji = item.category === 'Baby Frocks' ? '👶' : item.category === 'Chudithar' ? '👘' : item.category === 'Frocks' ? '👗' : item.category === 'Western Dresses' ? '👒' : item.category === 'Lehenga' ? '💃' : item.category === 'Party Wear' ? '✨' : '👗';
                 const imgSrc = item.image ? (item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL}${item.image}`) : null;
-                return (
-                  <div key={i} className="flex items-start gap-4 pb-4 border-b border-orange-50 last:border-0 last:pb-0">
+                const itemVisual = (
+                  <>
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-maroon-100 to-gold-50 flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden border border-maroon-200">
                       {imgSrc ? (
                         <img src={imgSrc} alt={item.name} className="w-full h-full object-cover"
@@ -604,21 +604,40 @@ function OrderDetailContent() {
                       ) : <span>{emoji}</span>}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm text-gray-800 truncate">{item.name}</p>
+                      <p className="font-semibold text-sm text-gray-800 truncate group-hover:text-maroon-700 group-hover:underline">{item.name}</p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         Qty: {item.quantity}
                         {item.size ? ` · Size: ${item.size}` : ''}
                         {item.color ? ` · Colour: ${item.color}` : ''}
                       </p>
                       <p className="text-xs text-gray-500">₹{Number(item.price).toLocaleString()} each</p>
-                      {isDelivered && item.product_id && (
-                        <Link href={`/products/${item.product_id}#reviews`}
-                          className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-maroon-700 hover:text-maroon-900 border border-maroon-300 hover:border-maroon-500 rounded-lg px-2.5 py-1 transition-colors">
-                          ✍️ Write a Review
-                        </Link>
-                      )}
                     </div>
                     <p className="font-bold text-maroon-900 flex-shrink-0">₹{Number(item.subtotal).toLocaleString()}</p>
+                  </>
+                );
+                return (
+                  <div key={i} className="pb-4 border-b border-orange-50 last:border-0 last:pb-0">
+                    {/* Clicking a purchased item opens its product page in a new tab — like
+                        Amazon's order-history "buy it again" — so shopping again or just
+                        re-checking the product never loses your place in this order. */}
+                    {item.product_id ? (
+                      <Link
+                        href={`/products/${item.product_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-start gap-4 -m-1.5 p-1.5 rounded-lg hover:bg-maroon-50/60 transition-colors"
+                      >
+                        {itemVisual}
+                      </Link>
+                    ) : (
+                      <div className="flex items-start gap-4">{itemVisual}</div>
+                    )}
+                    {isDelivered && item.product_id && (
+                      <Link href={`/products/${item.product_id}#reviews`}
+                        className="inline-flex items-center gap-1 mt-2 ml-[72px] text-xs font-medium text-maroon-700 hover:text-maroon-900 border border-maroon-300 hover:border-maroon-500 rounded-lg px-2.5 py-1 transition-colors">
+                        ✍️ Write a Review
+                      </Link>
+                    )}
                   </div>
                 );
               })}
