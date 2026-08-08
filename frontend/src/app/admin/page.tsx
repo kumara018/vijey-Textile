@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
   Trash2, X, AlertCircle, CheckCircle, Star, Upload, ImagePlus,
-  Bell, Ban, RotateCcw,
+  Bell, Ban, RotateCcw, GripVertical,
 } from 'lucide-react';
 import api, { adminAPI, adminReturnsAPI, adminNotifAPI, supportAPI } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -286,6 +286,10 @@ function AdminPageInner() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [imageUploadProgress, setImageUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [isDraggingImages, setIsDraggingImages] = useState(false);
+  const [isDraggingVideo, setIsDraggingVideo] = useState(false);
+  const [dragImageIdx, setDragImageIdx] = useState<number | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   // Order shipping details modal
@@ -600,28 +604,107 @@ function AdminPageInner() {
     setColorInput('');
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    setUploadingImage(true);
+  // Phone photos often carry an EXIF "Orientation" tag instead of storing
+  // pixels upright — some viewers respect it, some don't, which is exactly
+  // the "wrong orientation" bug. Rather than trust every downstream viewer
+  // (admin thumbnail, Cloudinary, customer's browser) to agree, we bake the
+  // correct rotation into the actual pixels once, right here, before the
+  // file ever leaves the browser. createImageBitmap's imageOrientation:
+  // "from-image" does the EXIF-aware decode; redrawing it to a canvas and
+  // re-exporting strips the tag and makes the upright orientation permanent.
+  // Falls back to the original file untouched if the browser can't do this
+  // (older Safari) — the backend's angle:"exif" transform covers that case.
+  const normalizeImageOrientation = async (file: File): Promise<File> => {
     try {
-      const res = await adminAPI.uploadImage(formData);
-      const url: string = res.data.url;
-      setForm(f => ({ ...f, images: [...f.images, url] }));
-      toast.success('Image uploaded successfully!');
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Image upload failed');
-    } finally {
-      setUploadingImage(false);
-      if (imageInputRef.current) imageInputRef.current.value = '';
+      const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' } as ImageBitmapOptions);
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return file;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+      const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, outType, 0.92));
+      if (!blob) return file;
+      const fixedName = file.name.replace(/\.\w+$/, outType === 'image/png' ? '.png' : '.jpg');
+      return new File([blob], fixedName, { type: outType });
+    } catch {
+      return file; // unsupported browser — server-side angle:"exif" still corrects it
     }
+  };
+
+  const MAX_IMAGE_MB = 10;
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+  const handleImageFiles = async (fileList: FileList | File[]) => {
+    const files = Array.from(fileList).filter(f => {
+      if (!ALLOWED_IMAGE_TYPES.includes(f.type)) {
+        toast.error(`${f.name}: only JPEG, PNG or WebP images are allowed`);
+        return false;
+      }
+      if (f.size > MAX_IMAGE_MB * 1024 * 1024) {
+        toast.error(`${f.name}: must be under ${MAX_IMAGE_MB}MB`);
+        return false;
+      }
+      return true;
+    });
+    if (files.length === 0) return;
+
+    setUploadingImage(true);
+    setImageUploadProgress({ done: 0, total: files.length });
+    const uploaded: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      try {
+        const fixed = await normalizeImageOrientation(files[i]);
+        const formData = new FormData();
+        formData.append('file', fixed);
+        const res = await adminAPI.uploadImage(formData);
+        uploaded.push(res.data.url);
+      } catch (err: any) {
+        toast.error(err.response?.data?.detail || `${files[i].name}: upload failed`);
+      }
+      setImageUploadProgress({ done: i + 1, total: files.length });
+    }
+    if (uploaded.length) {
+      setForm(f => ({ ...f, images: [...f.images, ...uploaded] }));
+      toast.success(uploaded.length === 1 ? 'Image uploaded successfully!' : `${uploaded.length} images uploaded successfully!`);
+    }
+    setUploadingImage(false);
+    setImageUploadProgress(null);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) handleImageFiles(e.target.files);
+  };
+
+  const handleImageDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingImages(false);
+    if (e.dataTransfer.files?.length) handleImageFiles(e.dataTransfer.files);
+  };
+
+  // Drag-to-reorder — the first image is the product's main listing photo
+  // everywhere else in the app, same convention as Amazon/Flipkart/Myntra's
+  // seller image managers, so letting the admin drag a better shot into
+  // slot 1 is the whole point of making this reorderable.
+  const reorderImages = (from: number, to: number) => {
+    setForm(f => {
+      const next = [...f.images];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return { ...f, images: next };
+    });
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    await uploadVideoFile(file);
+  };
+
+  const uploadVideoFile = async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     setUploadingVideo(true);
@@ -636,6 +719,13 @@ function AdminPageInner() {
       setUploadingVideo(false);
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
+  };
+
+  const handleVideoDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingVideo(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) uploadVideoFile(file);
   };
 
   const F = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -1533,50 +1623,90 @@ function AdminPageInner() {
                   ))}
                 </div>
               </div>
-              {/* Image Upload */}
+              {/* Image Upload — Amazon/Flipkart/Myntra-style image manager */}
               <div>
                 <label className="label">Product Images</label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {form.images.map((img, idx) => (
-                    <div key={idx} className="relative group">
-                      <img
-                        src={img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_URL}${img}`}
-                        alt={`Product ${idx + 1}`}
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={10} />
-                      </button>
+                <p className="text-xs text-gray-500 mb-2">
+                  Drag photos in or click to browse — sideways or upside-down phone
+                  photos are automatically straightened. Drag a thumbnail to reorder;
+                  the first photo is the main listing image shown everywhere else.
+                </p>
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingImages(true); }}
+                  onDragLeave={() => setIsDraggingImages(false)}
+                  onDrop={handleImageDrop}
+                  onClick={() => !uploadingImage && imageInputRef.current?.click()}
+                  className={`rounded-xl border-2 border-dashed p-4 text-center cursor-pointer transition-colors ${
+                    isDraggingImages ? 'border-maroon-500 bg-maroon-50' : 'border-gray-300 hover:border-maroon-400 hover:bg-maroon-50/40'
+                  } ${uploadingImage ? 'pointer-events-none opacity-70' : ''}`}
+                >
+                  {uploadingImage ? (
+                    <div className="flex flex-col items-center gap-1.5 py-2">
+                      <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-maroon-600" />
+                      <span className="text-sm text-maroon-700 font-medium">
+                        Uploading {imageUploadProgress ? `${imageUploadProgress.done}/${imageUploadProgress.total}` : ''}…
+                      </span>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => imageInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:border-maroon-400 hover:text-maroon-500 transition-colors disabled:opacity-50"
-                  >
-                    {uploadingImage ? (
-                      <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-maroon-600" />
-                    ) : (
-                      <>
-                        <ImagePlus size={18} />
-                        <span className="text-[9px] mt-1">Upload</span>
-                      </>
-                    )}
-                  </button>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5 py-2 text-gray-500">
+                      <ImagePlus size={22} className="text-maroon-400" />
+                      <span className="text-sm font-medium text-gray-600">Drag photos here, or click to upload</span>
+                      <span className="text-xs text-gray-400">JPEG, PNG or WebP · up to 10MB each · select multiple at once</span>
+                    </div>
+                  )}
                 </div>
                 <input
                   ref={imageInputRef}
                   type="file"
+                  multiple
                   accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={handleImageUpload}
                 />
-                <p className="text-xs text-gray-400">JPEG, PNG, WebP. Max 10MB. Images stored on Cloudinary.</p>
+
+                {form.images.length > 0 && (
+                  <div className="flex flex-wrap gap-3 mt-3">
+                    {form.images.map((img, idx) => (
+                      <div
+                        key={img + idx}
+                        draggable
+                        onDragStart={() => setDragImageIdx(idx)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragImageIdx !== null && dragImageIdx !== idx) reorderImages(dragImageIdx, idx);
+                          setDragImageIdx(null);
+                        }}
+                        onDragEnd={() => setDragImageIdx(null)}
+                        className={`relative group w-20 h-20 rounded-lg border bg-gray-50 flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing transition-opacity ${
+                          dragImageIdx === idx ? 'opacity-40' : 'border-gray-200'
+                        }`}
+                      >
+                        <img
+                          src={img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_URL}${img}`}
+                          alt={`Product ${idx + 1}`}
+                          className="w-full h-full object-contain p-1"
+                        />
+                        {idx === 0 && (
+                          <span className="absolute bottom-0 inset-x-0 bg-maroon-800/90 text-white text-[9px] font-semibold text-center py-0.5 flex items-center justify-center gap-0.5">
+                            <Star size={8} fill="currentColor" /> Main
+                          </span>
+                        )}
+                        <span className="absolute top-0.5 left-0.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <GripVertical size={13} />
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Video Upload */}
@@ -1594,20 +1724,27 @@ function AdminPageInner() {
                       className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg border border-red-200 text-sm">Clear</button>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => videoInputRef.current?.click()}
-                    disabled={uploadingVideo}
-                    className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-maroon-400 hover:text-maroon-600 text-sm transition-colors disabled:opacity-50"
-                  >
-                    {uploadingVideo ? (
-                      <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-maroon-600" /> Uploading...</>
-                    ) : (
-                      <><Upload size={15} /> Upload MP4/MOV</>
-                    )}
-                  </button>
-                  <span className="text-xs text-gray-400">Max 100MB · MP4, MOV, WebM</span>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingVideo(true); }}
+                  onDragLeave={() => setIsDraggingVideo(false)}
+                  onDrop={handleVideoDrop}
+                  onClick={() => !uploadingVideo && videoInputRef.current?.click()}
+                  className={`rounded-xl border-2 border-dashed p-3 flex items-center justify-center gap-2 cursor-pointer transition-colors ${
+                    isDraggingVideo ? 'border-maroon-500 bg-maroon-50' : 'border-gray-300 hover:border-maroon-400 hover:bg-maroon-50/40'
+                  } ${uploadingVideo ? 'pointer-events-none opacity-70' : ''}`}
+                >
+                  {uploadingVideo ? (
+                    <>
+                      <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-maroon-600" />
+                      <span className="text-sm text-maroon-700 font-medium">Uploading…</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} className="text-maroon-400" />
+                      <span className="text-sm text-gray-600">Drag a video here, or click to upload</span>
+                      <span className="text-xs text-gray-400">· MP4, MOV, WebM · up to 100MB</span>
+                    </>
+                  )}
                 </div>
                 <input ref={videoInputRef} type="file" accept="video/mp4,video/quicktime,video/webm" className="hidden" onChange={handleVideoUpload} />
 
