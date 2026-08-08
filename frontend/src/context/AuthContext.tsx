@@ -179,8 +179,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // If no other sessions → fully log out.
   const logout = () => {
     // Revoke the device session server-side (fire-and-forget — never block
-    // the local sign-out on a network round trip).
-    authAPI.logout().catch(() => {});
+    // the local sign-out on a network round trip). Must pass the outgoing
+    // account's token explicitly: this function switches localStorage's
+    // 'token' to the next saved account (or clears it) before the request
+    // interceptor's microtask actually reads localStorage, so relying on
+    // the interceptor here would revoke the WRONG account's session — the
+    // one being switched to, not the one being signed out of.
+    authAPI.logout(token || undefined).catch(() => {});
 
     const currentId = user?.id;
     const remaining = sessions.filter(s => s.user.id !== currentId);

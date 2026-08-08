@@ -23,9 +23,15 @@ const api = axios.create({
   timeout: 65000, // 65s — Render cold starts can take up to 60s
 });
 
-// Attach JWT token to every request
+// Attach JWT token to every request. Callers that need to authenticate as a
+// specific (soon-to-change) account — e.g. logging out of one saved account
+// while switching to another — can set config.headers.Authorization
+// themselves; that explicit value is left alone instead of being clobbered
+// by whatever localStorage holds when this interceptor actually runs (it
+// runs as a microtask, i.e. after the current account switch has already
+// written the new token to localStorage — see authAPI.logout).
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && !config.headers.Authorization) {
     const token = localStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
   }
@@ -94,7 +100,9 @@ export const authAPI = {
   sendLoginOtp:        (data: object) => api.post('/api/auth/send-login-otp', data),
   verifyLoginOtp:      (data: object) => api.post('/api/auth/verify-login-otp', data),
   evictAndLogin:       (data: object) => api.post('/api/auth/sessions/evict-and-login', data),
-  logout:              ()             => api.post('/api/auth/logout'),
+  // token: pass the account's own token explicitly when signing it out while
+  // switching to another saved account — see the request interceptor above.
+  logout:              (token?: string) => api.post('/api/auth/logout', {}, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
   getMe:               ()             => api.get('/api/auth/me'),
   updateProfile:       (data: object) => api.put('/api/auth/me', data),
   forgotPassword:      (data: object) => api.post('/api/auth/forgot-password', data),
