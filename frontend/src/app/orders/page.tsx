@@ -25,6 +25,23 @@ const RETURN_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   completed:           { label: 'Completed',            color: 'bg-green-100 text-green-700 border-green-300'    },
 };
 
+// Same colour families as RETURN_STATUS_LABEL above, in the banner's -50/
+// -200/-800 shade pattern instead of the pill's -100/-300/-700, so the top
+// banner can switch to the return's own colour once one is active.
+const RETURN_BANNER_COLOR: Record<string, string> = {
+  pending:             'bg-yellow-50 border-yellow-200 text-yellow-800',
+  under_review:        'bg-blue-50 border-blue-200 text-blue-800',
+  approved:            'bg-green-50 border-green-200 text-green-800',
+  rejected:            'bg-red-50 border-red-200 text-red-800',
+  pickup_scheduled:    'bg-purple-50 border-purple-200 text-purple-800',
+  picked_up:           'bg-cyan-50 border-cyan-200 text-cyan-800',
+  processing:          'bg-indigo-50 border-indigo-200 text-indigo-800',
+  replacement_shipped: 'bg-purple-50 border-purple-200 text-purple-800',
+  refund_initiated:    'bg-amber-50 border-amber-200 text-amber-800',
+  refunded:            'bg-green-50 border-green-200 text-green-800',
+  completed:           'bg-green-50 border-green-200 text-green-800',
+};
+
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; badge: string; banner: string }> = {
   pending:          { label: 'Pending',          icon: Clock,        color: 'text-yellow-600', badge: 'badge-warning', banner: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
   confirmed:        { label: 'Confirmed',         icon: CheckCircle,  color: 'text-blue-600',   badge: 'badge-info',    banner: 'bg-blue-50 border-blue-200 text-blue-800' },
@@ -146,11 +163,19 @@ export default function OrdersPage() {
             <Link key={order.id} href={`/orders/${order.id}`} className="block group">
               <div className="card overflow-hidden hover:shadow-md transition-all">
 
-                {/* Colored status banner */}
-                <div className={`border-b px-5 py-2.5 flex items-center justify-between ${cfg.banner}`}>
+                {/* Colored status banner — once a return/exchange is active, this
+                    shows the compound status ("Delivered → Pickup Scheduled")
+                    and switches to the return's own colour, so the banner never
+                    looks like a plain closed order while something is actually
+                    in progress. */}
+                <div className={`border-b px-5 py-2.5 flex items-center justify-between ${activeReturn ? (RETURN_BANNER_COLOR[activeReturn.status] || cfg.banner) : cfg.banner}`}>
                   <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Icon size={14} />
-                    <span>{cfg.label}</span>
+                    {activeReturn ? <RotateCcw size={14} /> : <Icon size={14} />}
+                    <span>
+                      {activeReturn
+                        ? `${cfg.label} → ${activeReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: ${RETURN_STATUS_LABEL[activeReturn.status]?.label || activeReturn.status}`
+                        : cfg.label}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs font-medium opacity-80">
                     <span>{deliveryLine}</span>
@@ -202,18 +227,6 @@ export default function OrdersPage() {
                       </p>
                     </div>
                   </div>
-
-                  {/* Return / Exchange status — an order stays "Delivered" forever
-                      (that's accurate), but a return/exchange in progress on top of
-                      it needs its own visible signal, same as Amazon shows both. */}
-                  {activeReturn && (
-                    <div className="mb-3">
-                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${RETURN_STATUS_LABEL[activeReturn.status]?.color || 'bg-gray-100 text-gray-600 border-gray-300'}`}>
-                        <RotateCcw size={12} />
-                        {activeReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: {RETURN_STATUS_LABEL[activeReturn.status]?.label || activeReturn.status}
-                      </span>
-                    </div>
-                  )}
 
                   {/* Tracking + payment */}
                   <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
