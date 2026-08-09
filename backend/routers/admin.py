@@ -248,6 +248,17 @@ def get_all_orders(
     skip: int = 0,
     limit: int = 50,
 ):
+    # Opportunistic sync — the 15-min in-process poller alone isn't reliable
+    # on a host that spins down when idle, so every time the admin actually
+    # opens this dashboard is also a chance to self-heal any order that's
+    # fallen behind Delhivery's real status. Best-effort: a Delhivery outage
+    # must never break loading the order list itself.
+    try:
+        import courier_sync
+        courier_sync.sync_all_open_orders(db)
+    except Exception as e:
+        print(f"[Admin Orders] opportunistic Delhivery sync error: {e}")
+
     query = db.query(models.Order)
     if status:
         query = query.filter(models.Order.status == status)
@@ -640,6 +651,45 @@ def create_delhivery_shipment(
         "awb_code":     awb,
         "courier":      "Delhivery",
         "tracking_url": order.tracking_url,
+    }
+
+
+@router.post("/orders/{order_id}/sync-delhivery")
+def sync_order_delhivery_now(
+    order_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """
+    On-demand version of courier_sync.sync_all_open_orders() for a single
+    order — an immediate "Sync now" for when an admin has spotted a specific
+    order that looks stale and doesn't want to wait for the next opportunistic
+    or timed sync to catch it.
+    """
+    import delhivery as dl
+
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if not order.awb_code:
+        raise HTTPException(400, "This order has no Delhivery AWB yet — nothing to sync.")
+    if not dl.is_configured():
+        raise HTTPException(500, "Delhivery not configured. Add DELHIVERY_API_TOKEN to Render env vars.")
+
+    raw = dl.track_awb(order.awb_code)
+    if not raw:
+        raise HTTPException(502, "Could not reach Delhivery — check the AWB and try again in a moment.")
+
+    current = dl.parse_current_status(raw)
+    action = courier_sync.sync_order_from_delhivery(order, current, db)
+    db.refresh(order)
+
+    return {
+        "message":          f"Delhivery reports: {current.get('status') or 'no status yet'}",
+        "action":           action,
+        "status":           order.status,
+        "delhivery_status": current.get("status"),
+        "location":         order.status_location,
     }
 
 

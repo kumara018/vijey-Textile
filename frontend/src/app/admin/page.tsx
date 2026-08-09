@@ -301,6 +301,7 @@ function AdminPageInner() {
   });
   const [shipSaving, setShipSaving] = useState(false);
   const [creatingDelhivery, setCreatingDelhivery] = useState<number | null>(null);
+  const [syncingDelhivery, setSyncingDelhivery] = useState<number | null>(null);
 
   useEffect(() => {
     if (authLoading) return;            // wait for localStorage restore
@@ -568,6 +569,17 @@ function AdminPageInner() {
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Delhivery shipment failed — check API token & pickup location');
     } finally { setCreatingDelhivery(null); }
+  };
+
+  const handleSyncDelhivery = async (orderId: number) => {
+    setSyncingDelhivery(orderId);
+    try {
+      const res = await adminAPI.syncDelhivery(orderId);
+      toast.success(`📦 ${res.data.message}${res.data.status ? ` — now ${res.data.status}` : ''}`, { duration: 6000 });
+      loadOrders();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not reach Delhivery — try again in a moment');
+    } finally { setSyncingDelhivery(null); }
   };
 
   const handleShipSave = async () => {
@@ -1122,6 +1134,16 @@ function AdminPageInner() {
                           >
                             📍 Track
                           </a>
+                        )}
+                        {o.awb_code && o.status !== 'cancelled' && o.status !== 'delivered' && (
+                          <button
+                            onClick={() => handleSyncDelhivery(o.id)}
+                            disabled={syncingDelhivery === o.id}
+                            className="text-xs bg-teal-50 border border-teal-200 text-teal-700 hover:bg-teal-100 rounded-lg px-2 py-1.5 transition-colors whitespace-nowrap disabled:opacity-60"
+                            title="Pull this order's live status from Delhivery right now — the dashboard already syncs every time it loads, use this to force an immediate check"
+                          >
+                            {syncingDelhivery === o.id ? '⏳...' : '🔄 Sync'}
+                          </button>
                         )}
                         {/* Initiate Refund — show only for cancelled, online-paid, not yet refunded */}
                         {o.status === 'cancelled' && o.payment_method !== 'cod' && o.payment_status === 'paid' && (

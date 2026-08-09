@@ -162,6 +162,7 @@ export const adminAPI = {
   getOrders:               (status?: string)            => api.get('/api/admin/orders', { params: status ? { status } : {} }),
   updateOrderStatus:       (id: number, data: object)   => api.put(`/api/admin/orders/${id}/status`, data),
   createDelhiveryShipment: (id: number)                 => api.post(`/api/admin/orders/${id}/create-delhivery-shipment`),
+  syncDelhivery:           (id: number)                 => api.post(`/api/admin/orders/${id}/sync-delhivery`),
   checkServiceability:     (id: number)                 => api.get(`/api/admin/orders/${id}/check-serviceability`),
   initiateRefund:          (id: number)                 => api.post(`/api/payments/admin/orders/${id}/initiate-refund`),
   markRefunded:            (id: number)                 => api.post(`/api/payments/admin/orders/${id}/mark-refunded`),

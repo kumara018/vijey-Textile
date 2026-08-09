@@ -424,40 +424,26 @@ def _sync_delhivery_statuses():
     """
     Runs on a timer (see lifespan below): pulls live tracking for every order
     with an open Delhivery shipment and advances its status via
-    courier_sync.sync_order_from_delhivery — the piece that makes Shipped ->
+    courier_sync.sync_all_open_orders() — the piece that makes Shipped ->
     Out for Delivery move on its own instead of needing an admin to notice a
     courier scan and update it by hand.
 
-    Best-effort only, while this process happens to be awake — the Delhivery
-    webhook receiver (routers/webhooks.py) and the opportunistic sync on the
-    customer's own tracking-page view (routers/orders.py) cover the gaps if
-    this host is asleep when a status actually changes.
+    This timer alone is best-effort: a host that spins down when idle stops
+    it along with everything else until the next request wakes the process
+    back up. courier_sync.sync_all_open_orders() is also called
+    opportunistically whenever the admin orders dashboard loads and via a
+    manual "Sync now" action (routers/admin.py), plus the Delhivery webhook
+    receiver (routers/webhooks.py) and the customer's own tracking-page view
+    (routers/orders.py) — real activity, not just this clock, is what keeps
+    orders caught up in practice.
     """
-    import delhivery as dl
     import courier_sync
 
-    if not dl.is_configured():
-        return
     db = SessionLocal()
     try:
-        open_orders = db.query(models.Order).filter(
-            models.Order.awb_code.isnot(None),
-            models.Order.status.notin_(["delivered", "cancelled"]),
-        ).all()
-        for order in open_orders:
-            courier = (order.courier_name or "").lower()
-            if courier and "delhivery" not in courier:
-                continue  # manually-entered non-Delhivery courier (BlueDart/DTDC) — nothing to poll
-            try:
-                raw = dl.track_awb(order.awb_code)
-                if not raw:
-                    continue
-                current = dl.parse_current_status(raw)
-                action = courier_sync.sync_order_from_delhivery(order, current, db)
-                if action and action != "location_only":
-                    print(f"[Delhivery Poll] {order.order_number}: {action}")
-            except Exception as e:
-                print(f"[Delhivery Poll] error syncing order {order.id}: {e}")
+        changes = courier_sync.sync_all_open_orders(db)
+        for c in changes:
+            print(f"[Delhivery Poll] {c}")
     finally:
         db.close()
 

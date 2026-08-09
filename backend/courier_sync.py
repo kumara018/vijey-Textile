@@ -20,6 +20,7 @@ Deliberately conservative:
 import random
 import models
 import notifications
+import delhivery as dl
 
 # Canonical order-status lifecycle. Both the admin dropdown (routers/admin.py)
 # and this module's own automatic sync enforce the same rule off this table:
@@ -152,3 +153,45 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
             print(f"[Delhivery Sync] notification error for {order.order_number}: {e}")
 
     return action
+
+
+def sync_all_open_orders(db) -> list[str]:
+    """
+    Polls live Delhivery tracking for every order with an open Delhivery
+    shipment and advances each one via sync_order_from_delhivery().
+
+    Shared by three call sites, because a single 15-minute in-process timer
+    (main.py's scheduler) is not on its own a reliable way to keep this
+    current — a host that spins down when idle simply stops running that
+    timer along with everything else until the next request wakes it back
+    up. Also called opportunistically whenever the admin orders dashboard
+    loads (routers/admin.py::get_all_orders) and on-demand from a manual
+    "Sync now" action, so real activity — not just the clock — keeps orders
+    caught up.
+
+    Best-effort throughout: one order's Delhivery API error never stops the
+    rest from syncing. Returns a list of "{order_number}: {action}" strings
+    for orders that actually changed, for logging/reporting by the caller.
+    """
+    if not dl.is_configured():
+        return []
+    changes = []
+    open_orders = db.query(models.Order).filter(
+        models.Order.awb_code.isnot(None),
+        models.Order.status.notin_(["delivered", "cancelled"]),
+    ).all()
+    for order in open_orders:
+        courier = (order.courier_name or "").lower()
+        if courier and "delhivery" not in courier:
+            continue  # manually-entered non-Delhivery courier (BlueDart/DTDC) — nothing to poll
+        try:
+            raw = dl.track_awb(order.awb_code)
+            if not raw:
+                continue
+            current = dl.parse_current_status(raw)
+            action = sync_order_from_delhivery(order, current, db)
+            if action and action != "location_only":
+                changes.append(f"{order.order_number}: {action}")
+        except Exception as e:
+            print(f"[Delhivery Sync] error syncing order {order.id}: {e}")
+    return changes
