@@ -2,10 +2,28 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
-import { ordersAPI } from '@/lib/api';
-import { Order } from '@/types';
+import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
+import { ordersAPI, returnsAPI } from '@/lib/api';
+import { Order, ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+
+// Mirrors orders/[id]/page.tsx's RETURN_STATUS_LABEL — kept in sync so a
+// return/exchange reads the same everywhere a customer sees it. No "Return:"/
+// "Exchange:" prefix baked in here — the card adds that itself, since which
+// word applies depends on request_type.
+const RETURN_STATUS_LABEL: Record<string, { label: string; color: string }> = {
+  pending:             { label: 'Pending Review',       color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
+  under_review:        { label: 'Under Review',         color: 'bg-blue-100 text-blue-700 border-blue-300'       },
+  approved:            { label: 'Approved',             color: 'bg-green-100 text-green-700 border-green-300'    },
+  rejected:            { label: 'Rejected',             color: 'bg-red-100 text-red-700 border-red-300'          },
+  pickup_scheduled:    { label: 'Pickup Scheduled',     color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  picked_up:           { label: 'Picked Up',            color: 'bg-cyan-100 text-cyan-700 border-cyan-300'       },
+  processing:          { label: 'Processing',           color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+  replacement_shipped: { label: 'Replacement Shipped',  color: 'bg-purple-100 text-purple-700 border-purple-300' },
+  refund_initiated:    { label: 'Refund Initiated',     color: 'bg-amber-100 text-amber-700 border-amber-300'    },
+  refunded:            { label: 'Refund Credited',      color: 'bg-green-100 text-green-700 border-green-300'    },
+  completed:           { label: 'Completed',            color: 'bg-green-100 text-green-700 border-green-300'    },
+};
 
 const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; badge: string; banner: string }> = {
   pending:          { label: 'Pending',          icon: Clock,        color: 'text-yellow-600', badge: 'badge-warning', banner: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
@@ -38,6 +56,7 @@ export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [returnsByOrder, setReturnsByOrder] = useState<Record<number, ReturnRequest>>({});
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(false);
 
@@ -45,8 +64,18 @@ export default function OrdersPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await ordersAPI.getAll();
-      setOrders(res.data);
+      const [ordersRes, returnsRes] = await Promise.all([
+        ordersAPI.getAll(),
+        returnsAPI.getAll().catch(() => ({ data: [] as ReturnRequest[] })), // never block the order list on this
+      ]);
+      setOrders(ordersRes.data);
+      // Newest-first from the API — first occurrence per order_id is the
+      // most recent return/exchange request for that order.
+      const map: Record<number, ReturnRequest> = {};
+      for (const rr of returnsRes.data as ReturnRequest[]) {
+        if (!(rr.order_id in map)) map[rr.order_id] = rr;
+      }
+      setReturnsByOrder(map);
     } catch {
       setError(true);
     } finally {
@@ -111,6 +140,7 @@ export default function OrdersPage() {
           const Icon = cfg.icon;
           const items = order.items_snapshot as any[];
           const deliveryLine = getDeliveryLine(order.status);
+          const activeReturn = returnsByOrder[order.id];
 
           return (
             <Link key={order.id} href={`/orders/${order.id}`} className="block group">
@@ -172,6 +202,18 @@ export default function OrdersPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Return / Exchange status — an order stays "Delivered" forever
+                      (that's accurate), but a return/exchange in progress on top of
+                      it needs its own visible signal, same as Amazon shows both. */}
+                  {activeReturn && (
+                    <div className="mb-3">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${RETURN_STATUS_LABEL[activeReturn.status]?.color || 'bg-gray-100 text-gray-600 border-gray-300'}`}>
+                        <RotateCcw size={12} />
+                        {activeReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: {RETURN_STATUS_LABEL[activeReturn.status]?.label || activeReturn.status}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Tracking + payment */}
                   <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
