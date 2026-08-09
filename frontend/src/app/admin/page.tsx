@@ -1485,6 +1485,11 @@ function AdminPageInner() {
                                         <span className="font-mono text-xs text-teal-700 tracking-widest">{r.pickup_otp}</span>
                                       </div>
                                     )}
+                                    <p className="text-[11px] text-teal-600 leading-snug">
+                                      ℹ️ Reverse pickups are auto-scheduled by Delhivery and won't appear in their
+                                      &quot;Upcoming Pickups&quot; dashboard widget — that only tracks outbound warehouse
+                                      pickups. Use the Track link above for this pickup&apos;s real status.
+                                    </p>
                                   </div>
                                 ) : ['return','exchange'].includes(r.request_type) && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
                                   <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
