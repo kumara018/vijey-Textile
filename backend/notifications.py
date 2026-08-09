@@ -1693,10 +1693,18 @@ def send_return_request_whatsapp(phone: str, name: str, order, rr):
         f"Track status: {STORE_URL}/orders/{order.id}"
     )
 
-def send_return_status_email(email: str, name: str, order, rr):
+def send_return_status_email(email: str, name: str, order, rr, status: str | None = None):
+    """
+    `status` lets a caller notify about a specific milestone even if `rr`
+    has since moved further (e.g. approving a return that also
+    auto-schedules a Delhivery pickup in the same request is two separate
+    milestones from the customer's point of view — each gets its own
+    email rather than only the final resolved status). Defaults to rr.status.
+    """
+    status = status or rr.status
     first = name.split()[0]
     type_label = _RETURN_TYPE_LABEL.get(rr.request_type, rr.request_type.title())
-    title, color, msg = _RETURN_STATUS_INFO.get(rr.status, (f"Update: {rr.status}", "#a8763f", ""))
+    title, color, msg = _RETURN_STATUS_INFO.get(status, (f"Update: {status}", "#a8763f", ""))
     admin_note = (f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:14px;margin:16px 0;">'
                   f'<p style="margin:0;font-size:13px;color:#92400e;"><strong>Note from our team:</strong> {rr.admin_notes}</p></div>'
                   if rr.admin_notes else "")
@@ -1713,10 +1721,12 @@ def send_return_status_email(email: str, name: str, order, rr):
     """)
     _bg(email, f"{title} — {order.order_number} | {STORE_NAME}", html)
 
-def send_return_status_whatsapp(phone: str, name: str, order, rr):
+def send_return_status_whatsapp(phone: str, name: str, order, rr, status: str | None = None):
+    """See send_return_status_email — `status` overrides which milestone to notify about."""
+    status = status or rr.status
     first = name.split()[0]
     type_label = _RETURN_TYPE_LABEL.get(rr.request_type, rr.request_type.title())
-    title, color, msg = _RETURN_STATUS_INFO.get(rr.status, (f"Update: {rr.status}", "#a8763f", ""))
+    title, color, msg = _RETURN_STATUS_INFO.get(status, (f"Update: {status}", "#a8763f", ""))
     note = f"\n\n*Note:* {rr.admin_notes}" if rr.admin_notes else ""
     _send_whatsapp(phone,
         f"*{type_label} Update — {order.order_number}*\n\n"

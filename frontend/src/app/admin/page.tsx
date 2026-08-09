@@ -1450,6 +1450,23 @@ function AdminPageInner() {
                                   </div>
                                 )}
 
+                                {/* Return pickup — real Delhivery AWB, only shown once Delhivery actually confirmed it */}
+                                {r.return_awb ? (
+                                  <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
+                                    <span className="text-xs font-semibold text-teal-800">🚚 Return Pickup AWB:</span>
+                                    <span className="font-mono text-xs text-teal-700">{r.return_awb}</span>
+                                    <a href={r.return_tracking_url || `https://www.delhivery.com/track/package/${r.return_awb}`}
+                                      target="_blank" rel="noopener noreferrer"
+                                      className="ml-auto text-xs font-medium text-teal-700 hover:text-teal-900 underline">
+                                      Track
+                                    </a>
+                                  </div>
+                                ) : r.request_type === 'return' && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
+                                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                                    <p className="text-xs text-orange-700">⚠️ No confirmed Delhivery pickup for this return yet — arrange pickup manually.</p>
+                                  </div>
+                                )}
+
                                 {/* Update form */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div>

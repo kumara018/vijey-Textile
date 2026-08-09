@@ -233,6 +233,21 @@ function ReturnDetailContent() {
         </div>
       )}
 
+      {/* Pickup tracking — only shown once Delhivery has actually confirmed a pickup */}
+      {rr.return_awb && (
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-5 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-1">Pickup Tracking</p>
+            <p className="text-sm text-teal-800 font-mono">{rr.return_awb}</p>
+          </div>
+          <a href={rr.return_tracking_url || `https://www.delhivery.com/track/package/${rr.return_awb}`}
+            target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 hover:border-teal-500 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap">
+            Track Pickup
+          </a>
+        </div>
+      )}
+
       {/* Refund info */}
       {rr.refund_id && (
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-5">

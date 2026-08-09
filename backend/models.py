@@ -287,6 +287,8 @@ class ReturnRequest(Base):
     # pending → under_review → approved / rejected → pickup_scheduled → picked_up → processing → replacement_shipped → completed
     admin_notes   = Column(Text, nullable=True)
     refund_id     = Column(String(100), nullable=True)   # unused while return/refund is out of scope; kept for future
+    return_awb           = Column(String(50), nullable=True)   # Delhivery reverse-pickup waybill, once confirmed
+    return_tracking_url  = Column(String(255), nullable=True)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
 

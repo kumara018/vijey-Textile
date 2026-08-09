@@ -557,6 +557,40 @@ def create_shiprocket_shipment(
     }
 
 
+def _parse_delhivery_response(result: dict | None) -> tuple[str, str]:
+    """
+    Validates a Delhivery cmu/create.json response — shared by forward
+    shipment creation AND reverse/return pickup creation, since both hit
+    the same endpoint and get back the same response shape:
+    { "packages": [{ "waybill": "...", "error"/"remarks": "..." }], "success": true/false }
+
+    Delhivery can return HTTP 200 with a non-empty JSON body even when it
+    didn't actually create anything (success=false, or success=true with a
+    per-package error and no waybill) — a bare truthy check on the response
+    dict is NOT enough to know a shipment/pickup genuinely exists on
+    Delhivery's side. This is exactly what let a return's status become
+    "Pickup Scheduled" here while Delhivery's own dashboard showed nothing.
+
+    Returns (awb, error_message) — exactly one of the two is non-empty.
+    """
+    if not result:
+        return "", "No response from Delhivery"
+
+    packages = result.get("packages", [])
+    success  = result.get("success", False)
+
+    if not success and not packages:
+        return "", result.get("rmk") or result.get("error") or str(result)
+    if not packages:
+        return "", result.get("rmk") or result.get("error") or str(result)
+
+    pkg_err = packages[0].get("error") or packages[0].get("remarks") or ""
+    awb     = packages[0].get("waybill", "")
+    if not awb:
+        return "", pkg_err or f"Delhivery did not return an AWB. Full response: {result}"
+    return awb, ""
+
+
 def _create_delhivery_shipment_for_order(order, db: Session) -> str:
     """
     Calls Delhivery's create-shipment API for `order`, validates the
@@ -578,33 +612,11 @@ def _create_delhivery_shipment_for_order(order, db: Session) -> str:
 
     user = db.query(models.User).filter(models.User.id == order.user_id).first()
     result = dl.create_shipment(order, user)
-    if not result:
-        raise HTTPException(502, "Delhivery API call failed. Check Render logs for details.")
-
     print(f"[Delhivery] Full response: {result}")   # visible in Render logs
 
-    # Response format: { "packages": [{ "waybill": "...", "refnum": "...", "sort_code": "..." }], "success": true/false }
-    packages = result.get("packages", [])
-    success  = result.get("success", False)
-
-    # Check top-level failure
-    if not success and not packages:
-        err_msg = result.get("rmk") or result.get("error") or str(result)
-        raise HTTPException(502, f"Delhivery shipment failed: {err_msg}")
-
-    # Check package-level errors (Delhivery sometimes returns success=true but error inside package)
-    if packages:
-        pkg_err = packages[0].get("error") or packages[0].get("remarks") or ""
-        awb     = packages[0].get("waybill", "")
-        if pkg_err and not awb:
-            raise HTTPException(502, f"Delhivery shipment failed: {pkg_err}")
-    else:
-        top_err = result.get("rmk") or result.get("error") or str(result)
-        raise HTTPException(502, f"Delhivery shipment failed: {top_err}")
-
-    awb = packages[0].get("waybill", "")
+    awb, err = _parse_delhivery_response(result)
     if not awb:
-        raise HTTPException(502, f"Delhivery did not return an AWB. Full response: {result}")
+        raise HTTPException(502, f"Delhivery shipment failed: {err}")
 
     order.awb_code     = awb
     order.courier_name = "Delhivery"
@@ -748,6 +760,12 @@ def update_return_status(
 
     previous_status = rr.status
     rr.status = payload.status
+    # Every status rr.status actually passes through this request, in order —
+    # the admin's explicit choice plus anything auto-advanced further below
+    # (e.g. approving a return that also auto-schedules pickup). Each one is
+    # its own milestone from the customer's point of view and gets its own
+    # notification, not just whichever status this ends up resolving to.
+    milestones = [payload.status]
     if payload.admin_notes:
         rr.admin_notes = payload.admin_notes
 
@@ -771,16 +789,25 @@ def update_return_status(
 
     # Approving a RETURN auto-schedules a Delhivery pickup (best effort —
     # never blocks the approval if the courier call fails; admin can always
-    # arrange pickup manually in that case).
+    # arrange pickup manually in that case). Delhivery can return HTTP 200
+    # with a non-empty JSON body even when it didn't create anything, so a
+    # bare truthy check on the response was previously enough to claim
+    # "Pickup Scheduled" here while nothing was actually scheduled on
+    # Delhivery's side — _parse_delhivery_response() requires an actual
+    # waybill before this is treated as success.
     if payload.status == "approved" and previous_status != "approved" and rr.request_type == "return" and order and user:
         try:
             import delhivery as dl
             result = dl.create_return_pickup(order, user)
-            if result:
+            awb, err = _parse_delhivery_response(result)
+            if awb:
                 rr.status = "pickup_scheduled"
-                print(f"[Returns] Delhivery return pickup scheduled for return #{rr.id}")
+                rr.return_awb = awb
+                rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+                milestones.append("pickup_scheduled")
+                print(f"[Returns] Delhivery return pickup scheduled for return #{rr.id}, AWB {awb}")
             else:
-                print(f"[Returns] ⚠️ Delhivery return pickup could not be auto-scheduled for return #{rr.id} — arrange manually.")
+                print(f"[Returns] ⚠️ Delhivery return pickup could not be auto-scheduled for return #{rr.id}: {err} — arrange manually.")
         except Exception as e:
             print(f"[Returns] Delhivery return pickup error: {e}")
 
@@ -808,6 +835,7 @@ def update_return_status(
                     )
                     rr.refund_id = refund.get("id", "")
                     rr.status = "refund_initiated"
+                    milestones.append("refund_initiated")
                     order.payment_status = "refund_initiated"
                     print(f"[Returns] ✅ Refund {rr.refund_id} auto-initiated for return #{rr.id}")
                 except Exception as e:
@@ -818,13 +846,15 @@ def update_return_status(
     db.commit()
     db.refresh(rr)
 
-    # Notify customer
+    # Notify customer — once per milestone actually reached this request
+    # (see `milestones` above), not just the final resolved status.
     if user and order:
-        try:
-            notifications.send_return_status_email(user.email, user.full_name, order, rr)
-            notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr)
-        except Exception as e:
-            print(f"[Returns] Notification error: {e}")
+        for s in milestones:
+            try:
+                notifications.send_return_status_email(user.email, user.full_name, order, rr, status=s)
+                notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status=s)
+            except Exception as e:
+                print(f"[Returns] Notification error ({s}): {e}")
         if rr.status == "refund_initiated":
             try:
                 notifications.send_refund_initiated_email(user.email, user.full_name, order, rr.refund_id or "")

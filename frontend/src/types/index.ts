@@ -140,6 +140,8 @@ export interface ReturnRequest {
   status: string;
   admin_notes?: string;
   refund_id?: string;
+  return_awb?: string;
+  return_tracking_url?: string;
   product_id?: number;
   original_price?: number;
   new_product_id?: number;

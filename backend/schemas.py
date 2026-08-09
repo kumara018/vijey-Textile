@@ -594,6 +594,8 @@ class ReturnRequestOut(BaseModel):
     status:       str
     admin_notes:  Optional[str] = None
     refund_id:    Optional[str] = None
+    return_awb:           Optional[str] = None
+    return_tracking_url:  Optional[str] = None
     product_id:            Optional[int] = None
     original_price:         Optional[float] = None
     new_product_id:         Optional[int] = None

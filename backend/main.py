@@ -229,6 +229,14 @@ def _migrate_db():
                     conn.execute(text("ALTER TABLE return_requests ADD COLUMN price_diff_payment_id VARCHAR(100)"))
                     conn.commit()
                     print("[Startup] Migrated: added price_diff_payment_id to return_requests")
+                if "return_awb" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN return_awb VARCHAR(50)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added return_awb to return_requests")
+                if "return_tracking_url" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN return_tracking_url VARCHAR(255)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added return_tracking_url to return_requests")
         except Exception as e:
             print(f"[Startup] Return-requests migration note: {e}")
 
