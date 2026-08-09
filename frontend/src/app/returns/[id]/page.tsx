@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Package, CheckCircle, Clock, XCircle,
-  RefreshCw, AlertCircle, Image as ImageIcon,
+  RefreshCw, AlertCircle, Image as ImageIcon, ShieldCheck,
 } from 'lucide-react';
 import { returnsAPI } from '@/lib/api';
 import { ReturnRequest } from '@/types';
@@ -233,6 +233,22 @@ function ReturnDetailContent() {
         </div>
       )}
 
+      {/* Pickup OTP — give this to the courier when they arrive */}
+      {rr.status === 'pickup_scheduled' && rr.pickup_otp && (
+        <div className="bg-gradient-to-br from-orange-50 to-amber-50 border-2 border-orange-300 rounded-2xl p-6 mb-5">
+          <div className="flex items-center gap-2 mb-4">
+            <ShieldCheck size={22} className="text-orange-700" />
+            <h3 className="font-bold text-orange-900">Your Pickup OTP</h3>
+          </div>
+          <p className="text-sm text-gray-700 mb-4">Our courier is on the way to collect your item! Give this OTP to the pickup agent when they arrive.</p>
+          <div className="bg-white border-2 border-orange-300 rounded-xl p-4 text-center">
+            <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">Pickup OTP</p>
+            <p className="text-5xl font-bold tracking-[0.4em] font-mono text-orange-700">{rr.pickup_otp}</p>
+          </div>
+          <p className="text-xs text-orange-700 mt-3 font-medium">⚠️ Never share this OTP via phone call or message. Only give it to the agent in person.</p>
+        </div>
+      )}
+
       {/* Pickup tracking — only shown once Delhivery has actually confirmed a pickup */}
       {rr.return_awb && (
         <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mb-5 flex items-center justify-between gap-3">
@@ -244,6 +260,21 @@ function ReturnDetailContent() {
             target="_blank" rel="noopener noreferrer"
             className="text-xs font-semibold text-teal-700 hover:text-teal-900 border border-teal-300 hover:border-teal-500 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap">
             Track Pickup
+          </a>
+        </div>
+      )}
+
+      {/* Replacement shipment tracking — exchange only */}
+      {rr.replacement_awb && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-5 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">Replacement Shipment</p>
+            <p className="text-sm text-purple-800 font-mono">{rr.replacement_awb}</p>
+          </div>
+          <a href={rr.replacement_tracking_url || `https://www.delhivery.com/track/package/${rr.replacement_awb}`}
+            target="_blank" rel="noopener noreferrer"
+            className="text-xs font-semibold text-purple-700 hover:text-purple-900 border border-purple-300 hover:border-purple-500 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap">
+            Track Replacement
           </a>
         </div>
       )}

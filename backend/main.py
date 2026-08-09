@@ -156,6 +156,10 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE orders ADD COLUMN delivered_at TIMESTAMP WITH TIME ZONE"))
                 conn.commit()
                 print("[Startup] Migrated: added delivered_at to orders")
+            if "rto_pending" not in orders_cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN rto_pending BOOLEAN DEFAULT FALSE"))
+                conn.commit()
+                print("[Startup] Migrated: added rto_pending to orders")
         except Exception as e:
             print(f"[Startup] Orders migration note: {e}")
 
@@ -237,6 +241,18 @@ def _migrate_db():
                     conn.execute(text("ALTER TABLE return_requests ADD COLUMN return_tracking_url VARCHAR(255)"))
                     conn.commit()
                     print("[Startup] Migrated: added return_tracking_url to return_requests")
+                if "pickup_otp" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN pickup_otp VARCHAR(10)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added pickup_otp to return_requests")
+                if "replacement_awb" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN replacement_awb VARCHAR(50)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added replacement_awb to return_requests")
+                if "replacement_tracking_url" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN replacement_tracking_url VARCHAR(255)"))
+                    conn.commit()
+                    print("[Startup] Migrated: added replacement_tracking_url to return_requests")
         except Exception as e:
             print(f"[Startup] Return-requests migration note: {e}")
 
@@ -434,7 +450,9 @@ def _sync_delhivery_statuses():
     with an open Delhivery shipment and advances its status via
     courier_sync.sync_all_open_orders() — the piece that makes Shipped ->
     Out for Delivery move on its own instead of needing an admin to notice a
-    courier scan and update it by hand.
+    courier scan and update it by hand. Also runs
+    courier_sync.sync_all_open_returns() for the same reason, on the
+    replacement-shipment leg of exchanges.
 
     This timer alone is best-effort: a host that spins down when idle stops
     it along with everything else until the next request wakes the process
@@ -451,6 +469,9 @@ def _sync_delhivery_statuses():
     try:
         changes = courier_sync.sync_all_open_orders(db)
         for c in changes:
+            print(f"[Delhivery Poll] {c}")
+        return_changes = courier_sync.sync_all_open_returns(db)
+        for c in return_changes:
             print(f"[Delhivery Poll] {c}")
     finally:
         db.close()

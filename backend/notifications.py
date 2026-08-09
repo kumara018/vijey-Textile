@@ -419,6 +419,29 @@ def send_order_status_email(email: str, name: str, order, new_status: str):
     _bg(email, f"{title} — {order.order_number} | {STORE_NAME}", html)
 
 
+# ── 5b. Cancelled after already being handed to the courier (RTO) ─────────────
+# Distinct from the generic "cancelled" message above — the item is physically
+# still in transit or at the customer's door, so the copy has to say so.
+def send_rto_cancellation_email(email: str, name: str, order):
+    first = name.split()[0]
+    html = _wrap(f"""
+      <h2 style="color:#dc2626;margin-top:0;font-size:22px;">❌ Order Cancelled</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;">
+        Hi {first}, your order <strong>{order.order_number}</strong> has been cancelled — but it was already handed to our courier.
+      </p>
+      <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:4px;padding:16px;margin:20px 0;">
+        <p style="margin:0;color:#dc2626;font-weight:bold;font-size:14px;">
+          ⚠️ Please do NOT accept the package if a delivery agent arrives — we're arranging its return to us.
+        </p>
+      </div>
+      <p style="color:#444;font-size:14px;line-height:1.6;">
+        Any refund will be processed once the courier confirms the package is back with us.
+      </p>
+      {_btn("View Order", f"{STORE_URL}/orders/{order.id}")}
+    """)
+    _bg(email, f"Order Cancelled — {order.order_number} | {STORE_NAME}", html)
+
+
 # ── 6. Review request (after delivery) ────────────────────────────────────────
 def send_review_request_email(email: str, name: str, order):
     first = name.split()[0]
@@ -915,6 +938,43 @@ def send_delivery_otp_email(email: str, name: str, otp: str, order_number: str,
     _bg(email, f"🚚 Delivery OTP for order {order_number} — share with delivery agent | {STORE_NAME}", html)
 
 
+# ── 12b. Pickup OTP (return/exchange reverse pickup) ───────────────────────────
+def send_pickup_otp_email(email: str, name: str, otp: str, request_type: str, order_number: str,
+                           agent_name: str = "", agent_phone: str = ""):
+    first = name.split()[0]
+    type_label = "return" if request_type == "return" else "exchange"
+    agent_block = ""
+    if agent_name or agent_phone:
+        agent_block = f"""
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin:16px 0;">
+        <p style="margin:0;color:#0369a1;font-weight:bold;font-size:14px;">📦 Your Pickup Agent</p>
+        {"<p style='margin:8px 0 0;color:#0c4a6e;font-size:14px;'>👤 " + agent_name + "</p>" if agent_name else ""}
+        {"<p style='margin:6px 0 0;color:#0c4a6e;font-size:14px;'>📞 " + agent_phone + "</p>" if agent_phone else ""}
+      </div>"""
+    html = _wrap(f"""
+      <h2 style="color:#a8763f;margin-top:0;font-size:22px;">📦 Your {type_label} pickup is scheduled!</h2>
+      <p style="color:#444;font-size:14px;line-height:1.6;">
+        Hi {first}, our courier will be collecting your item for order <strong>{order_number}</strong> soon.
+      </p>
+      {agent_block}
+      <div style="background:#f4ede1;border:2px solid #a8763f;border-radius:12px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#888;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Your Pickup OTP</p>
+        <p style="margin:14px 0 6px;font-size:52px;font-weight:bold;color:#a8763f;letter-spacing:14px;font-family:monospace;">{otp}</p>
+        <p style="margin:0;color:#666;font-size:13px;">Give this OTP to the pickup agent to confirm the handover</p>
+      </div>
+      <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px;margin:20px 0;">
+        <p style="margin:0;color:#92400e;font-weight:bold;font-size:14px;">⚠️ Important Security Note</p>
+        <p style="margin:8px 0 0;color:#92400e;font-size:13px;line-height:1.6;">
+          • Only share this OTP with the pickup agent at your door<br>
+          • Do NOT share via phone call or message<br>
+          • The OTP confirms we're collecting the right item from the right person
+        </p>
+      </div>
+      {_btn("View Request Status", f"{STORE_URL}/orders")}
+    """)
+    _bg(email, f"📦 Pickup OTP for order {order_number} — share with pickup agent | {STORE_NAME}", html)
+
+
 # ── 13. Support rating confirmation (to user) ─────────────────────────────────
 def send_support_rating_confirmation(email: str, name: str, rating: int):
     first = name.split()[0]
@@ -1146,6 +1206,19 @@ def send_order_status_whatsapp(phone: str, name: str, order, new_status: str):
     )
 
 
+# ── 15d-2. Cancelled after already being handed to the courier (RTO) ──────────
+def send_rto_cancellation_whatsapp(phone: str, name: str, order):
+    first = name.split()[0]
+    _send_whatsapp(phone,
+        f"📬 *Order Cancelled — {order.order_number}*\n\n"
+        f"Hi {first},\n\n"
+        f"❌ Your order has been cancelled — but it was already handed to our courier.\n\n"
+        f"⚠️ *Please do NOT accept the package if a delivery agent arrives* — we're arranging its return to us.\n\n"
+        f"Any refund will be processed once the courier confirms it's back with us.\n\n"
+        f"📲 View order: {STORE_URL}/orders/{order.id}"
+    )
+
+
 # ── 15e. Delivery OTP ─────────────────────────────────────────────────────────
 def send_delivery_otp_whatsapp(phone: str, name: str, otp: str, order_number: str,
                                 agent_name: str = "", agent_phone: str = ""):
@@ -1163,6 +1236,27 @@ def send_delivery_otp_whatsapp(phone: str, name: str, otp: str, order_number: st
         f"📌 Share this OTP only with the delivery person at your door.\n"
         f"⚠️ Never share via call or message.\n\n"
         f"📲 Track order: {STORE_URL}/orders"
+    )
+
+
+# ── 15e-2. Pickup OTP (return/exchange reverse pickup) ─────────────────────────
+def send_pickup_otp_whatsapp(phone: str, name: str, otp: str, request_type: str, order_number: str,
+                              agent_name: str = "", agent_phone: str = ""):
+    first      = name.split()[0]
+    type_label = "return" if request_type == "return" else "exchange"
+    agent_info = ""
+    if agent_name or agent_phone:
+        agent_info = f"\n\n👤 *Pickup Agent:* {agent_name or '—'}"
+        if agent_phone:
+            agent_info += f"\n📞 {agent_phone}"
+    _send_whatsapp(phone,
+        f"📦 *Your {type_label.title()} Pickup is Scheduled!*\n\n"
+        f"Hi {first}, our courier is collecting the item for order *{order_number}*.{agent_info}\n\n"
+        f"🔐 *Your Pickup OTP:*\n\n"
+        f"*{otp}*\n\n"
+        f"📌 Give this OTP only to the pickup agent at your door.\n"
+        f"⚠️ Never share via call or message.\n\n"
+        f"📲 View status: {STORE_URL}/orders"
     )
 
 

@@ -39,6 +39,18 @@ STATUS_RANK = {
     "delivered":        5,
 }
 
+# A failed delivery attempt's status text ("Undelivered", "Delivery
+# Attempted", "Consignee Refused"...) also contains the substring "deliver",
+# so callers must check this BEFORE any generic "deliver" match or a
+# botched attempt gets misread as a successful delivery. Shared between the
+# regular-order sync below and the exchange-replacement sync, since both
+# leg types can hit the exact same failure phrases from Delhivery.
+FAILED_DELIVERY_ATTEMPT_PHRASES = (
+    "undelivered", "not delivered", "delivery attempt", "delivery failed",
+    "delivery exception", "consignee refused", "consignee unavailable",
+    "consignee not available",
+)
+
 
 def is_valid_transition(from_status: str, to_status: str) -> bool:
     """
@@ -66,8 +78,8 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
 
     Returns a short string describing what happened ("shipped",
     "out_for_delivery", "delivered", "delivery_attempt_failed_needs_review",
-    "rto_needs_review", "courier_cancelled_needs_review", "location_only")
-    or None if nothing about the order needed to change.
+    "rto_needs_review", "courier_cancelled_needs_review", "rto_received",
+    "location_only") or None if nothing about the order needed to change.
     """
     raw_status = (current.get("status") or "").strip()
     status_l   = raw_status.lower()
@@ -82,8 +94,31 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
         order.estimated_delivery = current["expected_delivery"]
         changed = True
 
-    # Terminal in our own system — keep location/ETA fresh but never reopen it.
-    if order.status in ("delivered", "cancelled"):
+    # Delivered is terminal — keep location/ETA fresh but never reopen it.
+    if order.status == "delivered":
+        if changed:
+            db.commit()
+        return "location_only" if changed else None
+
+    # Cancelled is terminal for the order's own status, but a cancellation
+    # made after the item had already shipped (rto_pending — see
+    # routers/admin.py / routers/orders.py) deliberately did NOT restore
+    # stock at cancel time, since the item was still physically out with
+    # the courier. This is the one remaining signal that closes that loop:
+    # once Delhivery confirms the RTO genuinely landed back at origin,
+    # restore the stock and clear the flag. Any other RTO-related status
+    # (still in transit back) just keeps location fresh, same as before.
+    if order.status == "cancelled":
+        if order.rto_pending and "rto" in status_l and ("delivered" in status_l or "complete" in status_l):
+            for item in order.items_snapshot:
+                product = db.query(models.Product).filter(models.Product.id == item["product_id"]).first()
+                if product:
+                    product.stock += item["quantity"]
+            order.rto_pending = False
+            db.commit()
+            db.refresh(order)
+            print(f"[Delhivery Sync] {order.order_number}: RTO confirmed back at origin — stock restored")
+            return "rto_received"
         if changed:
             db.commit()
         return "location_only" if changed else None
@@ -116,11 +151,7 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
     # Attempted", "Consignee Refused"...) also contains the substring
     # "deliver", so this must run BEFORE the generic "deliver" catch below
     # or a botched attempt would get misread as a successful delivery.
-    elif any(p in status_l for p in (
-        "undelivered", "not delivered", "delivery attempt", "delivery failed",
-        "delivery exception", "consignee refused", "consignee unavailable",
-        "consignee not available",
-    )):
+    elif any(p in status_l for p in FAILED_DELIVERY_ATTEMPT_PHRASES):
         print(f"[Delhivery Sync] {order.order_number}: delivery attempt failed "
               f"({raw_status!r}) — needs manual review, status left as {order.status!r}")
         action = "delivery_attempt_failed_needs_review"
@@ -204,9 +235,15 @@ def sync_all_open_orders(db) -> list[str]:
     if not dl.is_configured():
         return []
     changes = []
+    # A cancelled order stays in scope while rto_pending — that's the one
+    # case where "cancelled" isn't fully done with Delhivery yet, since
+    # sync_order_from_delhivery() still needs to see the RTO confirmed back
+    # at origin before it can release the held stock.
     open_orders = db.query(models.Order).filter(
         models.Order.awb_code.isnot(None),
-        models.Order.status.notin_(["delivered", "cancelled"]),
+    ).filter(
+        (models.Order.status.notin_(["delivered", "cancelled"]))
+        | ((models.Order.status == "cancelled") & (models.Order.rto_pending.is_(True)))
     ).all()
     for order in open_orders:
         courier = (order.courier_name or "").lower()
@@ -222,4 +259,67 @@ def sync_all_open_orders(db) -> list[str]:
                 changes.append(f"{order.order_number}: {action}")
         except Exception as e:
             print(f"[Delhivery Sync] error syncing order {order.id}: {e}")
+    return changes
+
+
+def sync_all_open_returns(db) -> list[str]:
+    """
+    Mirrors sync_all_open_orders() for an exchange's replacement leg — once
+    create_replacement_shipment() (routers/admin.py) has shipped the new
+    item, this polls that shipment's own AWB and auto-completes the
+    exchange the same way a regular order now auto-completes: trust
+    Delhivery's own "Delivered" scan directly, with the same failed-
+    attempt-phrase guard so a botched delivery attempt is never misread as
+    success. The pickup leg (return_awb) is intentionally NOT auto-advanced
+    here — confirming a pickup is what triggers refunds/replacement
+    shipments, so that stays an admin-confirmed step (see courier_sync.py
+    module docstring / the plan this was built from).
+
+    Called from the same three places as sync_all_open_orders(): the
+    scheduled timer, opportunistically on the admin returns dashboard load,
+    and on-demand via a manual "Sync now" action.
+    """
+    if not dl.is_configured():
+        return []
+    changes = []
+    open_returns = (
+        db.query(models.ReturnRequest)
+        .filter(models.ReturnRequest.replacement_awb.isnot(None))
+        .filter(models.ReturnRequest.status == "replacement_shipped")
+        .all()
+    )
+    for rr in open_returns:
+        try:
+            raw = dl.track_awb(rr.replacement_awb)
+            if not raw:
+                continue
+            current = dl.parse_current_status(raw)
+            status_l = (current.get("status") or "").strip().lower()
+            if not status_l:
+                continue
+
+            if any(p in status_l for p in FAILED_DELIVERY_ATTEMPT_PHRASES):
+                print(f"[Returns Sync] return #{rr.id}: replacement delivery attempt failed "
+                      f"({current.get('status')!r}) — needs manual review")
+                continue
+
+            # Same substring caution as the order-delivery check: "out for
+            # delivery"/"dispatched for delivery" both contain "deliver".
+            if "deliver" in status_l and "out for" not in status_l and "dispatch" not in status_l:
+                rr.status = "completed"
+                db.commit()
+                db.refresh(rr)
+                changes.append(f"return#{rr.id}: replacement delivered, completed")
+                print(f"[Returns Sync] return #{rr.id}: replacement delivered — marked completed")
+
+                user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+                order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+                if user and order:
+                    try:
+                        notifications.send_return_status_email(user.email, user.full_name, order, rr, status="completed")
+                        notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status="completed")
+                    except Exception as e:
+                        print(f"[Returns Sync] notification error for return #{rr.id}: {e}")
+        except Exception as e:
+            print(f"[Returns Sync] error syncing replacement AWB for return #{rr.id}: {e}")
     return changes

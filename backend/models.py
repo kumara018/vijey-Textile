@@ -184,6 +184,7 @@ class Order(Base):
     # ── Cancellation info ──────────────────────────────────────────────────
     cancel_reason         = Column(String(255), nullable=True)
     cancelled_by          = Column(String(20),  nullable=True)       # 'user' or 'admin'
+    rto_pending           = Column(Boolean, default=False)   # cancelled after already being shipped — stock held until the courier confirms it's back
     delivered_at           = Column(DateTime(timezone=True), nullable=True)  # set when status → delivered; anchors return/exchange windows
     created_at             = Column(DateTime(timezone=True), server_default=func.now())
     updated_at             = Column(DateTime(timezone=True), onupdate=func.now())
@@ -289,6 +290,9 @@ class ReturnRequest(Base):
     refund_id     = Column(String(100), nullable=True)   # unused while return/refund is out of scope; kept for future
     return_awb           = Column(String(50), nullable=True)   # Delhivery reverse-pickup waybill, once confirmed
     return_tracking_url  = Column(String(255), nullable=True)
+    pickup_otp            = Column(String(10),  nullable=True)   # given to the pickup agent to verify handoff — same idea as Order.delivery_otp
+    replacement_awb          = Column(String(50),  nullable=True)   # exchange only — forward shipment of the new item, created once the old one is picked up
+    replacement_tracking_url = Column(String(255), nullable=True)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
 

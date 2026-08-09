@@ -564,6 +564,18 @@ function OrderDetailContent() {
                   </p>
                 </div>
               </div>
+              {order.rto_pending && (
+                <div className="flex items-start gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3 mb-3">
+                  <AlertCircle size={18} className="text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-orange-800">This order was already with our courier</p>
+                    <p className="text-xs text-orange-700 mt-0.5">
+                      Please do not accept the package if a delivery agent arrives — we're arranging its return to us.
+                      Any refund will be processed once we receive it back.
+                    </p>
+                  </div>
+                </div>
+              )}
               {order.payment_status === 'refunded' ? (
                 <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                   <CheckCircle size={18} className="text-green-600 flex-shrink-0" />

@@ -246,26 +246,38 @@ def cancel_order(
             detail=f"Orders can only be cancelled within {CANCEL_WINDOW_HOURS} hour of purchase. This window has passed — please contact support.",
         )
 
+    pre_cancel_status = order.status
     order.status        = "cancelled"
     order.cancelled_by  = "user"
     order.cancel_reason = (payload.reason or "Cancelled by customer").strip()
 
-    # Restore stock
-    for item in order.items_snapshot:
-        product = db.query(models.Product).filter(
-            models.Product.id == item["product_id"]
-        ).first()
-        if product:
-            product.stock += item["quantity"]
+    # An order cancelled once it's already Shipped is an RTO, not a simple
+    # cancel — the item is physically with the courier, not back on the
+    # shelf. Restoring stock immediately would let the shop oversell a unit
+    # that isn't actually available yet. Hold it and flag rto_pending;
+    # courier_sync restores it once Delhivery confirms the item is back.
+    # (Customers can't self-cancel past "shipped" — out_for_delivery/
+    # delivered are blocked above — so "shipped" is the only RTO case here.)
+    is_rto = bool(order.awb_code) and pre_cancel_status == "shipped"
 
-    # Cancel on Delhivery if AWB exists (unlikely this early, but handle it)
+    if not is_rto:
+        for item in order.items_snapshot:
+            product = db.query(models.Product).filter(
+                models.Product.id == item["product_id"]
+            ).first()
+            if product:
+                product.stock += item["quantity"]
+    else:
+        order.rto_pending = True
+
+    # Cancel on Delhivery if AWB exists
     if order.awb_code:
         courier = (order.courier_name or "").lower()
         try:
             if "delhivery" in courier or not courier:
                 import delhivery as dl
-                dl.cancel_shipment(order.awb_code)
-                print(f"[Delhivery] Cancelled AWB {order.awb_code}")
+                cancel_result = dl.cancel_shipment(order.awb_code)
+                print(f"[Delhivery] Cancel/RTO requested for AWB {order.awb_code} — response: {cancel_result}")
             elif order.shiprocket_order_id:
                 from shiprocket import shiprocket as sr
                 sr.cancel_order([int(order.shiprocket_order_id)])
@@ -309,13 +321,20 @@ def cancel_order(
     db.commit()
     db.refresh(order)
 
-    # Notify customer — cancellation
+    # Notify customer — cancellation (RTO gets a distinct "don't accept it if
+    # it arrives" message instead of the generic cancellation email)
     try:
-        notifications.send_order_cancelled_email(current_user.email, current_user.full_name, order)
+        if order.rto_pending:
+            notifications.send_rto_cancellation_email(current_user.email, current_user.full_name, order)
+        else:
+            notifications.send_order_cancelled_email(current_user.email, current_user.full_name, order)
     except Exception as e:
         print(f"[Cancel email error] {e}")
     try:
-        notifications.send_order_cancelled_whatsapp(current_user.phone, current_user.full_name, order)
+        if order.rto_pending:
+            notifications.send_rto_cancellation_whatsapp(current_user.phone, current_user.full_name, order)
+        else:
+            notifications.send_order_cancelled_whatsapp(current_user.phone, current_user.full_name, order)
     except Exception as e:
         print(f"[Cancel WhatsApp error] {e}")
 

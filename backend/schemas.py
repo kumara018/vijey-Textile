@@ -492,6 +492,7 @@ class OrderOut(BaseModel):
     status_location:        Optional[str] = None
     cancel_reason:          Optional[str] = None
     cancelled_by:           Optional[str] = None
+    rto_pending:            bool = False
     delivered_at:           Optional[datetime] = None
     created_at:             datetime
 
@@ -596,6 +597,9 @@ class ReturnRequestOut(BaseModel):
     refund_id:    Optional[str] = None
     return_awb:           Optional[str] = None
     return_tracking_url:  Optional[str] = None
+    pickup_otp:               Optional[str] = None
+    replacement_awb:          Optional[str] = None
+    replacement_tracking_url: Optional[str] = None
     product_id:            Optional[int] = None
     original_price:         Optional[float] = None
     new_product_id:         Optional[int] = None

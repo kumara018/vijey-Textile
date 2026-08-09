@@ -112,6 +112,7 @@ export interface Order {
   // Cancellation
   cancel_reason?: string;
   cancelled_by?: string;
+  rto_pending?: boolean;   // cancelled after already being shipped — item still routing back to the shop
   delivered_at?: string;
   created_at: string;
 }
@@ -142,6 +143,9 @@ export interface ReturnRequest {
   refund_id?: string;
   return_awb?: string;
   return_tracking_url?: string;
+  pickup_otp?: string;
+  replacement_awb?: string;
+  replacement_tracking_url?: string;
   product_id?: number;
   original_price?: number;
   new_product_id?: number;

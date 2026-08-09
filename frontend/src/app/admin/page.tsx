@@ -277,6 +277,7 @@ function AdminPageInner() {
   const [expandedReturn, setExpandedReturn] = useState<number | null>(null);
   const [returnUpdateForm, setReturnUpdateForm] = useState<Record<number, { status: string; admin_notes: string }>>({});
   const [savingReturn, setSavingReturn] = useState<number | null>(null);
+  const [syncingReturn, setSyncingReturn] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -759,6 +760,17 @@ function AdminPageInner() {
     } finally { setSavingReturn(null); }
   };
 
+  const handleSyncReturnDelhivery = async (returnId: number) => {
+    setSyncingReturn(returnId);
+    try {
+      const res = await adminReturnsAPI.syncDelhivery(returnId);
+      toast.success(`📦 ${res.data.message}${res.data.status ? ` — now ${res.data.status}` : ''}`, { duration: 6000 });
+      loadReturns();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not reach Delhivery — try again in a moment');
+    } finally { setSyncingReturn(null); }
+  };
+
   const TABS = [
     { key: 'dash',          label: 'Dashboard'        },
     { key: 'products',      label: 'Products'          },
@@ -1096,6 +1108,11 @@ function AdminPageInner() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="capitalize badge badge-info text-xs">{o.status}</span>
+                      {o.status === 'cancelled' && o.rto_pending && (
+                        <p className="text-[10px] font-semibold text-orange-600 mt-0.5" title="Item was already shipped — stock is held until the courier confirms it's back">
+                          🔄 Awaiting return to shop
+                        </p>
+                      )}
                       {o.status_location && <p className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[120px]">📍 {o.status_location}</p>}
                       {o.awb_code && <p className="text-[10px] font-mono text-maroon-600 mt-0.5">{o.awb_code}</p>}
                     </td>
@@ -1450,21 +1467,57 @@ function AdminPageInner() {
                                   </div>
                                 )}
 
-                                {/* Return pickup — real Delhivery AWB, only shown once Delhivery actually confirmed it */}
+                                {/* Pickup — real Delhivery AWB, only shown once Delhivery actually confirmed it. Applies to both return and exchange. */}
                                 {r.return_awb ? (
-                                  <div className="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg px-3 py-2">
-                                    <span className="text-xs font-semibold text-teal-800">🚚 Return Pickup AWB:</span>
-                                    <span className="font-mono text-xs text-teal-700">{r.return_awb}</span>
-                                    <a href={r.return_tracking_url || `https://www.delhivery.com/track/package/${r.return_awb}`}
-                                      target="_blank" rel="noopener noreferrer"
-                                      className="ml-auto text-xs font-medium text-teal-700 hover:text-teal-900 underline">
-                                      Track
-                                    </a>
+                                  <div className="bg-teal-50 border border-teal-200 rounded-lg px-3 py-2 space-y-1.5">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-semibold text-teal-800">🚚 Pickup AWB:</span>
+                                      <span className="font-mono text-xs text-teal-700">{r.return_awb}</span>
+                                      <a href={r.return_tracking_url || `https://www.delhivery.com/track/package/${r.return_awb}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="ml-auto text-xs font-medium text-teal-700 hover:text-teal-900 underline">
+                                        Track
+                                      </a>
+                                    </div>
+                                    {r.pickup_otp && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-teal-800">🔐 Pickup OTP:</span>
+                                        <span className="font-mono text-xs text-teal-700 tracking-widest">{r.pickup_otp}</span>
+                                      </div>
+                                    )}
                                   </div>
-                                ) : r.request_type === 'return' && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
+                                ) : ['return','exchange'].includes(r.request_type) && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
                                   <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                                    <p className="text-xs text-orange-700">⚠️ No confirmed Delhivery pickup for this return yet — arrange pickup manually.</p>
+                                    <p className="text-xs text-orange-700">⚠️ No confirmed Delhivery pickup for this {r.request_type} yet — arrange pickup manually.</p>
                                   </div>
+                                )}
+
+                                {/* Replacement shipment — exchange only, created once the old item is picked up */}
+                                {r.request_type === 'exchange' && (
+                                  r.replacement_awb ? (
+                                    <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+                                      <span className="text-xs font-semibold text-purple-800">📦 Replacement AWB:</span>
+                                      <span className="font-mono text-xs text-purple-700">{r.replacement_awb}</span>
+                                      <a href={r.replacement_tracking_url || `https://www.delhivery.com/track/package/${r.replacement_awb}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        className="text-xs font-medium text-purple-700 hover:text-purple-900 underline">
+                                        Track
+                                      </a>
+                                      {r.status !== 'completed' && (
+                                        <button
+                                          onClick={() => handleSyncReturnDelhivery(r.id)}
+                                          disabled={syncingReturn === r.id}
+                                          className="ml-auto text-xs bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60"
+                                        >
+                                          {syncingReturn === r.id ? '⏳...' : '🔄 Sync'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : r.status === 'picked_up' && (
+                                    <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                                      <p className="text-xs text-orange-700">⚠️ Replacement shipment couldn't be auto-created — ship the new item manually.</p>
+                                    </div>
+                                  )
                                 )}
 
                                 {/* Update form */}

@@ -245,6 +245,82 @@ def create_return_pickup(order, user) -> dict | None:
         return None
 
 
+# ── Forward shipment for an exchange's replacement item ───────────────────────
+# Not the same call as create_shipment() — there's no real Order row for the
+# replacement, just a ReturnRequest pointing at a new_product. This is the
+# second leg of an exchange: once the old item is picked up (see
+# create_return_pickup above), the replacement goes out as its own fresh
+# forward shipment to the same address — the same two-leg pattern
+# Amazon/Flipkart/Myntra use for apparel exchanges rather than a same-visit
+# swap, since the replacement's exact size/colour/stock needs its own
+# verified shipment like any other order.
+def create_replacement_shipment(rr, order, user) -> dict | None:
+    if not is_configured():
+        return None
+    addr = order.shipping_address or {}
+    new_product = rr.new_product
+
+    def _ascii(s: str) -> str:
+        return (s or "").encode("ascii", errors="ignore").decode("ascii").strip()
+
+    desc = new_product.name if new_product else "Replacement item"
+    if rr.new_size:
+        desc += f" ({rr.new_size})"
+
+    shipment = {
+        "name":    _ascii(addr.get("full_name") or (user.full_name if user else "Customer")),
+        "add":     _ascii(" ".join(filter(None, [addr.get("address_line1", ""), addr.get("address_line2", "")]))),
+        "pin":     str(addr.get("pincode", "")),
+        "city":    _ascii(addr.get("city", "")),
+        "state":   _ascii(addr.get("state", "Tamil Nadu")),
+        "country": "India",
+        "phone":   str(addr.get("phone") or (user.phone if user else "")),
+        "order":   f"EXC-{order.order_number}",
+        # A replacement swap never collects COD, regardless of how the
+        # original order was paid — the customer already paid (or owes
+        # nothing more) for the item being exchanged.
+        "payment_mode":   "Pre-paid",
+        "payment":        "Pre-paid",
+        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638001"),
+        "return_city":    os.getenv("DELHIVERY_RETURN_CITY",    "Gangapuram"),
+        "return_state":   os.getenv("DELHIVERY_RETURN_STATE",   "Tamil Nadu"),
+        "return_country": "India",
+        "return_phone":   os.getenv("DELHIVERY_RETURN_PHONE",   ""),
+        "return_name":    os.getenv("DELHIVERY_RETURN_NAME",    "Vijey Textile"),
+        "return_add":     os.getenv("DELHIVERY_RETURN_ADDRESS", "Shop Ground Floor No 131, Texvalley Gangapuram"),
+        "return_time":    "72",
+        "products_desc":  _ascii(desc),
+        "hsn_code":       "",
+        "cod_amount":     "0",
+        "total_amount":   str(round(new_product.price, 2)) if new_product else "0",
+        "shipment_width":  20,
+        "shipment_height": 5,
+        "shipment_length": 25,
+        "weight":          0.5,
+        "quantity":        1,
+        "waybill":         "",
+        "seller_tin":      "",
+        "seller_gst_tin":  "",
+    }
+
+    pickup_name = os.getenv("DELHIVERY_PICKUP_NAME", "Primary")
+    payload = {"shipments": [shipment], "pickup_location": {"name": pickup_name}}
+
+    try:
+        data_json = json.dumps(payload, ensure_ascii=True, separators=(',', ':'))
+        resp = _requests.post(
+            f"{_base()}/api/cmu/create.json",
+            data    = {"format": "json", "data": data_json},
+            headers = {"Authorization": f"Token {_token()}"},
+            timeout = 20,
+        )
+        print(f"[Delhivery] Replacement shipment HTTP {resp.status_code}  body={resp.text[:500]}")
+        return resp.json()
+    except Exception as e:
+        print(f"[Delhivery] Replacement shipment error: {e}")
+        return None
+
+
 # ── Check serviceability (pincode reachable?) ─────────────────────────────────
 def check_serviceability(origin_pin: str, dest_pin: str, weight_grams: int = 500) -> dict | None:
     if not is_configured():

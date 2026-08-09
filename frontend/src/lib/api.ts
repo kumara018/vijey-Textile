@@ -199,6 +199,7 @@ export const wishlistAPI = {
 export const adminReturnsAPI = {
   getAll:       ()                          => api.get('/api/admin/returns'),
   updateStatus: (id: number, data: object) => api.put(`/api/admin/returns/${id}/status`, data),
+  syncDelhivery: (id: number)               => api.post(`/api/admin/returns/${id}/sync-delhivery`),
 };
 
 export const adminNotifAPI = {

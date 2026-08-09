@@ -290,32 +290,46 @@ def update_order_status(
             detail=f"Can't move an order from '{order.status}' back to '{payload.status}' — status only moves forward. Use Cancel if this order needs to be stopped.",
         )
 
-    was_cancelled = order.status == "cancelled"
+    was_cancelled     = order.status == "cancelled"
+    pre_cancel_status = order.status
     order.status = payload.status
 
     # ── Cancelled by admin: restore stock and cancel the courier pickup ───────
     # Mirrors the customer self-cancel flow in routers/orders.py::cancel_order —
     # without this, the shipment stays live with the courier (still shows
     # "ready for pickup" on Delhivery) even though the order is cancelled here.
+    #
+    # An order cancelled once it's already Shipped/Out for Delivery is an RTO,
+    # not a simple cancel — the item is physically still with the courier or
+    # at the customer's door, not back on the shelf. Restoring stock the
+    # instant this button is clicked would let the shop oversell a unit that
+    # isn't actually available yet. Instead: hold the stock, flag
+    # rto_pending, and only restore it once courier_sync sees Delhivery
+    # confirm the item is genuinely back at origin.
     if payload.status == "cancelled" and not was_cancelled:
         order.cancelled_by = "admin"
         if not order.cancel_reason:
             order.cancel_reason = "Cancelled by admin"
 
-        for item in order.items_snapshot:
-            product = db.query(models.Product).filter(
-                models.Product.id == item["product_id"]
-            ).first()
-            if product:
-                product.stock += item["quantity"]
+        is_rto = bool(order.awb_code) and pre_cancel_status in ("shipped", "out_for_delivery")
+
+        if not is_rto:
+            for item in order.items_snapshot:
+                product = db.query(models.Product).filter(
+                    models.Product.id == item["product_id"]
+                ).first()
+                if product:
+                    product.stock += item["quantity"]
+        else:
+            order.rto_pending = True
 
         if order.awb_code:
             courier = (order.courier_name or "").lower()
             try:
                 if "delhivery" in courier or not courier:
                     import delhivery as dl
-                    dl.cancel_shipment(order.awb_code)
-                    print(f"[Delhivery] Cancelled AWB {order.awb_code}")
+                    cancel_result = dl.cancel_shipment(order.awb_code)
+                    print(f"[Delhivery] Cancel/RTO requested for AWB {order.awb_code} — response: {cancel_result}")
                 elif order.shiprocket_order_id:
                     from shiprocket import shiprocket as sr
                     sr.cancel_order([int(order.shiprocket_order_id)])
@@ -387,6 +401,9 @@ def update_order_status(
                 f"Delivery OTP for order {order.order_number}: {order.delivery_otp}. Share with delivery agent only.",
                 "Delivery",
             )
+        elif payload.status == "cancelled" and order.rto_pending:
+            notifications.send_rto_cancellation_email(user.email, user.full_name, order)
+            notifications.send_rto_cancellation_whatsapp(user.phone, user.full_name, order)
         else:
             notifications.send_order_status_email(user.email, user.full_name, order, payload.status)
             notifications.send_order_status_whatsapp(user.phone, user.full_name, order, payload.status)
@@ -736,7 +753,64 @@ def get_all_returns(
     db: Session = Depends(get_db),
     _: models.User = Depends(auth_utils.get_current_admin),
 ):
+    # Opportunistic sync — same reasoning as get_all_orders(): the 15-min
+    # in-process poller alone isn't reliable on a host that spins down when
+    # idle, so every dashboard load is also a chance to auto-complete any
+    # exchange replacement that's already been delivered.
+    try:
+        courier_sync.sync_all_open_returns(db)
+    except Exception as e:
+        print(f"[Admin Returns] opportunistic Delhivery sync error: {e}")
+
     return db.query(models.ReturnRequest).order_by(models.ReturnRequest.created_at.desc()).all()
+
+
+@router.post("/returns/{return_id}/sync-delhivery")
+def sync_return_delhivery_now(
+    return_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """On-demand single-return version of sync_all_open_returns() — checks
+    the replacement shipment's live status right now, for an admin who's
+    spotted a specific exchange that looks stale."""
+    import delhivery as dl
+
+    rr = db.query(models.ReturnRequest).filter(models.ReturnRequest.id == return_id).first()
+    if not rr:
+        raise HTTPException(404, "Return request not found")
+    if not rr.replacement_awb:
+        raise HTTPException(400, "This exchange has no replacement shipment yet — nothing to sync.")
+    if not dl.is_configured():
+        raise HTTPException(500, "Delhivery not configured. Add DELHIVERY_API_TOKEN to Render env vars.")
+
+    raw = dl.track_awb(rr.replacement_awb)
+    if not raw:
+        raise HTTPException(502, "Could not reach Delhivery — check the AWB and try again in a moment.")
+
+    current = dl.parse_current_status(raw)
+    status_l = (current.get("status") or "").strip().lower()
+
+    if status_l and not any(p in status_l for p in courier_sync.FAILED_DELIVERY_ATTEMPT_PHRASES) \
+       and "deliver" in status_l and "out for" not in status_l and "dispatch" not in status_l \
+       and rr.status == "replacement_shipped":
+        rr.status = "completed"
+        db.commit()
+        db.refresh(rr)
+        user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+        order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+        if user and order:
+            try:
+                notifications.send_return_status_email(user.email, user.full_name, order, rr, status="completed")
+                notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status="completed")
+            except Exception as e:
+                print(f"[Returns] Notification error: {e}")
+
+    return {
+        "message":          f"Delhivery reports: {current.get('status') or 'no status yet'}",
+        "status":           rr.status,
+        "delhivery_status": current.get("status"),
+    }
 
 
 @router.put("/returns/{return_id}/status")
@@ -787,15 +861,17 @@ def update_return_status(
                 raise HTTPException(400, f'"{new_product.name}" only has {new_product.stock} in stock — cannot approve this exchange.')
             new_product.stock -= qty
 
-    # Approving a RETURN auto-schedules a Delhivery pickup (best effort —
-    # never blocks the approval if the courier call fails; admin can always
-    # arrange pickup manually in that case). Delhivery can return HTTP 200
-    # with a non-empty JSON body even when it didn't create anything, so a
-    # bare truthy check on the response was previously enough to claim
-    # "Pickup Scheduled" here while nothing was actually scheduled on
-    # Delhivery's side — _parse_delhivery_response() requires an actual
-    # waybill before this is treated as success.
-    if payload.status == "approved" and previous_status != "approved" and rr.request_type == "return" and order and user:
+    # Approving a RETURN or EXCHANGE auto-schedules a Delhivery pickup (best
+    # effort — never blocks the approval if the courier call fails; admin
+    # can always arrange pickup manually in that case). Delhivery can
+    # return HTTP 200 with a non-empty JSON body even when it didn't create
+    # anything, so a bare truthy check on the response was previously
+    # enough to claim "Pickup Scheduled" while nothing was actually
+    # scheduled on Delhivery's side — _parse_delhivery_response() requires
+    # an actual waybill before this is treated as success. An exchange is
+    # physically the same pickup as a return (the old item still has to
+    # come back) — it just never called Delhivery at all before this.
+    if payload.status == "approved" and previous_status != "approved" and rr.request_type in ("return", "exchange") and order and user:
         try:
             import delhivery as dl
             result = dl.create_return_pickup(order, user)
@@ -804,12 +880,31 @@ def update_return_status(
                 rr.status = "pickup_scheduled"
                 rr.return_awb = awb
                 rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+                # Pickup OTP — the agent verifies it with the customer before
+                # taking the item, same anti-fraud idea as the forward
+                # delivery_otp, just for the reverse leg. Applies to both
+                # return and exchange pickups.
+                rr.pickup_otp = str(random.randint(100000, 999999))
                 milestones.append("pickup_scheduled")
-                print(f"[Returns] Delhivery return pickup scheduled for return #{rr.id}, AWB {awb}")
+                print(f"[Returns] Delhivery pickup scheduled for {rr.request_type} #{rr.id}, AWB {awb}")
+                try:
+                    notifications.send_pickup_otp_email(
+                        user.email, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
+                    )
+                    notifications.send_pickup_otp_whatsapp(
+                        user.phone, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
+                    )
+                    notifications.send_otp_sms(
+                        user.phone,
+                        f"Pickup OTP for order {order.order_number}: {rr.pickup_otp}. Share with pickup agent only.",
+                        "Pickup",
+                    )
+                except Exception as e:
+                    print(f"[Returns] Pickup OTP notification error for return #{rr.id}: {e}")
             else:
-                print(f"[Returns] ⚠️ Delhivery return pickup could not be auto-scheduled for return #{rr.id}: {err} — arrange manually.")
+                print(f"[Returns] ⚠️ Delhivery pickup could not be auto-scheduled for {rr.request_type} #{rr.id}: {err} — arrange manually.")
         except Exception as e:
-            print(f"[Returns] Delhivery return pickup error: {e}")
+            print(f"[Returns] Delhivery pickup error: {e}")
 
     # Once a RETURN is marked picked_up, automatically initiate the Razorpay
     # refund — no separate manual "refund_initiated" click needed.
@@ -842,6 +937,27 @@ def update_return_status(
                     print(f"[Returns] ❌ Auto-refund FAILED for return #{rr.id}: {e}")
             else:
                 print(f"[Returns] ⚠️ REFUND SKIPPED — Razorpay not configured. Return #{rr.id} must be refunded manually.")
+
+    # Once an EXCHANGE's old item is marked picked_up, immediately ship the
+    # replacement — this is the second leg of the two-leg exchange pattern
+    # (reverse pickup, then a fresh forward shipment), not a same-visit
+    # swap. Best effort: failure just leaves the admin to ship it manually,
+    # same as every other Delhivery call site.
+    if payload.status == "picked_up" and rr.request_type == "exchange" and rr.new_product_id and order and user:
+        try:
+            import delhivery as dl
+            result = dl.create_replacement_shipment(rr, order, user)
+            awb, err = _parse_delhivery_response(result)
+            if awb:
+                rr.replacement_awb = awb
+                rr.replacement_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+                rr.status = "replacement_shipped"
+                milestones.append("replacement_shipped")
+                print(f"[Returns] Replacement shipment created for exchange #{rr.id}, AWB {awb}")
+            else:
+                print(f"[Returns] ⚠️ Replacement shipment could not be auto-created for exchange #{rr.id}: {err} — ship manually.")
+        except Exception as e:
+            print(f"[Returns] Replacement shipment error: {e}")
 
     db.commit()
     db.refresh(rr)
