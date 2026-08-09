@@ -3,14 +3,17 @@ Syncs order status from live Delhivery tracking data — the piece that makes
 Shipped -> Out for Delivery -> Delivered advance on its own instead of
 needing an admin to notice a courier scan and update the order by hand.
 
-Deliberately conservative:
-  - Only ever advances INTO "out_for_delivery", and does so by running the
-    exact same delivery-OTP step the manual admin dropdown already runs —
-    it never invents a new way for an order to become "delivered". This
-    store confirms delivery via an OTP the agent collects from the
-    customer, which anchors the return/exchange window and protects
-    against a courier's own record being the only proof a package arrived.
-    A Delhivery "Delivered" scan is therefore logged, not applied.
+  - Delhivery's own "Delivered" scan is trusted directly and applied
+    immediately, matching Amazon/Flipkart/Myntra. A delivery-OTP is still
+    generated and sent to the customer the moment an order reaches
+    "out_for_delivery" — the delivery agent should still use it to verify
+    they're handing the parcel to the right person — but the OTP is no
+    longer a gate the *app's own status* waits on; Delhivery's scan alone
+    is enough to close the order out. A specific set of failed-attempt
+    phrases (undelivered, delivery attempt failed, consignee refused/
+    unavailable, delivery exception) is checked FIRST and routed to manual
+    review instead, so a botched delivery attempt can never be misread as
+    a successful one just because its status text also contains "deliver".
   - RTO and courier-side cancellation are logged for manual review rather
     than auto-applied, since resolving either correctly may mean a refund
     decision that shouldn't happen without a human looking at it.
@@ -18,6 +21,7 @@ Deliberately conservative:
     never guessed at.
 """
 import random
+from datetime import datetime, timezone
 import models
 import notifications
 import delhivery as dl
@@ -61,9 +65,9 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
     db:      SQLAlchemy session — this function commits if anything changes.
 
     Returns a short string describing what happened ("shipped",
-    "out_for_delivery", "delivered_awaiting_otp", "rto_needs_review",
-    "courier_cancelled_needs_review", "location_only") or None if nothing
-    about the order needed to change.
+    "out_for_delivery", "delivered", "delivery_attempt_failed_needs_review",
+    "rto_needs_review", "courier_cancelled_needs_review", "location_only")
+    or None if nothing about the order needed to change.
     """
     raw_status = (current.get("status") or "").strip()
     status_l   = raw_status.lower()
@@ -108,10 +112,26 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
               f"({raw_status!r}) — needs manual review, status left as {order.status!r}")
         action = "courier_cancelled_needs_review"
 
+    # A failed delivery attempt's status text ("Undelivered", "Delivery
+    # Attempted", "Consignee Refused"...) also contains the substring
+    # "deliver", so this must run BEFORE the generic "deliver" catch below
+    # or a botched attempt would get misread as a successful delivery.
+    elif any(p in status_l for p in (
+        "undelivered", "not delivered", "delivery attempt", "delivery failed",
+        "delivery exception", "consignee refused", "consignee unavailable",
+        "consignee not available",
+    )):
+        print(f"[Delhivery Sync] {order.order_number}: delivery attempt failed "
+              f"({raw_status!r}) — needs manual review, status left as {order.status!r}")
+        action = "delivery_attempt_failed_needs_review"
+
     elif "deliver" in status_l:
-        print(f"[Delhivery Sync] {order.order_number}: courier reports delivered — "
-              f"awaiting OTP confirmation before this becomes Delivered in-app")
-        action = "delivered_awaiting_otp"
+        if order.status != "delivered" and is_valid_transition(order.status, "delivered"):
+            order.status = "delivered"
+            if not order.delivered_at:
+                order.delivered_at = datetime.now(timezone.utc)
+            changed = True
+            action = "delivered"
 
     elif "transit" in status_l or "dispatch" in status_l or "manifest" in status_l or "picked" in status_l:
         if order.status not in ("shipped", "out_for_delivery") and is_valid_transition(order.status, "shipped"):
@@ -130,7 +150,7 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
     db.refresh(order)
 
     user = db.query(models.User).filter(models.User.id == order.user_id).first()
-    if user and action in ("out_for_delivery", "shipped"):
+    if user and action in ("out_for_delivery", "shipped", "delivered"):
         try:
             if action == "out_for_delivery":
                 notifications.send_delivery_otp_email(
@@ -146,6 +166,14 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
                     f"Delivery OTP for order {order.order_number}: {order.delivery_otp}. Share with delivery agent only.",
                     "Delivery",
                 )
+            elif action == "delivered":
+                # Same notification pair the manual admin dropdown sends for
+                # every status change, plus the same post-delivery review
+                # request — keeps the automatic and manual paths consistent.
+                notifications.send_order_status_email(user.email, user.full_name, order, action)
+                notifications.send_order_status_whatsapp(user.phone, user.full_name, order, action)
+                notifications.send_review_request_email(user.email, user.full_name, order)
+                notifications.send_review_request_whatsapp(user.phone, user.full_name, order.order_number)
             else:
                 notifications.send_order_status_email(user.email, user.full_name, order, action)
                 notifications.send_order_status_whatsapp(user.phone, user.full_name, order, action)
