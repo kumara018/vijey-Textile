@@ -295,6 +295,7 @@ class ReturnRequest(Base):
     replacement_tracking_url = Column(String(255), nullable=True)
     pickup_error       = Column(Text, nullable=True)   # last Delhivery error creating the pickup — cleared on success, shown to admin instead of a generic "failed" message
     replacement_error  = Column(Text, nullable=True)   # same, for the exchange's replacement shipment
+    pickup_last_status = Column(Text, nullable=True)   # raw live Delhivery status text from the last pickup-AWB poll, updated every check regardless of outcome — lets the admin see exactly what Delhivery reports without clicking Sync
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
 

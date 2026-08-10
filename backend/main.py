@@ -261,6 +261,10 @@ def _migrate_db():
                     conn.execute(text("ALTER TABLE return_requests ADD COLUMN replacement_error TEXT"))
                     conn.commit()
                     print("[Startup] Migrated: added replacement_error to return_requests")
+                if "pickup_last_status" not in rr_cols:
+                    conn.execute(text("ALTER TABLE return_requests ADD COLUMN pickup_last_status TEXT"))
+                    conn.commit()
+                    print("[Startup] Migrated: added pickup_last_status to return_requests")
         except Exception as e:
             print(f"[Startup] Return-requests migration note: {e}")
 

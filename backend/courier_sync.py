@@ -428,6 +428,11 @@ def _check_return_pickup(rr, order, user, db) -> tuple[str | None, str]:
     (still waiting, nothing to check, or an unrecognised status). Never
     raises — a Delhivery API hiccup here should never break the rest of a
     sync sweep; caller is responsible for db.commit() when action is not None.
+
+    Whatever Delhivery reports is always saved to rr.pickup_last_status,
+    even when nothing else changes — so the admin panel can show the live
+    status directly instead of the admin having to click "Sync" and read a
+    toast to find out why an auto-detection isn't advancing.
     """
     if not rr.return_awb or rr.status != "pickup_scheduled":
         return None, ""
@@ -444,6 +449,10 @@ def _check_return_pickup(rr, order, user, db) -> tuple[str | None, str]:
     status_l   = raw_status.lower()
     if not status_l:
         return None, ""
+
+    if rr.pickup_last_status != raw_status:
+        rr.pickup_last_status = raw_status
+        db.commit()
 
     if any(p in status_l for p in FAILED_PICKUP_ATTEMPT_PHRASES):
         print(f"[Returns Sync] return #{rr.id}: pickup attempt failed "

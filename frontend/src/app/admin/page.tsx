@@ -772,6 +772,17 @@ function AdminPageInner() {
     } finally { setSyncingReturn(null); }
   };
 
+  const handleMarkPickedUp = async (returnId: number) => {
+    setSavingReturn(returnId);
+    try {
+      await adminReturnsAPI.updateStatus(returnId, { status: 'picked_up' });
+      toast.success('Marked picked up — refund/replacement processing started', { duration: 6000 });
+      loadReturns();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to update return status');
+    } finally { setSavingReturn(null); }
+  };
+
   const handleRetryPickup = async (returnId: number) => {
     setRetryingReturn(returnId);
     try {
@@ -1515,6 +1526,30 @@ function AdminPageInner() {
                                       &quot;Upcoming Pickups&quot; dashboard widget — that only tracks outbound warehouse
                                       pickups. Use the Track link above for this pickup&apos;s real status.
                                     </p>
+                                    {r.status === 'pickup_scheduled' && (
+                                      <div className="flex items-center gap-2 pt-1 border-t border-teal-200">
+                                        <span className="text-[11px] text-teal-700">
+                                          📡 Delhivery status: <span className="font-medium">{r.pickup_last_status || 'not checked yet — click Sync'}</span>
+                                        </span>
+                                        <div className="ml-auto flex gap-1.5">
+                                          <button
+                                            onClick={() => handleSyncReturnDelhivery(r.id)}
+                                            disabled={syncingReturn === r.id}
+                                            className="text-xs bg-teal-100 border border-teal-300 text-teal-800 hover:bg-teal-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60"
+                                          >
+                                            {syncingReturn === r.id ? '⏳...' : '🔄 Sync'}
+                                          </button>
+                                          <button
+                                            onClick={() => handleMarkPickedUp(r.id)}
+                                            disabled={savingReturn === r.id}
+                                            title="Force this forward if you've confirmed the item is back, regardless of what Delhivery's tracking shows"
+                                            className="text-xs bg-cyan-100 border border-cyan-300 text-cyan-800 hover:bg-cyan-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60"
+                                          >
+                                            {savingReturn === r.id ? '⏳...' : '✅ Mark Picked Up'}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 ) : ['return','exchange'].includes(r.request_type) && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
                                   <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 space-y-1.5">
