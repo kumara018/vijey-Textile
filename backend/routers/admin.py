@@ -901,6 +901,52 @@ def retry_return_pickup(
     }
 
 
+@router.post("/returns/{return_id}/attach-awb")
+def attach_return_awb(
+    return_id: int,
+    payload: schemas.AttachAwbPayload,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """
+    Links a return/exchange to a Delhivery pickup AWB that already exists on
+    Delhivery's side but this app's own records never captured — e.g. the
+    automatic pickup call appeared to fail here but Delhivery actually
+    dispatched an agent anyway (a lost response, not a real rejection), or
+    someone scheduled the pickup by hand directly in Delhivery's own
+    dashboard. Once linked, this return is picked up by the same automatic
+    polling as every other pickup — no separate manual status update needed
+    from here on.
+    """
+    rr = db.query(models.ReturnRequest).filter(models.ReturnRequest.id == return_id).first()
+    if not rr:
+        raise HTTPException(404, "Return request not found")
+    if rr.return_awb:
+        raise HTTPException(400, f"This {rr.request_type} already has an AWB on file (AWB {rr.return_awb}).")
+
+    order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+    user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+    if not order or not user:
+        raise HTTPException(400, "Order or customer not found for this return.")
+
+    success, message = courier_sync._attach_existing_pickup_awb(rr, payload.awb, db)
+    if not success:
+        raise HTTPException(400, message)
+
+    # Immediately pull the live status too — if Delhivery already shows this
+    # picked up (or further along), resolve it in this same action instead
+    # of waiting for the next poll.
+    _action, delhivery_status = courier_sync._check_return_pickup(rr, order, user, db)
+    db.refresh(rr)
+
+    return {
+        "message":          f"AWB linked. Delhivery reports: {delhivery_status or 'no status yet'}",
+        "return_awb":       rr.return_awb,
+        "status":           rr.status,
+        "delhivery_status": delhivery_status,
+    }
+
+
 @router.post("/returns/{return_id}/retry-replacement")
 def retry_replacement_shipment(
     return_id: int,

@@ -202,6 +202,7 @@ export const adminReturnsAPI = {
   syncDelhivery: (id: number)               => api.post(`/api/admin/returns/${id}/sync-delhivery`),
   retryPickup:      (id: number)            => api.post(`/api/admin/returns/${id}/retry-pickup`),
   retryReplacement: (id: number)            => api.post(`/api/admin/returns/${id}/retry-replacement`),
+  attachAwb:        (id: number, awb: string) => api.post(`/api/admin/returns/${id}/attach-awb`, { awb }),
 };
 
 export const adminNotifAPI = {

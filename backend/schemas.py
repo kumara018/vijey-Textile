@@ -584,6 +584,9 @@ class ReturnStatusUpdate(BaseModel):
     status:      str
     admin_notes: Optional[str] = None
 
+class AttachAwbPayload(BaseModel):
+    awb: str
+
 class ReturnRequestOut(BaseModel):
     id:           int
     order_id:     int

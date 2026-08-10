@@ -279,6 +279,8 @@ function AdminPageInner() {
   const [savingReturn, setSavingReturn] = useState<number | null>(null);
   const [syncingReturn, setSyncingReturn] = useState<number | null>(null);
   const [retryingReturn, setRetryingReturn] = useState<number | null>(null);
+  const [attachAwbInput, setAttachAwbInput] = useState<Record<number, string>>({});
+  const [attachingAwb, setAttachingAwb] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -805,6 +807,20 @@ function AdminPageInner() {
       toast.error(err.response?.data?.detail || 'Retry failed — try again in a moment', { duration: 8000 });
       loadReturns();
     } finally { setRetryingReturn(null); }
+  };
+
+  const handleAttachAwb = async (returnId: number) => {
+    const awb = (attachAwbInput[returnId] || '').trim();
+    if (!awb) { toast.error('Enter a Delhivery AWB number'); return; }
+    setAttachingAwb(returnId);
+    try {
+      const res = await adminReturnsAPI.attachAwb(returnId, awb);
+      toast.success(`🔗 ${res.data.message}`, { duration: 8000 });
+      setAttachAwbInput(f => ({ ...f, [returnId]: '' }));
+      loadReturns();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Could not link that AWB — try again in a moment', { duration: 8000 });
+    } finally { setAttachingAwb(null); }
   };
 
   const TABS = [
@@ -1565,6 +1581,28 @@ function AdminPageInner() {
                                     >
                                       {retryingReturn === r.id ? '⏳ Retrying...' : '🔄 Retry pickup'}
                                     </button>
+                                    <div className="pt-1.5 mt-1 border-t border-orange-200">
+                                      <p className="text-[11px] text-orange-600 leading-snug mb-1.5">
+                                        Already have a real AWB for this pickup — from Delhivery&apos;s own dashboard, or support?
+                                        Link it directly instead of retrying:
+                                      </p>
+                                      <div className="flex gap-1.5">
+                                        <input
+                                          type="text"
+                                          value={attachAwbInput[r.id] || ''}
+                                          onChange={e => setAttachAwbInput(f => ({ ...f, [r.id]: e.target.value }))}
+                                          placeholder="Delhivery AWB number"
+                                          className="flex-1 text-xs border border-orange-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-orange-400"
+                                        />
+                                        <button
+                                          onClick={() => handleAttachAwb(r.id)}
+                                          disabled={attachingAwb === r.id}
+                                          className="text-xs bg-orange-100 border border-orange-300 text-orange-800 hover:bg-orange-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60 whitespace-nowrap"
+                                        >
+                                          {attachingAwb === r.id ? '⏳...' : '🔗 Link AWB'}
+                                        </button>
+                                      </div>
+                                    </div>
                                   </div>
                                 )}
 

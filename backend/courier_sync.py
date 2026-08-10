@@ -320,6 +320,47 @@ def _attempt_return_pickup(rr, order, user) -> bool:
     return True
 
 
+def _attach_existing_pickup_awb(rr, awb, db) -> tuple[bool, str]:
+    """
+    Links a return/exchange to a Delhivery pickup AWB that already exists on
+    Delhivery's side but this app never recorded — e.g. create_return_pickup()
+    appeared to fail here (network hiccup, response never made it back) but
+    Delhivery actually processed the request and dispatched an agent anyway,
+    or someone scheduled the pickup by hand directly in Delhivery's own
+    dashboard rather than through the app. Reconciling this is a real gap:
+    without a stored AWB, sync_all_open_returns() has nothing to poll, so a
+    pickup that genuinely happened on Delhivery's side can otherwise sit
+    stuck at "no confirmed pickup" forever with no way for the app to find
+    out about it.
+
+    Validates the AWB is real and trackable with Delhivery before attaching
+    it — a typo'd or unrelated AWB should never get linked silently. Does
+    NOT downgrade a return that's already progressed past the pickup stage.
+    Returns (success, message). Caller is responsible for db.commit().
+    """
+    awb = (awb or "").strip()
+    if not awb:
+        return False, "Enter a Delhivery AWB number."
+    try:
+        raw = dl.track_awb(awb)
+    except Exception as e:
+        return False, f"Could not reach Delhivery: {e}"
+    if not raw:
+        return False, "Delhivery has no record of this AWB — double-check the number and try again."
+
+    rr.return_awb = awb
+    rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+    rr.pickup_error = None
+    if rr.status not in ("picked_up", "processing", "refund_initiated", "replacement_shipped", "refunded", "completed"):
+        rr.status = "pickup_scheduled"
+        if not rr.pickup_otp:
+            rr.pickup_otp = str(random.randint(100000, 999999))
+    db.commit()
+    db.refresh(rr)
+    print(f"[Returns] Linked existing Delhivery AWB {awb} to {rr.request_type} #{rr.id}")
+    return True, "AWB linked"
+
+
 def _attempt_replacement_shipment(rr, order, user) -> bool:
     """Same idea as _attempt_return_pickup, for the exchange's second leg —
     the forward replacement shipment created once the old item is picked
