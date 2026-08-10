@@ -366,6 +366,41 @@ def parse_tracking_events(raw: dict) -> list:
         return []
 
 
+def parse_create_response(result: dict | None) -> tuple[str, str]:
+    """
+    Validates a Delhivery cmu/create.json response — shared by forward
+    shipment creation AND reverse/return pickup creation AND the exchange
+    replacement shipment, since all three hit the same endpoint and get
+    back the same response shape:
+    { "packages": [{ "waybill": "...", "error"/"remarks": "..." }], "success": true/false }
+
+    Delhivery can return HTTP 200 with a non-empty JSON body even when it
+    didn't actually create anything (success=false, or success=true with a
+    per-package error and no waybill) — a bare truthy check on the response
+    dict is NOT enough to know a shipment/pickup genuinely exists on
+    Delhivery's side. This is exactly what let a return's status become
+    "Pickup Scheduled" while Delhivery's own dashboard showed nothing.
+
+    Returns (awb, error_message) — exactly one of the two is non-empty.
+    """
+    if not result:
+        return "", "No response from Delhivery"
+
+    packages = result.get("packages", [])
+    success  = result.get("success", False)
+
+    if not success and not packages:
+        return "", result.get("rmk") or result.get("error") or str(result)
+    if not packages:
+        return "", result.get("rmk") or result.get("error") or str(result)
+
+    pkg_err = packages[0].get("error") or packages[0].get("remarks") or ""
+    awb     = packages[0].get("waybill", "")
+    if not awb:
+        return "", pkg_err or f"Delhivery did not return an AWB. Full response: {result}"
+    return awb, ""
+
+
 def parse_current_status(raw: dict) -> dict:
     """
     Extract current status and EDD from a Delhivery response. Handles both
