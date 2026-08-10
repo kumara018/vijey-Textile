@@ -608,6 +608,87 @@ def _parse_delhivery_response(result: dict | None) -> tuple[str, str]:
     return awb, ""
 
 
+def _attempt_return_pickup(rr, order, user) -> bool:
+    """
+    Calls Delhivery to schedule a reverse pickup for `rr` and updates it in
+    place. Shared by the automatic on-approve trigger and the manual
+    "Retry pickup" endpoint below, so both behave identically.
+
+    On success: sets return_awb/return_tracking_url/pickup_otp, clears any
+    previous pickup_error, advances status to "pickup_scheduled", and sends
+    the pickup OTP notifications.
+
+    On failure: stores the real Delhivery error message on rr.pickup_error
+    instead of only printing it — previously the admin only ever saw a
+    generic "not confirmed" warning and had to go digging through server
+    logs to find out why.
+
+    Does not commit — caller commits. Returns True on success.
+    """
+    import delhivery as dl
+    try:
+        result = dl.create_return_pickup(order, user)
+        awb, err = _parse_delhivery_response(result)
+    except Exception as e:
+        awb, err = "", str(e)
+
+    if not awb:
+        rr.pickup_error = err
+        print(f"[Returns] ⚠️ Delhivery pickup could not be scheduled for {rr.request_type} #{rr.id}: {err}")
+        return False
+
+    rr.status = "pickup_scheduled"
+    rr.return_awb = awb
+    rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+    rr.pickup_error = None
+    # Pickup OTP — the agent verifies it with the customer before taking the
+    # item, same anti-fraud idea as the forward delivery_otp, just for the
+    # reverse leg. Applies to both return and exchange pickups.
+    rr.pickup_otp = str(random.randint(100000, 999999))
+    print(f"[Returns] Delhivery pickup scheduled for {rr.request_type} #{rr.id}, AWB {awb}")
+    try:
+        notifications.send_pickup_otp_email(
+            user.email, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
+        )
+        notifications.send_pickup_otp_whatsapp(
+            user.phone, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
+        )
+        notifications.send_otp_sms(
+            user.phone,
+            f"Pickup OTP for order {order.order_number}: {rr.pickup_otp}. Share with pickup agent only.",
+            "Pickup",
+        )
+    except Exception as e:
+        print(f"[Returns] Pickup OTP notification error for return #{rr.id}: {e}")
+    return True
+
+
+def _attempt_replacement_shipment(rr, order, user) -> bool:
+    """
+    Same idea as _attempt_return_pickup() but for an exchange's replacement
+    forward shipment — shared by the automatic on-picked_up trigger and the
+    manual "Retry replacement" endpoint.
+    """
+    import delhivery as dl
+    try:
+        result = dl.create_replacement_shipment(rr, order, user)
+        awb, err = _parse_delhivery_response(result)
+    except Exception as e:
+        awb, err = "", str(e)
+
+    if not awb:
+        rr.replacement_error = err
+        print(f"[Returns] ⚠️ Replacement shipment could not be created for exchange #{rr.id}: {err}")
+        return False
+
+    rr.replacement_awb = awb
+    rr.replacement_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
+    rr.replacement_error = None
+    rr.status = "replacement_shipped"
+    print(f"[Returns] Replacement shipment created for exchange #{rr.id}, AWB {awb}")
+    return True
+
+
 def _create_delhivery_shipment_for_order(order, db: Session) -> str:
     """
     Calls Delhivery's create-shipment API for `order`, validates the
@@ -863,48 +944,14 @@ def update_return_status(
 
     # Approving a RETURN or EXCHANGE auto-schedules a Delhivery pickup (best
     # effort — never blocks the approval if the courier call fails; admin
-    # can always arrange pickup manually in that case). Delhivery can
-    # return HTTP 200 with a non-empty JSON body even when it didn't create
-    # anything, so a bare truthy check on the response was previously
-    # enough to claim "Pickup Scheduled" while nothing was actually
-    # scheduled on Delhivery's side — _parse_delhivery_response() requires
-    # an actual waybill before this is treated as success. An exchange is
-    # physically the same pickup as a return (the old item still has to
-    # come back) — it just never called Delhivery at all before this.
+    # can always retry from the UI, which surfaces the real Delhivery error
+    # via rr.pickup_error instead of a generic "not confirmed" message).
+    # An exchange is physically the same pickup as a return (the old item
+    # still has to come back) — it just never called Delhivery at all
+    # before this.
     if payload.status == "approved" and previous_status != "approved" and rr.request_type in ("return", "exchange") and order and user:
-        try:
-            import delhivery as dl
-            result = dl.create_return_pickup(order, user)
-            awb, err = _parse_delhivery_response(result)
-            if awb:
-                rr.status = "pickup_scheduled"
-                rr.return_awb = awb
-                rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
-                # Pickup OTP — the agent verifies it with the customer before
-                # taking the item, same anti-fraud idea as the forward
-                # delivery_otp, just for the reverse leg. Applies to both
-                # return and exchange pickups.
-                rr.pickup_otp = str(random.randint(100000, 999999))
-                milestones.append("pickup_scheduled")
-                print(f"[Returns] Delhivery pickup scheduled for {rr.request_type} #{rr.id}, AWB {awb}")
-                try:
-                    notifications.send_pickup_otp_email(
-                        user.email, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
-                    )
-                    notifications.send_pickup_otp_whatsapp(
-                        user.phone, user.full_name, rr.pickup_otp, rr.request_type, order.order_number,
-                    )
-                    notifications.send_otp_sms(
-                        user.phone,
-                        f"Pickup OTP for order {order.order_number}: {rr.pickup_otp}. Share with pickup agent only.",
-                        "Pickup",
-                    )
-                except Exception as e:
-                    print(f"[Returns] Pickup OTP notification error for return #{rr.id}: {e}")
-            else:
-                print(f"[Returns] ⚠️ Delhivery pickup could not be auto-scheduled for {rr.request_type} #{rr.id}: {err} — arrange manually.")
-        except Exception as e:
-            print(f"[Returns] Delhivery pickup error: {e}")
+        if _attempt_return_pickup(rr, order, user):
+            milestones.append("pickup_scheduled")
 
     # Once a RETURN is marked picked_up, automatically initiate the Razorpay
     # refund — no separate manual "refund_initiated" click needed.
@@ -941,23 +988,12 @@ def update_return_status(
     # Once an EXCHANGE's old item is marked picked_up, immediately ship the
     # replacement — this is the second leg of the two-leg exchange pattern
     # (reverse pickup, then a fresh forward shipment), not a same-visit
-    # swap. Best effort: failure just leaves the admin to ship it manually,
-    # same as every other Delhivery call site.
+    # swap. Best effort: failure leaves the admin to retry from the UI
+    # (surfacing the real Delhivery error via rr.replacement_error) or ship
+    # manually.
     if payload.status == "picked_up" and rr.request_type == "exchange" and rr.new_product_id and order and user:
-        try:
-            import delhivery as dl
-            result = dl.create_replacement_shipment(rr, order, user)
-            awb, err = _parse_delhivery_response(result)
-            if awb:
-                rr.replacement_awb = awb
-                rr.replacement_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
-                rr.status = "replacement_shipped"
-                milestones.append("replacement_shipped")
-                print(f"[Returns] Replacement shipment created for exchange #{rr.id}, AWB {awb}")
-            else:
-                print(f"[Returns] ⚠️ Replacement shipment could not be auto-created for exchange #{rr.id}: {err} — ship manually.")
-        except Exception as e:
-            print(f"[Returns] Replacement shipment error: {e}")
+        if _attempt_replacement_shipment(rr, order, user):
+            milestones.append("replacement_shipped")
 
     db.commit()
     db.refresh(rr)
@@ -980,6 +1016,78 @@ def update_return_status(
                 print(f"[Returns] Refund notification error: {e}")
 
     return {"message": f"Return request updated to {rr.status}", "return_id": return_id, "status": rr.status}
+
+
+@router.post("/returns/{return_id}/retry-pickup")
+def retry_return_pickup(
+    return_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """
+    Manually re-attempts scheduling a Delhivery pickup for a return/exchange
+    that's stuck without one — surfaces the exact Delhivery error in the
+    response so the admin doesn't have to dig through server logs to find
+    out why the automatic attempt failed.
+    """
+    rr = db.query(models.ReturnRequest).filter(models.ReturnRequest.id == return_id).first()
+    if not rr:
+        raise HTTPException(404, "Return request not found")
+    if rr.return_awb:
+        raise HTTPException(400, f"This {rr.request_type} already has a confirmed pickup (AWB {rr.return_awb}).")
+
+    order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+    user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+    if not order or not user:
+        raise HTTPException(400, "Order or customer not found for this return.")
+
+    success = _attempt_return_pickup(rr, order, user)
+    db.commit()
+    db.refresh(rr)
+
+    if not success:
+        raise HTTPException(502, f"Delhivery pickup still failed: {rr.pickup_error}")
+
+    return {
+        "message":    f"Pickup scheduled — AWB {rr.return_awb}",
+        "return_awb": rr.return_awb,
+        "status":     rr.status,
+    }
+
+
+@router.post("/returns/{return_id}/retry-replacement")
+def retry_replacement_shipment(
+    return_id: int,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    """Manual retry for an exchange's replacement forward shipment — same
+    idea as retry-pickup above, for the second leg."""
+    rr = db.query(models.ReturnRequest).filter(models.ReturnRequest.id == return_id).first()
+    if not rr:
+        raise HTTPException(404, "Return request not found")
+    if rr.request_type != "exchange":
+        raise HTTPException(400, "Only exchanges have a replacement shipment.")
+    if rr.replacement_awb:
+        raise HTTPException(400, f"This exchange already has a confirmed replacement shipment (AWB {rr.replacement_awb}).")
+
+    order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+    user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+    if not order or not user:
+        raise HTTPException(400, "Order or customer not found for this return.")
+
+    success = _attempt_replacement_shipment(rr, order, user)
+    db.commit()
+    db.refresh(rr)
+
+    if not success:
+        raise HTTPException(502, f"Replacement shipment still failed: {rr.replacement_error}")
+
+    return {
+        "message":         f"Replacement shipment created — AWB {rr.replacement_awb}",
+        "replacement_awb": rr.replacement_awb,
+        "status":          rr.status,
+    }
 
 
 @router.get("/notifications")

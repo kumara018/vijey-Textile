@@ -600,6 +600,8 @@ class ReturnRequestOut(BaseModel):
     pickup_otp:               Optional[str] = None
     replacement_awb:          Optional[str] = None
     replacement_tracking_url: Optional[str] = None
+    pickup_error:             Optional[str] = None
+    replacement_error:        Optional[str] = None
     product_id:            Optional[int] = None
     original_price:         Optional[float] = None
     new_product_id:         Optional[int] = None

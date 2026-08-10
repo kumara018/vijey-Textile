@@ -146,6 +146,8 @@ export interface ReturnRequest {
   pickup_otp?: string;
   replacement_awb?: string;
   replacement_tracking_url?: string;
+  pickup_error?: string;
+  replacement_error?: string;
   product_id?: number;
   original_price?: number;
   new_product_id?: number;

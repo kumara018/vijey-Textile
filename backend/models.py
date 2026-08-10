@@ -293,6 +293,8 @@ class ReturnRequest(Base):
     pickup_otp            = Column(String(10),  nullable=True)   # given to the pickup agent to verify handoff — same idea as Order.delivery_otp
     replacement_awb          = Column(String(50),  nullable=True)   # exchange only — forward shipment of the new item, created once the old one is picked up
     replacement_tracking_url = Column(String(255), nullable=True)
+    pickup_error       = Column(Text, nullable=True)   # last Delhivery error creating the pickup — cleared on success, shown to admin instead of a generic "failed" message
+    replacement_error  = Column(Text, nullable=True)   # same, for the exchange's replacement shipment
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), onupdate=func.now())
 

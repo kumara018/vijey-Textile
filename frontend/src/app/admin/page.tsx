@@ -278,6 +278,7 @@ function AdminPageInner() {
   const [returnUpdateForm, setReturnUpdateForm] = useState<Record<number, { status: string; admin_notes: string }>>({});
   const [savingReturn, setSavingReturn] = useState<number | null>(null);
   const [syncingReturn, setSyncingReturn] = useState<number | null>(null);
+  const [retryingReturn, setRetryingReturn] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -769,6 +770,30 @@ function AdminPageInner() {
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Could not reach Delhivery — try again in a moment');
     } finally { setSyncingReturn(null); }
+  };
+
+  const handleRetryPickup = async (returnId: number) => {
+    setRetryingReturn(returnId);
+    try {
+      const res = await adminReturnsAPI.retryPickup(returnId);
+      toast.success(`🚚 ${res.data.message}`, { duration: 6000 });
+      loadReturns();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Retry failed — try again in a moment', { duration: 8000 });
+      loadReturns();
+    } finally { setRetryingReturn(null); }
+  };
+
+  const handleRetryReplacement = async (returnId: number) => {
+    setRetryingReturn(returnId);
+    try {
+      const res = await adminReturnsAPI.retryReplacement(returnId);
+      toast.success(`📦 ${res.data.message}`, { duration: 6000 });
+      loadReturns();
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Retry failed — try again in a moment', { duration: 8000 });
+      loadReturns();
+    } finally { setRetryingReturn(null); }
   };
 
   const TABS = [
@@ -1492,8 +1517,19 @@ function AdminPageInner() {
                                     </p>
                                   </div>
                                 ) : ['return','exchange'].includes(r.request_type) && ['approved','pickup_scheduled','picked_up'].includes(r.status) && (
-                                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                                    <p className="text-xs text-orange-700">⚠️ No confirmed Delhivery pickup for this {r.request_type} yet — arrange pickup manually.</p>
+                                  <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 space-y-1.5">
+                                    <p className="text-xs text-orange-700">
+                                      ⚠️ {r.pickup_error
+                                        ? <>Delhivery pickup failed: <span className="font-medium">{r.pickup_error}</span></>
+                                        : <>No confirmed Delhivery pickup for this {r.request_type} yet.</>}
+                                    </p>
+                                    <button
+                                      onClick={() => handleRetryPickup(r.id)}
+                                      disabled={retryingReturn === r.id}
+                                      className="text-xs bg-orange-100 border border-orange-300 text-orange-800 hover:bg-orange-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60"
+                                    >
+                                      {retryingReturn === r.id ? '⏳ Retrying...' : '🔄 Retry pickup'}
+                                    </button>
                                   </div>
                                 )}
 
@@ -1519,8 +1555,19 @@ function AdminPageInner() {
                                       )}
                                     </div>
                                   ) : r.status === 'picked_up' && (
-                                    <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
-                                      <p className="text-xs text-orange-700">⚠️ Replacement shipment couldn't be auto-created — ship the new item manually.</p>
+                                    <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 space-y-1.5">
+                                      <p className="text-xs text-orange-700">
+                                        ⚠️ {r.replacement_error
+                                          ? <>Replacement shipment failed: <span className="font-medium">{r.replacement_error}</span></>
+                                          : <>Replacement shipment couldn&apos;t be auto-created.</>}
+                                      </p>
+                                      <button
+                                        onClick={() => handleRetryReplacement(r.id)}
+                                        disabled={retryingReturn === r.id}
+                                        className="text-xs bg-orange-100 border border-orange-300 text-orange-800 hover:bg-orange-200 rounded-lg px-2 py-1 transition-colors disabled:opacity-60"
+                                      >
+                                        {retryingReturn === r.id ? '⏳ Retrying...' : '🔄 Retry shipment'}
+                                      </button>
                                     </div>
                                   )
                                 )}
