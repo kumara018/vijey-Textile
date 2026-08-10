@@ -761,29 +761,11 @@ def sync_return_delhivery_now(
         }
 
     if rr.replacement_awb and rr.status == "replacement_shipped":
-        raw = dl.track_awb(rr.replacement_awb)
-        if not raw:
-            raise HTTPException(502, "Could not reach Delhivery — check the AWB and try again in a moment.")
-
-        current = dl.parse_current_status(raw)
-        status_l = (current.get("status") or "").strip().lower()
-
-        if status_l and not any(p in status_l for p in courier_sync.FAILED_DELIVERY_ATTEMPT_PHRASES) \
-           and "deliver" in status_l and "out for" not in status_l and "dispatch" not in status_l:
-            rr.status = "completed"
-            db.commit()
-            db.refresh(rr)
-            if user and order:
-                try:
-                    notifications.send_return_status_email(user.email, user.full_name, order, rr, status="completed")
-                    notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status="completed")
-                except Exception as e:
-                    print(f"[Returns] Notification error: {e}")
-
+        action, delhivery_status = courier_sync._check_replacement_delivery(rr, order, user, db)
         return {
-            "message":          f"Delhivery reports: {current.get('status') or 'no status yet'}",
+            "message":          f"Delhivery reports: {delhivery_status or 'no status yet'}",
             "status":           rr.status,
-            "delhivery_status": current.get("status"),
+            "delhivery_status": delhivery_status,
         }
 
     raise HTTPException(400, "This return has no active Delhivery shipment to sync right now.")

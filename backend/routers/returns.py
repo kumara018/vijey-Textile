@@ -206,14 +206,40 @@ async def upload_return_image(
         raise HTTPException(500, f"Upload failed: {e}")
 
 
+def _sync_return_courier_state(rr, db) -> None:
+    """
+    Opportunistic sync for a single return/exchange — mirrors the pattern
+    already used for regular orders (routers/orders.py::track_order): the
+    customer simply viewing their own return's status is itself a chance to
+    check Delhivery's live tracking, on top of the admin dashboard load,
+    scheduled timer, and manual "Sync" button. The more surfaces that get a
+    chance to run this, the less the whole feature depends on any one of
+    them firing in time. Best-effort — a Delhivery hiccup here should never
+    break the page that's just trying to show the customer their return.
+    """
+    import courier_sync
+    try:
+        order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+        user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+        if rr.return_awb and rr.status == "pickup_scheduled":
+            courier_sync._check_return_pickup(rr, order, user, db)
+        elif rr.replacement_awb and rr.status == "replacement_shipped":
+            courier_sync._check_replacement_delivery(rr, order, user, db)
+    except Exception as e:
+        print(f"[Returns] opportunistic Delhivery sync error for return #{rr.id}: {e}")
+
+
 @router.get("/", response_model=List[schemas.ReturnRequestOut])
 def get_my_returns(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    return db.query(models.ReturnRequest).filter(
+    my_returns = db.query(models.ReturnRequest).filter(
         models.ReturnRequest.user_id == current_user.id
     ).order_by(models.ReturnRequest.created_at.desc()).all()
+    for rr in my_returns:
+        _sync_return_courier_state(rr, db)
+    return my_returns
 
 
 @router.get("/{return_id}", response_model=schemas.ReturnRequestOut)
@@ -228,4 +254,5 @@ def get_return(
     ).first()
     if not rr:
         raise HTTPException(404, "Return request not found")
+    _sync_return_courier_state(rr, db)
     return rr

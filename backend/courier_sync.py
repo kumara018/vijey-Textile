@@ -418,16 +418,21 @@ def _check_return_pickup(rr, order, user, db) -> tuple[str | None, str]:
     someone to notice and click it (matching Amazon/Flipkart/Myntra).
 
     Delhivery's own reverse-pickup lifecycle is Ready for Pickup -> In
-    Transit -> Out for Delivery -> Delivered, where "In Transit" is the
-    scan that means the item has left the customer's hands — that's the
-    trigger point here. A pickup-specific failed-attempt phrase list is
-    checked first so a botched pickup attempt is never misread as success.
+    Transit -> Out for Delivery -> Delivered. A pickup-specific
+    failed-attempt phrase list, and a still-waiting phrase list (Manifested/
+    Ready for Pickup/Pending), are checked first so a botched or not-yet-
+    started pickup is never misread as complete. Anything else Delhivery
+    reports beyond that is treated as evidence of pickup completion —
+    deliberately optimistic rather than requiring an exact "In Transit"
+    match, since real-world status text varies by account/integration and
+    the app has no way to independently verify what Delhivery's own system
+    hasn't recorded yet.
 
     Returns (action, delhivery_status_text). action is "picked_up",
     "pickup_failed_needs_review", "pickup_cancelled_needs_review", or None
-    (still waiting, nothing to check, or an unrecognised status). Never
-    raises — a Delhivery API hiccup here should never break the rest of a
-    sync sweep; caller is responsible for db.commit() when action is not None.
+    (still waiting, or nothing to check). Never raises — a Delhivery API
+    hiccup here should never break the rest of a sync sweep; caller is
+    responsible for db.commit() when action is not None.
 
     Whatever Delhivery reports is always saved to rr.pickup_last_status,
     even when nothing else changes — so the admin panel can show the live
@@ -469,10 +474,17 @@ def _check_return_pickup(rr, order, user, db) -> tuple[str | None, str]:
     if "out for pickup" in status_l or "ready for pickup" in status_l or "manifest" in status_l or status_l == "pending":
         return None, raw_status
 
-    # "In Transit" (item collected, en route back) or further along ("Out
-    # for Delivery"/"Delivered" to the shop) all mean the courier already
-    # has the item — the pickup is done.
-    if "transit" in status_l or "picked" in status_l or "dispatch" in status_l or "out for delivery" in status_l or "deliver" in status_l:
+    # Any other status Delhivery reports — "In Transit", "Out for
+    # Delivery"/"Delivered" (to the shop), or anything else not already
+    # caught by the failed/cancelled/still-waiting checks above — means the
+    # pickup has moved past "created but untouched", so the courier already
+    # has the item. Deliberately optimistic rather than requiring an exact
+    # phrase match: Delhivery's real wording varies by account/integration,
+    # and guessing every variant wrong would silently strand pickups at
+    # "Pickup Scheduled" forever with the app unable to tell why. The admin
+    # can always correct a wrong auto-advance from the dropdown if Delhivery
+    # ever reports something genuinely unrelated to the pickup itself.
+    if status_l:
         rr.status = "picked_up"
         extra_milestones = _process_picked_up(rr, order, user)
         db.commit()
@@ -496,7 +508,63 @@ def _check_return_pickup(rr, order, user, db) -> tuple[str | None, str]:
 
         return "picked_up", raw_status
 
-    print(f"[Returns Sync] return #{rr.id}: unrecognised pickup status {raw_status!r} — left unchanged")
+    return None, raw_status
+
+
+def _check_replacement_delivery(rr, order, user, db) -> tuple[str | None, str]:
+    """
+    Polls rr.replacement_awb's live Delhivery status and auto-completes the
+    exchange the same way a regular order now auto-completes: trust
+    Delhivery's own "Delivered" scan directly, with the same
+    failed-attempt-phrase guard so a botched delivery attempt is never
+    misread as success. Shared by the bulk sync sweep, the admin's
+    on-demand "Sync now" endpoint, and the customer-facing return-detail
+    view — the more places this gets a chance to run, the less this
+    depends on any one poller.
+
+    Returns (action, delhivery_status_text). action is "completed" or None
+    (still in transit, nothing to check, or a failed delivery attempt).
+    Never raises; caller is responsible for db.commit() when action is not
+    None (already committed internally, but kept consistent with
+    _check_return_pickup's contract).
+    """
+    if not rr.replacement_awb or rr.status != "replacement_shipped":
+        return None, ""
+    try:
+        raw = dl.track_awb(rr.replacement_awb)
+    except Exception as e:
+        print(f"[Returns Sync] error polling replacement AWB for return #{rr.id}: {e}")
+        return None, ""
+    if not raw:
+        return None, ""
+
+    current = dl.parse_current_status(raw)
+    raw_status = (current.get("status") or "").strip()
+    status_l   = raw_status.lower()
+    if not status_l:
+        return None, ""
+
+    if any(p in status_l for p in FAILED_DELIVERY_ATTEMPT_PHRASES):
+        print(f"[Returns Sync] return #{rr.id}: replacement delivery attempt failed "
+              f"({raw_status!r}) — needs manual review")
+        return None, raw_status
+
+    # Same substring caution as the order-delivery check: "out for
+    # delivery"/"dispatched for delivery" both contain "deliver".
+    if "deliver" in status_l and "out for" not in status_l and "dispatch" not in status_l:
+        rr.status = "completed"
+        db.commit()
+        db.refresh(rr)
+        print(f"[Returns Sync] return #{rr.id}: replacement delivered — marked completed")
+
+        if user and order:
+            try:
+                notifications.send_return_status_email(user.email, user.full_name, order, rr, status="completed")
+                notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status="completed")
+            except Exception as e:
+                print(f"[Returns Sync] notification error for return #{rr.id}: {e}")
+        return "completed", raw_status
+
     return None, raw_status
 
 
@@ -548,36 +616,11 @@ def sync_all_open_returns(db) -> list[str]:
     )
     for rr in open_returns:
         try:
-            raw = dl.track_awb(rr.replacement_awb)
-            if not raw:
-                continue
-            current = dl.parse_current_status(raw)
-            status_l = (current.get("status") or "").strip().lower()
-            if not status_l:
-                continue
-
-            if any(p in status_l for p in FAILED_DELIVERY_ATTEMPT_PHRASES):
-                print(f"[Returns Sync] return #{rr.id}: replacement delivery attempt failed "
-                      f"({current.get('status')!r}) — needs manual review")
-                continue
-
-            # Same substring caution as the order-delivery check: "out for
-            # delivery"/"dispatched for delivery" both contain "deliver".
-            if "deliver" in status_l and "out for" not in status_l and "dispatch" not in status_l:
-                rr.status = "completed"
-                db.commit()
-                db.refresh(rr)
+            order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
+            user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
+            action, _ = _check_replacement_delivery(rr, order, user, db)
+            if action == "completed":
                 changes.append(f"return#{rr.id}: replacement delivered, completed")
-                print(f"[Returns Sync] return #{rr.id}: replacement delivered — marked completed")
-
-                user  = db.query(models.User).filter(models.User.id == rr.user_id).first()
-                order = db.query(models.Order).filter(models.Order.id == rr.order_id).first()
-                if user and order:
-                    try:
-                        notifications.send_return_status_email(user.email, user.full_name, order, rr, status="completed")
-                        notifications.send_return_status_whatsapp(user.phone, user.full_name, order, rr, status="completed")
-                    except Exception as e:
-                        print(f"[Returns Sync] notification error for return #{rr.id}: {e}")
         except Exception as e:
             print(f"[Returns Sync] error syncing replacement AWB for return #{rr.id}: {e}")
     return changes
