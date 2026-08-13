@@ -142,7 +142,7 @@ export default function HomePage() {
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(100deg, #f4ede1 0%, #f4ede1 46%, rgba(168,118,63,0.18) 46.4%, #faf7f2 100%)',
+            background: 'linear-gradient(100deg, #f6f1f3 0%, #f6f1f3 46%, rgba(197,128,89,0.18) 46.4%, #fcfbfb 100%)',
           }}
         />
         {/* Divider — anchored to the 3D box's own right edge (not a guessed
@@ -155,8 +155,8 @@ export default function HomePage() {
           style={{
             left: 'calc(6% + min(40vw, 420px) + 40px)',
             top: '8%', bottom: '8%',
-            background: 'linear-gradient(180deg, transparent, #a8763f 30%, #a8763f 70%, transparent)',
-            boxShadow: '0 0 24px 1px rgba(168,118,63,0.5)',
+            background: 'linear-gradient(180deg, transparent, #c58059 30%, #c58059 70%, transparent)',
+            boxShadow: '0 0 24px 1px rgba(197,128,89,0.5)',
           }}
         />
 

@@ -13,7 +13,7 @@ export default function Hero3D() {
       <div
         className="absolute left-1/2 bottom-[2%] -translate-x-1/2 w-[62%] h-[9%] rounded-full"
         style={{
-          background: 'radial-gradient(closest-side, rgba(168,118,63,0.55), transparent 72%)',
+          background: 'radial-gradient(closest-side, rgba(197,128,89,0.55), transparent 72%)',
           filter: 'blur(10px)',
           animation: 'heroPoolPulse 5s ease-in-out infinite',
         }}
@@ -24,7 +24,7 @@ export default function Hero3D() {
         className="absolute inset-0 m-auto rounded-full"
         style={{
           width: '92%', height: '92%',
-          border: '1px solid rgba(168,118,63,0.35)',
+          border: '1px solid rgba(197,128,89,0.35)',
           transform: 'rotateX(72deg)',
           animation: 'heroRingSpin 26s linear infinite',
         }}
@@ -33,7 +33,7 @@ export default function Hero3D() {
         className="absolute inset-0 m-auto rounded-full"
         style={{
           width: '78%', height: '78%',
-          border: '1px dashed rgba(201,154,95,0.4)',
+          border: '1px dashed rgba(212,156,125,0.4)',
           transform: 'rotateX(72deg)',
           animation: 'heroRingSpin 40s linear infinite reverse',
         }}
@@ -52,9 +52,9 @@ export default function Hero3D() {
           className="absolute inset-0 rounded-md"
           style={{
             transform: 'translateZ(-34px) translateX(-22px) translateY(14px) rotateZ(-8deg) scale(0.88)', opacity: 0.5,
-            background: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%)',
-            backgroundImage: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 7px)',
-            border: '1px solid rgba(168,118,63,0.6)',
+            background: 'linear-gradient(165deg, #d49c7d 0%, #eee0e4 75%)',
+            backgroundImage: 'linear-gradient(165deg, #d49c7d 0%, #eee0e4 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 7px)',
+            border: '1px solid rgba(197,128,89,0.6)',
             boxShadow: '0 60px 100px -36px rgba(0,0,0,0.4)',
           }}
         />
@@ -63,9 +63,9 @@ export default function Hero3D() {
           className="absolute inset-0 rounded-md"
           style={{
             transform: 'translateZ(0px) translateX(13px) translateY(-9px) rotateZ(5deg) scale(0.95)', opacity: 0.78,
-            background: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%)',
-            backgroundImage: 'linear-gradient(165deg, #c99a5f 0%, #ece0cd 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 7px)',
-            border: '1px solid rgba(168,118,63,0.6)',
+            background: 'linear-gradient(165deg, #d49c7d 0%, #eee0e4 75%)',
+            backgroundImage: 'linear-gradient(165deg, #d49c7d 0%, #eee0e4 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.10) 0px, rgba(255,255,255,0.10) 1px, transparent 1px, transparent 7px)',
+            border: '1px solid rgba(197,128,89,0.6)',
             boxShadow: '0 60px 100px -36px rgba(0,0,0,0.5)',
           }}
         />
@@ -74,9 +74,9 @@ export default function Hero3D() {
           className="absolute inset-0 rounded-md overflow-hidden"
           style={{
             transform: 'translateZ(34px) rotateZ(-1.5deg)',
-            background: 'linear-gradient(165deg, #a8763f 0%, #ece0cd 75%)',
-            backgroundImage: 'linear-gradient(165deg, #a8763f 0%, #ece0cd 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 7px)',
-            border: '1px solid rgba(168,118,63,0.7)',
+            background: 'linear-gradient(165deg, #c58059 0%, #eee0e4 75%)',
+            backgroundImage: 'linear-gradient(165deg, #c58059 0%, #eee0e4 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 7px)',
+            border: '1px solid rgba(197,128,89,0.7)',
             boxShadow: '0 60px 100px -36px rgba(0,0,0,0.6)',
           }}
         >
@@ -86,7 +86,7 @@ export default function Hero3D() {
               className="relative rounded-full overflow-hidden"
               style={{
                 width: '54%', aspectRatio: '1 / 1',
-                boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(168,118,63,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
+                boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(197,128,89,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
                 animation: 'heroMarkPulse 4.5s ease-in-out infinite',
               }}
             >
@@ -147,7 +147,7 @@ export default function Hero3D() {
           key={i}
           className="absolute w-[3px] h-[3px] rounded-full"
           style={{
-            top: m.top, left: m.left, background: '#c99a5f', opacity: 0.8,
+            top: m.top, left: m.left, background: '#d49c7d', opacity: 0.8,
             animation: `heroDrift 9s ease-in-out infinite`, animationDelay: m.delay,
           }}
         />
