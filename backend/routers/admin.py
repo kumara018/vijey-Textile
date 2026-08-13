@@ -92,7 +92,14 @@ def update_product(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    for field, value in payload.model_dump(exclude_none=True).items():
+    # exclude_unset (not exclude_none): the admin form always sends every
+    # field, including explicit nulls to clear an optional field (e.g.
+    # removing a product's video) — exclude_none would silently drop those
+    # nulls and leave the old value in place. exclude_unset still correctly
+    # leaves untouched any field a caller genuinely omits, like the
+    # single-field quick-toggle calls (is_featured, is_active) elsewhere in
+    # the admin UI.
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(product, field, value)
 
     db.commit()
