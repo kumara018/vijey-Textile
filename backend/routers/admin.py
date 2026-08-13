@@ -1081,3 +1081,35 @@ def get_support_ratings(
         }
         for r in ratings
     ]
+
+
+# ── One-off maintenance: wipe test orders, keeping a named list ───────────────
+# Temporary — remove this endpoint once used. Deletes every order whose
+# order_number isn't in `keep`, plus its dependent return_requests /
+# admin_notifications rows (deleted explicitly rather than relying on the
+# live DB actually having the ON DELETE CASCADE constraint this app's
+# models declare, since this project applies schema changes via ad-hoc
+# ALTER TABLE statements at startup rather than real migrations).
+@router.post("/maintenance/cleanup-orders")
+def cleanup_orders_keep_only(
+    keep: str,
+    db: Session = Depends(get_db),
+    _: models.User = Depends(auth_utils.get_current_admin),
+):
+    keep_set = {s.strip() for s in keep.split(",") if s.strip()}
+    if not keep_set:
+        raise HTTPException(400, "Refusing to run with an empty keep list — this would delete every order.")
+
+    to_delete_ids = [
+        row[0] for row in
+        db.query(models.Order.id).filter(~models.Order.order_number.in_(keep_set)).all()
+    ]
+    if not to_delete_ids:
+        return {"message": "Nothing to delete — every order is already in the keep list.", "deleted_orders": 0}
+
+    db.query(models.ReturnRequest).filter(models.ReturnRequest.order_id.in_(to_delete_ids)).delete(synchronize_session=False)
+    db.query(models.AdminNotification).filter(models.AdminNotification.order_id.in_(to_delete_ids)).delete(synchronize_session=False)
+    deleted = db.query(models.Order).filter(models.Order.id.in_(to_delete_ids)).delete(synchronize_session=False)
+    db.commit()
+
+    return {"message": f"Deleted {deleted} orders.", "deleted_orders": deleted, "kept_order_numbers": sorted(keep_set)}
