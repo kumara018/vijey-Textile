@@ -90,12 +90,12 @@ export default function Hero3D() {
                 animation: 'heroMarkPulse 4.5s ease-in-out infinite',
               }}
             >
-              {/* Re-cropped wider around the heart mark (public/hero-mark.jpg) so
+              {/* Re-cropped wider around the heart mark (public/hero-mark-v2.jpg) so
                   it reads smaller within the circle with real rose background
                   around it — one continuous photo, no composited background
                   needed (that approach left a visible seam; see git history). */}
               <img
-                src="/hero-mark.jpg"
+                src="/hero-mark-v2.jpg"
                 alt="Vijey Textile"
                 className="absolute inset-0 w-full h-full object-cover"
               />
