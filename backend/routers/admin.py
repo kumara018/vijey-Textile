@@ -797,6 +797,22 @@ def update_return_status(
     if not rr:
         raise HTTPException(404, "Return request not found")
 
+    # These are only ever reached through a real, verified courier/payment
+    # confirmation — pickup_scheduled and refund_initiated/refunded from a
+    # genuine Delhivery pickup + Razorpay webhook (see courier_sync.py /
+    # payments.py), replacement_shipped from a genuine Delhivery shipment
+    # call, and an exchange's completed from a genuine "Delivered" scan on
+    # the replacement. Accepting them here too let an admin hand-set
+    # "Refunded" before the money had actually moved. picked_up (and,
+    # for a plain return, completed) stay admin-settable by design.
+    SYSTEM_ONLY_STATUSES = {"pickup_scheduled", "refund_initiated", "refunded", "replacement_shipped"}
+    if payload.status in SYSTEM_ONLY_STATUSES or (payload.status == "completed" and rr.request_type == "exchange"):
+        raise HTTPException(
+            400,
+            f"'{payload.status}' can't be set manually — it's only applied automatically once Delhivery/Razorpay "
+            f"actually confirms it. Use the Retry Pickup / Retry Replacement / Sync button instead.",
+        )
+
     previous_status = rr.status
     rr.status = payload.status
     # Every status rr.status actually passes through this request, in order —
