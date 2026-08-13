@@ -83,23 +83,21 @@ export default function Hero3D() {
           {/* Logo medallion — real brand mark, not a placeholder letter */}
           <div className="absolute inset-0 flex items-center justify-center">
             <div
-              className="relative rounded-full overflow-hidden flex items-center justify-center"
+              className="relative rounded-full overflow-hidden"
               style={{
                 width: '50%', aspectRatio: '1 / 1',
-                background: '#b42251',
                 boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(197,128,89,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
                 animation: 'heroMarkPulse 4.5s ease-in-out infinite',
               }}
             >
-              {/* Icon sized down within the circle — the circle itself stays put,
-                  only the heart+T mark shrinks so more of the rose ground shows
-                  around it (the source photo's own magenta is a near-exact match
-                  to wine-500 above, so there's no visible seam at the edge). */}
+              {/* Re-cropped wider around the heart mark (public/hero-mark.jpg) so
+                  it reads smaller within the circle with real rose background
+                  around it — one continuous photo, no composited background
+                  needed (that approach left a visible seam; see git history). */}
               <img
                 src="/hero-mark.jpg"
                 alt="Vijey Textile"
-                className="rounded-full object-cover"
-                style={{ width: '68%', height: '68%' }}
+                className="absolute inset-0 w-full h-full object-cover"
               />
               {/* Inner bevel — keeps the medallion reading as embossed metal, not a flat sticker */}
               <div
