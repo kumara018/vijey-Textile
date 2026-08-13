@@ -85,7 +85,7 @@ export default function Hero3D() {
             <div
               className="relative rounded-full overflow-hidden"
               style={{
-                width: '50%', aspectRatio: '1 / 1',
+                width: '36%', aspectRatio: '1 / 1',
                 boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(197,128,89,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
                 animation: 'heroMarkPulse 4.5s ease-in-out infinite',
               }}
