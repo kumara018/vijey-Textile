@@ -85,7 +85,7 @@ export default function Hero3D() {
             <div
               className="relative rounded-full overflow-hidden"
               style={{
-                width: '54%', aspectRatio: '1 / 1',
+                width: '50%', aspectRatio: '1 / 1',
                 boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(197,128,89,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
                 animation: 'heroMarkPulse 4.5s ease-in-out infinite',
               }}
@@ -154,7 +154,7 @@ export default function Hero3D() {
       ))}
 
       <style jsx>{`
-        @keyframes heroFloat { 0%,100% { transform: translateY(0) rotateX(6deg); } 50% { transform: translateY(-14px) rotateX(6deg); } }
+        @keyframes heroFloat { 0%,100% { transform: translateY(0) rotateX(2deg); } 50% { transform: translateY(-14px) rotateX(2deg); } }
         @keyframes heroSpin { 0% { transform: rotateY(-16deg); } 50% { transform: rotateY(16deg); } 100% { transform: rotateY(-16deg); } }
         @keyframes heroRingSpin { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
         @keyframes heroPoolPulse { 0%,100% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
