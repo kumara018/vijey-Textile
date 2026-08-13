@@ -73,7 +73,7 @@ export default function Hero3D() {
         <div
           className="absolute inset-0 rounded-md overflow-hidden"
           style={{
-            transform: 'translateZ(34px) rotateZ(-1.5deg)',
+            transform: 'translateZ(34px)',
             background: 'linear-gradient(165deg, #c58059 0%, #eee0e4 75%)',
             backgroundImage: 'linear-gradient(165deg, #c58059 0%, #eee0e4 75%), repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 7px)',
             border: '1px solid rgba(197,128,89,0.7)',
@@ -154,7 +154,7 @@ export default function Hero3D() {
       ))}
 
       <style jsx>{`
-        @keyframes heroFloat { 0%,100% { transform: translateY(0) rotateX(2deg); } 50% { transform: translateY(-14px) rotateX(2deg); } }
+        @keyframes heroFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
         @keyframes heroSpin { 0% { transform: rotateY(-16deg); } 50% { transform: rotateY(16deg); } 100% { transform: rotateY(-16deg); } }
         @keyframes heroRingSpin { from { transform: rotateX(72deg) rotateZ(0deg); } to { transform: rotateX(72deg) rotateZ(360deg); } }
         @keyframes heroPoolPulse { 0%,100% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
