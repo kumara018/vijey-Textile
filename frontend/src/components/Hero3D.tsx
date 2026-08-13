@@ -80,16 +80,28 @@ export default function Hero3D() {
             boxShadow: '0 60px 100px -36px rgba(0,0,0,0.6)',
           }}
         >
-          {/* Monogram */}
-          <span
-            className="absolute inset-0 flex items-center justify-center font-display font-black select-none"
-            style={{
-              fontSize: 'clamp(3rem, 9vw, 5.5rem)', color: 'rgba(255,255,255,0.4)',
-              textShadow: '0 2px 0 rgba(255,255,255,0.25), 0 -1px 1px rgba(90,58,20,0.35)',
-            }}
-          >
-            V
-          </span>
+          {/* Logo medallion — real brand mark, not a placeholder letter */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div
+              className="relative rounded-full overflow-hidden"
+              style={{
+                width: '54%', aspectRatio: '1 / 1',
+                boxShadow: '0 0 0 3px rgba(255,255,255,0.6), 0 0 0 5px rgba(168,118,63,0.55), 0 22px 44px -14px rgba(0,0,0,0.6)',
+                animation: 'heroMarkPulse 4.5s ease-in-out infinite',
+              }}
+            >
+              <img
+                src="/hero-mark.jpg"
+                alt="Vijey Textile"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Inner bevel — keeps the medallion reading as embossed metal, not a flat sticker */}
+              <div
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ boxShadow: 'inset 0 2px 6px rgba(255,255,255,0.4), inset 0 -5px 12px rgba(0,0,0,0.4)' }}
+              />
+            </div>
+          </div>
 
           {/* Corner brackets — heirloom frame detail */}
           {[
@@ -148,6 +160,7 @@ export default function Hero3D() {
         @keyframes heroPoolPulse { 0%,100% { opacity: 0.7; transform: translateX(-50%) scale(1); } 50% { opacity: 1; transform: translateX(-50%) scale(1.08); } }
         @keyframes heroDrift { 0%,100% { transform: translateY(0) translateX(0); opacity: 0.3; } 50% { transform: translateY(-46px) translateX(10px); opacity: 0.9; } }
         @keyframes heroShine { 0% { transform: translateX(-220%) skewX(-12deg); } 35%,100% { transform: translateX(420%) skewX(-12deg); } }
+        @keyframes heroMarkPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.045); } }
         @media (prefers-reduced-motion: reduce) {
           div, span { animation: none !important; }
         }
