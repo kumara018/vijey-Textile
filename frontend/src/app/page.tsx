@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, Star, Truck, Shield, RotateCcw, Headphones, ChevronLeft, ChevronRight } from 'lucide-react';
 import { productsAPI } from '@/lib/api';
 import { Product } from '@/types';
@@ -97,23 +97,23 @@ export default function HomePage() {
   const [offerIdx,    setOfferIdx]    = useState(0);
   const offerTimer = useRef<any>(null);
 
-  // Auto-rotate offers every 3 seconds
+  // Auto-rotate offers every 4.2s (slow, unhurried pace)
   useEffect(() => {
     offerTimer.current = setInterval(() => {
       setOfferIdx(i => (i + 1) % OFFERS.length);
-    }, 3000);
+    }, 4200);
     return () => clearInterval(offerTimer.current);
   }, []);
 
   const prevOffer = () => {
     clearInterval(offerTimer.current);
     setOfferIdx(i => (i - 1 + OFFERS.length) % OFFERS.length);
-    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 3000);
+    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 4200);
   };
   const nextOffer = () => {
     clearInterval(offerTimer.current);
     setOfferIdx(i => (i + 1) % OFFERS.length);
-    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 3000);
+    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 4200);
   };
 
   useEffect(() => {
@@ -310,11 +310,23 @@ export default function HomePage() {
 
       {/* Rotating Offer Banner */}
       <section className="max-w-7xl mx-auto px-4 py-10">
-        <div className={`bg-gradient-to-r ${OFFERS[offerIdx].bg} border border-maroon-200 rounded-2xl p-8 md:p-12 text-maroon-900 text-center relative overflow-hidden transition-all duration-700`}>
+        <div
+          className={`bg-gradient-to-r ${OFFERS[offerIdx].bg} border border-maroon-200 rounded-2xl p-8 md:p-12 text-maroon-900 text-center relative overflow-hidden transition-colors duration-700`}
+          style={{ perspective: 1400 }}
+        >
           {/* Big background emoji */}
-          <div className="absolute inset-0 opacity-[0.06] text-[180px] flex items-center justify-center select-none pointer-events-none">
-            {OFFERS[offerIdx].accent}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`accent-${offerIdx}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.06 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              className="absolute inset-0 text-[180px] flex items-center justify-center select-none pointer-events-none"
+            >
+              {OFFERS[offerIdx].accent}
+            </motion.div>
+          </AnimatePresence>
 
           {/* Prev / Next arrows */}
           <button
@@ -330,28 +342,39 @@ export default function HomePage() {
             <ChevronRight size={20} />
           </button>
 
-          {/* Content */}
-          <div className="relative z-10 transition-all duration-500">
-            <span className="inline-block bg-white/70 border border-gold-300 text-gold-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">
-              {OFFERS[offerIdx].tag}
-            </span>
-            <h2 className="text-2xl md:text-4xl font-display font-black mb-3 text-maroon-900">
-              {OFFERS[offerIdx].emoji} {OFFERS[offerIdx].title}
-            </h2>
-            <p className="text-maroon-600 mb-6 max-w-xl mx-auto text-sm md:text-base">
-              {OFFERS[offerIdx].desc}
-            </p>
-            <Link href={OFFERS[offerIdx].href} className="btn-primary inline-flex items-center gap-2">
-              {OFFERS[offerIdx].btn} <ArrowRight size={18} />
-            </Link>
-          </div>
+          {/* Content — smooth fade + subtle 3D tilt on each rotation instead
+              of an instant swap */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={offerIdx}
+              initial={{ opacity: 0, rotateX: -8, y: 10 }}
+              animate={{ opacity: 1, rotateX: 0, y: 0 }}
+              exit={{ opacity: 0, rotateX: 8, y: -10 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              style={{ transformStyle: 'preserve-3d' }}
+              className="relative z-10"
+            >
+              <span className="inline-block bg-white/70 border border-gold-300 text-gold-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">
+                {OFFERS[offerIdx].tag}
+              </span>
+              <h2 className="text-2xl md:text-4xl font-display font-black mb-3 text-maroon-900">
+                {OFFERS[offerIdx].emoji} {OFFERS[offerIdx].title}
+              </h2>
+              <p className="text-maroon-600 mb-6 max-w-xl mx-auto text-sm md:text-base">
+                {OFFERS[offerIdx].desc}
+              </p>
+              <Link href={OFFERS[offerIdx].href} className="btn-primary inline-flex items-center gap-2">
+                {OFFERS[offerIdx].btn} <ArrowRight size={18} />
+              </Link>
+            </motion.div>
+          </AnimatePresence>
 
           {/* Dot indicators */}
           <div className="flex justify-center gap-2 mt-6 relative z-10">
             {OFFERS.map((_, i) => (
               <button
                 key={i}
-                onClick={() => { clearInterval(offerTimer.current); setOfferIdx(i); offerTimer.current = setInterval(() => setOfferIdx(j => (j + 1) % OFFERS.length), 3000); }}
+                onClick={() => { clearInterval(offerTimer.current); setOfferIdx(i); offerTimer.current = setInterval(() => setOfferIdx(j => (j + 1) % OFFERS.length), 4200); }}
                 className={`h-1.5 rounded-full transition-all duration-300 ${i === offerIdx ? 'w-6 bg-gold-500' : 'w-1.5 bg-maroon-300'}`}
               />
             ))}

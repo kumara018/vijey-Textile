@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Play } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -35,7 +35,7 @@ export default function ProductCard({ product }: Props) {
     setImgIdx((idx + totalSlides) % totalSlides);
   }, [totalSlides]);
 
-  // Auto-scroll every 2.5 s, pause on hover
+  // Auto-scroll every 3.8s (slow, unhurried pace), pause on hover
   useEffect(() => {
     if (totalSlides <= 1 || hovering) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -43,7 +43,7 @@ export default function ProductCard({ product }: Props) {
     }
     intervalRef.current = setInterval(() => {
       setImgIdx(i => (i + 1) % totalSlides);
-    }, 2500);
+    }, 3800);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [totalSlides, hovering]);
 
@@ -111,38 +111,64 @@ export default function ProductCard({ product }: Props) {
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
           className="relative bg-gradient-to-br from-maroon-100 to-gold-50 aspect-[3/4] overflow-hidden p-4"
+          style={{ perspective: 1200 }}
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={handleMouseLeave}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          {/* Slide content */}
-          {isVideoSlide ? (
-            <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-              <Play size={40} className="text-white opacity-80" fill="white" />
-              <span className="absolute bottom-8 text-white text-xs font-medium bg-black/50 px-2 py-0.5 rounded-full">
-                Watch Video
-              </span>
-            </div>
-          ) : currentImg ? (
-            <img
-              src={currentImg}
-              alt={product.name}
-              className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-maroon-200">
-              <div className="text-6xl mb-2">
-                {product.category === 'Baby Frocks' ? '👶' :
-                 product.category === 'Chudithar' ? '👘' :
-                 product.category === 'Frocks' ? '👗' :
-                 product.category === 'Western Dresses' ? '👒' :
-                 product.category === 'Lehenga' ? '💃' :
-                 product.category === 'Party Wear' ? '✨' : '👗'}
-              </div>
-              <span className="text-xs font-medium text-maroon-300">{product.category}</span>
-            </div>
-          )}
+          {/* Slide content — cross-fades with a subtle 3D coverflow tilt
+              instead of hard-cutting, so both auto-advance and manual swipe
+              feel smooth and give the gallery some depth. */}
+          <AnimatePresence mode="sync" initial={false}>
+            {isVideoSlide ? (
+              <motion.div
+                key="video"
+                initial={{ opacity: 0, rotateY: -14, scale: 0.94 }}
+                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                style={{ transformStyle: 'preserve-3d' }}
+                className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center"
+              >
+                <Play size={40} className="text-white opacity-80" fill="white" />
+                <span className="absolute bottom-4 text-white text-xs font-medium bg-black/50 px-2 py-0.5 rounded-full">
+                  Watch Video
+                </span>
+              </motion.div>
+            ) : currentImg ? (
+              <motion.img
+                key={currentImg}
+                src={currentImg}
+                alt={product.name}
+                initial={{ opacity: 0, rotateY: -14, scale: 0.94 }}
+                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                style={{ transformStyle: 'preserve-3d' }}
+                className="absolute inset-0 w-full h-full object-contain group-hover:scale-[1.03] transition-transform duration-500"
+              />
+            ) : (
+              <motion.div
+                key="placeholder"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+                className="w-full h-full flex flex-col items-center justify-center text-maroon-200"
+              >
+                <div className="text-6xl mb-2">
+                  {product.category === 'Baby Frocks' ? '👶' :
+                   product.category === 'Chudithar' ? '👘' :
+                   product.category === 'Frocks' ? '👗' :
+                   product.category === 'Western Dresses' ? '👒' :
+                   product.category === 'Lehenga' ? '💃' :
+                   product.category === 'Party Wear' ? '✨' : '👗'}
+                </div>
+                <span className="text-xs font-medium text-maroon-300">{product.category}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Prev / Next arrows — visible on hover when multiple slides */}
           {totalSlides > 1 && hovering && (
