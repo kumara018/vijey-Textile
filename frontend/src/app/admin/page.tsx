@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
@@ -30,6 +30,37 @@ function validNextStatuses(current: string): string[] {
 }
 
 interface DashData { total_products: number; active_products: number; total_users: number; total_orders: number; pending_orders: number; total_revenue: number; recent_orders: any[]; }
+
+// Shared with the Returns tab's own status badge — used wherever an order
+// row needs to show its linked return/exchange's status alongside the
+// order's own status (Amazon-style "Delivered → Return: Picked Up"),
+// instead of just "Delivered" with no sign anything happened since.
+const RETURN_STATUS_LABEL: Record<string, string> = {
+  pending:             'Pending Review',
+  under_review:        'Under Review',
+  approved:            'Approved',
+  rejected:            'Rejected',
+  pickup_scheduled:    'Pickup Scheduled',
+  picked_up:           'Picked Up',
+  processing:          'Processing',
+  replacement_shipped: 'Replacement Shipped',
+  refund_initiated:    'Refund Initiated',
+  refunded:            'Refunded',
+  completed:           'Completed',
+};
+const RETURN_STATUS_BADGE: Record<string, string> = {
+  pending:             'bg-yellow-100 text-yellow-700',
+  under_review:        'bg-blue-100 text-blue-700',
+  approved:            'bg-green-100 text-green-700',
+  rejected:            'bg-red-100 text-red-700',
+  pickup_scheduled:    'bg-purple-100 text-purple-700',
+  picked_up:           'bg-cyan-100 text-cyan-700',
+  processing:          'bg-indigo-100 text-indigo-700',
+  replacement_shipped: 'bg-purple-100 text-purple-700',
+  refund_initiated:    'bg-amber-100 text-amber-700',
+  refunded:            'bg-green-100 text-green-700',
+  completed:           'bg-gray-100 text-gray-700',
+};
 
 const CATEGORIES_WITH_HALF_SAREE = ['Baby Frocks', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
 
@@ -272,6 +303,17 @@ function AdminPageInner() {
   const [users, setUsers] = useState<any[]>([]);
   const [supportRatings, setSupportRatings] = useState<any[]>([]);
   const [returns, setReturns] = useState<any[]>([]);
+  // Latest return/exchange (by id) per order — lets order tables show an
+  // Amazon-style compound status ("Delivered → Return: Picked Up") instead
+  // of a plain order status that goes stale the moment a return starts.
+  const returnsByOrderId = useMemo(() => {
+    const map: Record<number, any> = {};
+    for (const r of returns) {
+      const existing = map[r.order_id];
+      if (!existing || r.id > existing.id) map[r.order_id] = r;
+    }
+    return map;
+  }, [returns]);
   const [admins, setAdmins] = useState<any[]>([]);
   const [adminActionLoading, setAdminActionLoading] = useState(false);
   const [expandedReturn, setExpandedReturn] = useState<number | null>(null);
@@ -394,9 +436,9 @@ function AdminPageInner() {
   };
 
   useEffect(() => {
-    if (tab === 'dash') loadDash();
+    if (tab === 'dash') { loadDash(); loadReturns(); }
     if (tab === 'products') loadProducts();
-    if (tab === 'orders') loadOrders();
+    if (tab === 'orders') { loadOrders(); loadReturns(); }
     if (tab === 'users') loadUsers();
     if (tab === 'ratings') loadSupportRatings();
     if (tab === 'returns') loadReturns();
@@ -980,14 +1022,24 @@ function AdminPageInner() {
                   <th className="pb-3">Date</th>
                 </tr></thead>
                 <tbody className="divide-y divide-orange-50">
-                  {dash.recent_orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-maroon-50">
-                      <td className="py-3 pr-4 font-mono font-medium text-maroon-800">{o.order_number}</td>
-                      <td className="py-3 pr-4 font-semibold">₹{o.total.toLocaleString()}</td>
-                      <td className="py-3 pr-4"><span className="capitalize badge badge-info">{o.status}</span></td>
-                      <td className="py-3 text-gray-500">{new Date(o.created_at).toLocaleDateString('en-IN')}</td>
-                    </tr>
-                  ))}
+                  {dash.recent_orders.map((o) => {
+                    const linkedReturn = returnsByOrderId[o.id];
+                    return (
+                      <tr key={o.id} className="hover:bg-maroon-50">
+                        <td className="py-3 pr-4 font-mono font-medium text-maroon-800">{o.order_number}</td>
+                        <td className="py-3 pr-4 font-semibold">₹{o.total.toLocaleString()}</td>
+                        <td className="py-3 pr-4">
+                          <span className="capitalize badge badge-info">{o.status}</span>
+                          {linkedReturn && (
+                            <span className={`ml-1 capitalize badge ${RETURN_STATUS_BADGE[linkedReturn.status] || 'bg-gray-100 text-gray-700'}`}>
+                              {linkedReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: {RETURN_STATUS_LABEL[linkedReturn.status] || linkedReturn.status}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 text-gray-500">{new Date(o.created_at).toLocaleDateString('en-IN')}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1160,6 +1212,11 @@ function AdminPageInner() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="capitalize badge badge-info text-xs">{o.status}</span>
+                      {returnsByOrderId[o.id] && (
+                        <p className={`text-[10px] font-semibold mt-0.5 capitalize inline-block rounded px-1.5 py-0.5 ${RETURN_STATUS_BADGE[returnsByOrderId[o.id].status] || 'bg-gray-100 text-gray-700'}`}>
+                          {returnsByOrderId[o.id].request_type === 'exchange' ? 'Exchange' : 'Return'}: {RETURN_STATUS_LABEL[returnsByOrderId[o.id].status] || returnsByOrderId[o.id].status}
+                        </p>
+                      )}
                       {o.status === 'cancelled' && o.rto_pending && (
                         <p className="text-[10px] font-semibold text-orange-600 mt-0.5" title="Item was already shipped — stock is held until the courier confirms it's back">
                           🔄 Awaiting return to shop
