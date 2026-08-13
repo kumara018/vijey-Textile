@@ -1,15 +1,14 @@
 export function LogoMark({ className = '', size = 32 }: { className?: string; size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 60 60" fill="none" className={className}>
-      <circle cx="30" cy="30" r="27" stroke="currentColor" strokeWidth="2" />
-      <text
-        x="30" y="31"
-        fontFamily="-apple-system,'SF Pro Display','Segoe UI',Helvetica,Arial,sans-serif"
-        fontWeight="900" fontSize="27" textAnchor="middle" dominantBaseline="central" fill="currentColor"
-      >
-        V
-      </text>
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/icon-mark.jpg"
+      alt="Vijey Textile"
+      width={size}
+      height={size}
+      className={`rounded-full object-cover flex-shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 

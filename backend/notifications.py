@@ -145,13 +145,14 @@ def _bg(to: str, subject: str, html: str):
 
 
 # ── HTML helpers ───────────────────────────────────────────────────────────────
-# Shared brand header — pure HTML, no PNG image, renders perfectly in all clients
-# Matches the live navbar exactly (frontend/src/components/Navbar.tsx + Logo.tsx):
+# Shared brand header. Matches the live navbar (frontend/src/components/Navbar.tsx
+# + Logo.tsx):
 #   bg          = maroon-50  #faf7f2   (light cream, same as navbar bg)
 #   brand text  = maroon-900 #1c1712   (dark ink, same as navbar text)
 #   tagline     = maroon-500 #8f7a5f
-#   accent/logo = gold-500   #a8763f   (outline medallion, same stroke color as Logo.tsx)
-#   font-display= Georgia    (brand name); apple-system (logo letter, matches Logo.tsx/favicon)
+#   font-display= Georgia    (brand name)
+# Logo is an absolute URL (email clients can't load relative/local paths) —
+# same cropped mark image used for the site's favicon/header icon.
 _HEADER_HTML = f"""\
     <table width="100%" cellpadding="0" cellspacing="0" border="0"
            style="border-collapse:collapse;background:#faf7f2;">
@@ -160,19 +161,10 @@ _HEADER_HTML = f"""\
           <table width="100%" cellpadding="0" cellspacing="0" border="0"
                  style="border-collapse:collapse;">
             <tr>
-              <!-- Logo medallion — outline circle + letter, matches the site's Logo.tsx mark -->
+              <!-- Logo — matches the site's Logo.tsx mark -->
               <td valign="middle" width="70" style="padding-right:18px;">
-                <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td width="58" height="58" align="center" valign="middle"
-                        style="width:58px;height:58px;border-radius:50%;background:#faf7f2;
-                               border:2px solid #a8763f;
-                               font-family:-apple-system,'SF Pro Display','Segoe UI',Helvetica,Arial,sans-serif;
-                               font-weight:900;font-size:28px;color:#a8763f;">
-                      V
-                    </td>
-                  </tr>
-                </table>
+                <img src="{STORE_URL}/icon-mark.jpg" width="58" height="58" alt="Vijey Textile"
+                     style="width:58px;height:58px;border-radius:50%;display:block;border:0;" />
               </td>
               <!-- Brand text -->
               <td valign="middle" style="text-align:left;">

@@ -42,9 +42,9 @@ export const metadata: Metadata = {
     google: 'IQsLO0zH60lGqrYy7Jd7nvjDFO_Uf0HKbtNcK8bDsHM',
   },
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    icon: [{ url: '/icon-mark.jpg', type: 'image/jpeg' }],
+    shortcut: '/icon-mark.jpg',
+    apple: '/icon-mark.jpg',
   },
 };
 
@@ -52,9 +52,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
-        <link rel="shortcut icon" href="/favicon.svg?v=3" />
-        <link rel="apple-touch-icon" href="/favicon.svg?v=3" />
+        <link rel="icon" type="image/jpeg" href="/icon-mark.jpg?v=4" />
+        <link rel="shortcut icon" href="/icon-mark.jpg?v=4" />
+        <link rel="apple-touch-icon" href="/icon-mark.jpg?v=4" />
       </head>
       <body className="bg-maroon-100 min-h-screen flex flex-col">
         <AuthProvider>
