@@ -9,8 +9,8 @@ export const STORE = {
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 94439 47853',
   phone2:      '+91 75981 86790',
-  email:       'admin@vijeytextile.com',
-  supportEmail:'admin@vijeytextile.com',
+  email:       'vijeytextile@gmail.com',
+  supportEmail:'vijeytextile@gmail.com',
   whatsapp:    '919443947853',   // primary WhatsApp — country code + number, no + or spaces
   whatsapp2:   '917598186790',   // secondary WhatsApp
 
