@@ -288,7 +288,7 @@ function InvoiceContent() {
                 <p className="text-white font-bold uppercase" style={{ fontSize: '14px', letterSpacing: '0.04em' }}>Vijey Textile</p>
                 <p className="text-maroon-300 text-[9px] font-semibold tracking-widest uppercase mb-1">Luxury Kid&apos;s &amp; Girls Clothing</p>
                 <p className="text-white/60 text-xs">Shop Ground Floor No 131, Texvalley Gangapuram</p>
-                <p className="text-white/60 text-xs">vijeytextile.com · {STORE.email}</p>
+                <p className="text-white/60 text-xs">vijeytextile.com · {STORE.email} · {STORE.email2}</p>
               </div>
             </div>
             <div className="text-right">

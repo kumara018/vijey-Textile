@@ -103,6 +103,7 @@ export default function TermsPage() {
             <p>{STORE.shopNo}, {STORE.area}</p>
             <p>{STORE.city}, {STORE.state} — {STORE.pincode}</p>
             <p>Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a></p>
+            <p>Email: <a href={`mailto:${STORE.email2}`} className="text-maroon-700">{STORE.email2}</a></p>
             <p>Phone: <a href={`tel:${STORE.phone1}`} className="text-maroon-700">{STORE.phone1}</a></p>
           </div>
         </section>

@@ -137,7 +137,7 @@ export default function CancellationPage() {
           <h2 className="text-lg font-bold text-gray-900 mb-3">7. Contact for Cancellation, Return & Exchange</h2>
           <div className="mt-2 p-4 bg-maroon-50 rounded-xl text-sm">
             <p className="font-semibold text-gray-800 mb-2">{STORE.name} — Customer Support</p>
-            <p>📧 Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a></p>
+            <p>📧 Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a> / <a href={`mailto:${STORE.email2}`} className="text-maroon-700">{STORE.email2}</a></p>
             <p>📱 WhatsApp: <a href={WHATSAPP_URL} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone1}</a> / <a href={WHATSAPP_URL2} className="text-maroon-700 font-semibold" target="_blank" rel="noopener noreferrer">{STORE.phone2}</a></p>
             <p>⏰ Support Hours: Mon–Sat, 9:00 AM – 8:00 PM</p>
           </div>

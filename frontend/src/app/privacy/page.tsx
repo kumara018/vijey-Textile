@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             <li>Request deletion of your account and data</li>
             <li>Opt out of promotional communications</li>
           </ul>
-          <p className="mt-2">To exercise these rights, contact us at <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700 underline">{STORE.supportEmail}</a>.</p>
+          <p className="mt-2">To exercise these rights, contact us at <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700 underline">{STORE.supportEmail}</a> or <a href={`mailto:${STORE.email2}`} className="text-maroon-700 underline">{STORE.email2}</a>.</p>
         </section>
 
         <section>
@@ -100,6 +100,7 @@ export default function PrivacyPage() {
             <p>{STORE.shopNo}, {STORE.area}</p>
             <p>{STORE.city}, {STORE.state} — {STORE.pincode}</p>
             <p>Email: <a href={`mailto:${STORE.supportEmail}`} className="text-maroon-700">{STORE.supportEmail}</a></p>
+            <p>Email: <a href={`mailto:${STORE.email2}`} className="text-maroon-700">{STORE.email2}</a></p>
             <p>Phone: <a href={`tel:${STORE.phone1}`} className="text-maroon-700">{STORE.phone1}</a></p>
           </div>
         </section>

@@ -9,8 +9,9 @@ export const STORE = {
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 94439 47853',
   phone2:      '+91 75981 86790',
-  email:       'vijeytextile@gmail.com',
-  supportEmail:'vijeytextile@gmail.com',
+  email:       'admin@vijeytextile.com',
+  email2:      'vijeytextile@gmail.com',
+  supportEmail:'admin@vijeytextile.com',
   whatsapp:    '919443947853',   // primary WhatsApp — country code + number, no + or spaces
   whatsapp2:   '917598186790',   // secondary WhatsApp
 
@@ -44,5 +45,6 @@ export const SHORT_ADDRESS = `${STORE.shopNo}, ${STORE.area}`;
 export const WHATSAPP_URL  = `https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent('Hi! I\'m interested in your products at Vijey Textile.')}`;
 export const WHATSAPP_URL2 = `https://wa.me/${STORE.whatsapp2}?text=${encodeURIComponent('Hi! I\'m interested in your products at Vijey Textile.')}`;
 export const MAIL_URL      = `mailto:${STORE.email}`;
+export const MAIL_URL2     = `mailto:${STORE.email2}`;
 export const CALL_URL      = `tel:${STORE.phone1}`;
 export const CALL_URL2     = `tel:${STORE.phone2}`;

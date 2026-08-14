@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Phone, Mail, Instagram, MessageCircle, MapIcon } from 'lucide-react';
-import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL, CALL_URL2 } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, MAIL_URL2, CALL_URL, CALL_URL2 } from '@/lib/config';
 import { LogoMark } from './Logo';
 
 const SHOP_CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
@@ -130,6 +130,12 @@ export default function Footer() {
                 <a href={MAIL_URL} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
                   <Mail size={16} className="text-gold-400 flex-shrink-0" />
                   {STORE.email}
+                </a>
+              </li>
+              <li>
+                <a href={MAIL_URL2} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
+                  <Mail size={16} className="text-gold-400 flex-shrink-0" />
+                  {STORE.email2}
                 </a>
               </li>
             </ul>

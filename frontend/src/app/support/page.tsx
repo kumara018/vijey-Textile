@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, CALL_URL } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, MAIL_URL2, CALL_URL } from '@/lib/config';
 import Link from 'next/link';
 import {
   Phone, Mail, MapPin, Clock, ChevronDown, ChevronUp,
@@ -148,15 +148,15 @@ export default function SupportPage() {
           <p className="text-xs text-gray-400 mt-1">Chat with us anytime</p>
         </div>
 
-        <a href={MAIL_URL}
-          className="card p-4 text-center hover:shadow-md transition-shadow group">
-          <div className="inline-flex p-2.5 bg-maroon-50 rounded-xl mb-2 text-orange-700 group-hover:bg-orange-100 transition-colors">
+        <div className="card p-4 text-center">
+          <div className="inline-flex p-2.5 bg-maroon-50 rounded-xl mb-2 text-orange-700">
             <Mail size={20} />
           </div>
           <p className="font-bold text-gray-800 text-sm mb-0.5">Email Us</p>
-          <p className="text-xs text-gray-600 break-all">{STORE.email}</p>
+          <a href={MAIL_URL} className="block text-xs text-gray-600 break-all hover:underline">{STORE.email}</a>
+          <a href={MAIL_URL2} className="block text-xs text-gray-600 break-all hover:underline mt-0.5">{STORE.email2}</a>
           <p className="text-xs text-gray-400 mt-1">Reply within 24 hours</p>
-        </a>
+        </div>
 
         <a href={STORE.googleMapsUrl} target="_blank" rel="noopener noreferrer"
           className="card p-4 text-center hover:shadow-md transition-shadow group">
@@ -352,7 +352,7 @@ export default function SupportPage() {
           </div>
           <div>
             <b className="text-gray-800">3. Account Responsibility</b>
-            <p className="mt-1">You are solely responsible for maintaining the confidentiality of your account credentials. Notify us immediately at <a href={MAIL_URL} className="text-maroon-700 hover:underline">{STORE.email}</a> of any unauthorized access or security breach.</p>
+            <p className="mt-1">You are solely responsible for maintaining the confidentiality of your account credentials. Notify us immediately at <a href={MAIL_URL} className="text-maroon-700 hover:underline">{STORE.email}</a> or <a href={MAIL_URL2} className="text-maroon-700 hover:underline">{STORE.email2}</a> of any unauthorized access or security breach.</p>
           </div>
           <div>
             <b className="text-gray-800">4. Product Accuracy</b>
@@ -406,7 +406,7 @@ export default function SupportPage() {
           </div>
           <div>
             <b className="text-gray-800">Your Rights</b>
-            <p className="mt-1">You have the right to access, correct, or delete your personal data. To exercise these rights, contact us at <a href={MAIL_URL} className="text-maroon-700 hover:underline">{STORE.supportEmail}</a>.</p>
+            <p className="mt-1">You have the right to access, correct, or delete your personal data. To exercise these rights, contact us at <a href={MAIL_URL} className="text-maroon-700 hover:underline">{STORE.supportEmail}</a> or <a href={MAIL_URL2} className="text-maroon-700 hover:underline">{STORE.email2}</a>.</p>
           </div>
         </div>
       </Accordion>
@@ -448,7 +448,7 @@ export default function SupportPage() {
           },
           {
             q: 'How do I contact customer support?',
-            a: `Call or WhatsApp us at ${STORE.phone1} or ${STORE.phone2}. You can also email us at ${STORE.email}. We are available ${STORE.weekdays}.`,
+            a: `Call or WhatsApp us at ${STORE.phone1} or ${STORE.phone2}. You can also email us at ${STORE.email} or ${STORE.email2}. We are available ${STORE.weekdays}.`,
           },
           {
             q: 'What payment methods do you accept?',
