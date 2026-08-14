@@ -6,7 +6,7 @@ import { ArrowRight, Star, Truck, Shield, RotateCcw, Headphones, ChevronLeft, Ch
 import { productsAPI } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
-import Hero3D from '@/components/Hero3D';
+import HeroScene from '@/components/HeroScene';
 
 const OFFERS = [
   {
@@ -169,7 +169,7 @@ export default function HomePage() {
         {/* Real 3D hero moment — normal flow + centered on mobile (avoids overlapping the
             copy below), absolute + mirrored-left on desktop to match Ammalu's fullness */}
         <div className="relative md:absolute md:z-[2] md:top-[14%] md:left-[6%] w-full md:w-[min(40vw,420px)] h-[280px] md:h-[56vh] mt-6 md:mt-0 px-10 md:px-0 mx-auto md:mx-0">
-          <Hero3D />
+          <HeroScene />
         </div>
 
         <div className="relative z-10 px-6 md:px-12 pb-16 md:pb-20 mt-8 md:mt-auto flex justify-center md:justify-end">
