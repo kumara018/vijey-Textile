@@ -7,6 +7,7 @@ import { productsAPI } from '@/lib/api';
 import { Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import Hero3D from '@/components/Hero3D';
+import HeroBackdrop from '@/components/webgl/HeroBackdrop';
 
 const OFFERS = [
   {
@@ -139,12 +140,7 @@ export default function HomePage() {
           layout (locket left / copy right, opposite angle) so both sites read as siblings
           without either one carrying dead space on the sides. */}
       <section className="relative min-h-[86vh] flex flex-col overflow-hidden border-b border-maroon-200">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(100deg, #f6f1f3 0%, #f6f1f3 46%, rgba(197,128,89,0.18) 46.4%, #fcfbfb 100%)',
-          }}
-        />
+        <HeroBackdrop />
         {/* Divider — anchored to the 3D box's own right edge (not a guessed
             percentage) so it can never drift into the headline regardless of
             viewport width. Straight, not rotated — a rotated line over this
