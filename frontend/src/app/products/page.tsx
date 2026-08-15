@@ -1,9 +1,11 @@
 'use client';
-import { useState, useEffect, useRef, Suspense } from 'react';
+import { useState, useRef, Suspense } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { SlidersHorizontal, Search, X, ChevronDown } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { productsAPI } from '@/lib/api';
+import { qk } from '@/lib/query';
 import { Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
 
@@ -20,11 +22,7 @@ function ProductsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const [products, setProducts]       = useState<Product[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [total, setTotal]             = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [fuzzyMatch, setFuzzyMatch]   = useState<string>('');
 
   // Single source of truth — derived directly from URL on every render
   const filters = {
@@ -36,105 +34,71 @@ function ProductsContent() {
     sort:     searchParams.get('sort')      || 'created_at:desc',
   };
 
-  // All fetch logic lives here with a cancellation flag — no useCallback needed
-  useEffect(() => {
-    let cancelled = false;
+  // Backend may return the array directly or wrapped — normalise both.
+  const unwrap = (raw: any): Product[] =>
+    Array.isArray(raw) ? raw : (raw?.products ?? raw?.items ?? raw?.data ?? []);
 
-    const doFetch = async (attempt = 1) => {
-      setLoading(true);
+  const [sortBy, sortOrder] = filters.sort.split(':');
+  const params: Record<string, unknown> = { sort_by: sortBy, sort_order: sortOrder, limit: 40 };
+  if (filters.category) params.category  = filters.category;
+  if (filters.search)   params.search    = filters.search;
+  if (filters.minPrice) params.min_price = Number(filters.minPrice);
+  if (filters.maxPrice) params.max_price = Number(filters.maxPrice);
+  if (filters.featured) params.featured  = true;
 
-      const [sortBy, sortOrder] = filters.sort.split(':');
-      const params: any = { sort_by: sortBy, sort_order: sortOrder, limit: 40 };
-      if (filters.category) params.category  = filters.category;
-      if (filters.search)   params.search    = filters.search;
-      if (filters.minPrice) params.min_price = Number(filters.minPrice);
-      if (filters.maxPrice) params.max_price = Number(filters.maxPrice);
-      if (filters.featured) params.featured  = true;
-
-      try {
-        const res = await productsAPI.getAll(params);
-        if (cancelled) return;
-
-        // Normalise — backend may return array directly or wrapped object
-        const raw = res.data;
-        const data: Product[] = Array.isArray(raw)
-          ? raw
-          : (raw?.products ?? raw?.items ?? raw?.data ?? []);
-
-        if (data.length === 0 && filters.search) {
-          // ── Fuzzy fallback ───────────────────────────────────────────
-          const allRes = await productsAPI.getAll({ limit: 100 });
-          if (cancelled) return;
-
-          const allRaw = allRes.data;
-          const allData: Product[] = Array.isArray(allRaw)
-            ? allRaw
-            : (allRaw?.products ?? allRaw?.items ?? allRaw?.data ?? []);
-
-          if (allData.length === 0) {
-            // Can't do fuzzy if we have no products at all
-            setFuzzyMatch('');
-            setProducts([]);
-            setTotal(0);
-            setLoading(false);
-            return;
-          }
-
-          const fuse = new Fuse(allData, {
-            keys: [{ name: 'name', weight: 0.7 }, { name: 'category', weight: 0.3 }],
-            threshold: 0.45,
-            minMatchCharLength: 2,
-            ignoreLocation: true,
-            includeScore: true,
-          });
-
-          const fuzzy = fuse.search(filters.search, { limit: 40 });
-          if (cancelled) return;
-
-          if (fuzzy.length > 0) {
-            const matched = fuzzy.map(r => r.item);
-            const bestMatch = fuzzy[0].item.category || fuzzy[0].item.name;
-            setFuzzyMatch(bestMatch);
-            setProducts(matched);
-            setTotal(matched.length);
-          } else {
-            setFuzzyMatch('');
-            setProducts([]);
-            setTotal(0);
-          }
-        } else {
-          // ── Exact / filtered results ──────────────────────────────────
-          setFuzzyMatch('');
-          setProducts(data);
-          setTotal(data.length);
-        }
-
-        setLoading(false);
-      } catch (err: any) {
-        if (cancelled) return;
-        if (!err.response && attempt === 1) {
-          // Network error — retry once after 10 s
-          setTimeout(() => { if (!cancelled) doFetch(2); }, 10000);
-        } else {
-          setFuzzyMatch('');
-          setProducts([]);
-          setTotal(0);
-          setLoading(false);
-        }
+  /**
+   * One query covers the exact search and the fuzzy fallback, because from the
+   * page's point of view they are a single question: "what should this grid
+   * show for these filters?" Splitting them into two queries would let the
+   * cache hold a state where the exact result is fresh and the fallback is
+   * stale, and the grid would flicker between them.
+   *
+   * The query key is the params object, so every filter combination is cached
+   * separately — going back to a previous filter is instant, and the manual
+   * cancellation flag the effect needed is now Query's job.
+   */
+  const { data, isPending, isError } = useQuery({
+    queryKey: qk.products.list(params),
+    queryFn: async () => {
+      const exact = unwrap((await productsAPI.getAll(params)).data);
+      if (exact.length > 0 || !filters.search) {
+        return { products: exact, total: exact.length, fuzzyMatch: '' };
       }
-    };
 
-    doFetch();
-    return () => { cancelled = true; }; // cancel on unmount or re-run
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    filters.category,
-    filters.search,
-    filters.minPrice,
-    filters.maxPrice,
-    filters.featured,
-    filters.sort,
-  ]);
+      // ── Fuzzy fallback ─────────────────────────────────────────────
+      const all = unwrap((await productsAPI.getAll({ limit: 100 })).data);
+      if (all.length === 0) return { products: [], total: 0, fuzzyMatch: '' };
+
+      const fuse = new Fuse(all, {
+        keys: [{ name: 'name', weight: 0.7 }, { name: 'category', weight: 0.3 }],
+        threshold: 0.45,
+        minMatchCharLength: 2,
+        ignoreLocation: true,
+        includeScore: true,
+      });
+      const fuzzy = fuse.search(filters.search, { limit: 40 });
+      if (fuzzy.length === 0) return { products: [], total: 0, fuzzyMatch: '' };
+
+      const matched = fuzzy.map((r) => r.item);
+      return {
+        products: matched,
+        total: matched.length,
+        fuzzyMatch: fuzzy[0].item.category || fuzzy[0].item.name,
+      };
+    },
+    // Preserves the old behaviour of retrying once on a network error (no
+    // response) while never retrying a 4xx the server actually answered with.
+    retry: (count, err: any) => !err?.response && count < 1,
+    retryDelay: 10_000,
+    // Keeps the previous filter's results on screen while the next load runs,
+    // instead of collapsing the grid to skeletons on every filter change.
+    placeholderData: (prev) => prev,
+  });
+
+  const products   = data?.products ?? [];
+  const total      = data?.total ?? 0;
+  const fuzzyMatch = data?.fuzzyMatch ?? '';
+  const loading    = isPending;
 
   // Update a filter: write to URL only (effect above reads from URL)
   const setF = (key: string, val: string) => {

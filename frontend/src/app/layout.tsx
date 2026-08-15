@@ -8,6 +8,7 @@ import NavbarWrapper from '@/components/NavbarWrapper';
 import FooterWrapper from '@/components/FooterWrapper';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
+import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
@@ -63,6 +64,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             — the GL context, compiled shaders and uploaded textures survive
             navigation. Fixed at z-0; all real UI renders above it. */}
         <ThreeProvider />
+        {/* Outermost of the data providers: AuthContext, CartContext and
+            WishlistContext all issue queries, so the client has to exist
+            above them. */}
+        <QueryProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
@@ -97,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

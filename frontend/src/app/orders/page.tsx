@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
-import { ordersAPI, returnsAPI } from '@/lib/api';
+import { ordersQuery, returnsQuery } from '@/lib/query';
 import { Order, ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 
@@ -72,39 +73,32 @@ function getCategoryEmoji(category?: string): string {
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [returnsByOrder, setReturnsByOrder] = useState<Record<number, ReturnRequest>>({});
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const [ordersRes, returnsRes] = await Promise.all([
-        ordersAPI.getAll(),
-        returnsAPI.getAll().catch(() => ({ data: [] as ReturnRequest[] })), // never block the order list on this
-      ]);
-      setOrders(ordersRes.data);
-      // Newest-first from the API — first occurrence per order_id is the
-      // most recent return/exchange request for that order.
-      const map: Record<number, ReturnRequest> = {};
-      for (const rr of returnsRes.data as ReturnRequest[]) {
-        if (!(rr.order_id in map)) map[rr.order_id] = rr;
-      }
-      setReturnsByOrder(map);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+  // Both lists are cached, so returning here from an order detail page is
+  // instant rather than a fresh round trip to a Render backend that may be
+  // cold. `enabled` keeps the queries from firing before auth resolves.
+  const ordersQ = useQuery({ ...ordersQuery(), enabled: !authLoading && !!user });
+  const returnsQ = useQuery({ ...returnsQuery(), enabled: !authLoading && !!user });
+
+  const orders = (ordersQ.data ?? []) as Order[];
+  // isLoading rather than isPending — a disabled query (auth still resolving)
+  // is permanently `pending`, which would pin the skeleton on screen.
+  const loading = ordersQ.isLoading;
+  // Only the orders call can fail the page. The returns query swallows its own
+  // errors to [] — an order must still render if returns are unavailable.
+  const error = ordersQ.isError;
+
+  const returnsByOrder = useMemo(() => {
+    // Newest-first from the API — first occurrence per order_id is the
+    // most recent return/exchange request for that order.
+    const map: Record<number, ReturnRequest> = {};
+    for (const rr of (returnsQ.data ?? []) as ReturnRequest[]) {
+      if (!(rr.order_id in map)) map[rr.order_id] = rr;
     }
-  };
+    return map;
+  }, [returnsQ.data]);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
+  const load = () => { ordersQ.refetch(); returnsQ.refetch(); };
 
   if (authLoading || !user) return null;
 

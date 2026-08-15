@@ -1,10 +1,13 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, ShieldCheck, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
+import { loginSchema, type LoginValues } from '@/lib/schemas';
 import { redirectAfterLogin } from '@/lib/auth';
 import toast from 'react-hot-toast';
 import { LogoMark } from '@/components/Logo';
@@ -23,9 +26,15 @@ function LoginPageInner() {
   const isAddMode = searchParams.get('add') === '1';
 
   // ── Step 1 fields ─────────────────────────────────────────────────────────
-  const [identifier, setIdentifier] = useState('');
-  const [password,   setPassword]   = useState('');
-  const [showPass,   setShowPass]   = useState(false);
+  // RHF keeps every keystroke out of React state, which matters here because
+  // a 3D scene is rendering behind this form — typing a password should not
+  // re-render the page on each character.
+  const credentialsForm = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { identifier: '', password: '' },
+    mode: 'onSubmit',
+  });
+  const [showPass, setShowPass] = useState(false);
 
   // ── Step 2 fields ─────────────────────────────────────────────────────────
   const [otp,       setOtp]       = useState('');
@@ -43,7 +52,9 @@ function LoginPageInner() {
 
   // True once the visitor has typed anything — never yank them away mid-keystroke
   // just because a background auth refresh resolved a stale/cached session.
-  const hasStartedForm = Boolean(identifier || password || otp);
+  // RHF tracks this for us — isDirty is true the moment any field diverges
+  // from its default.
+  const hasStartedForm = credentialsForm.formState.isDirty || Boolean(otp);
 
   // Redirect if already logged in — but NOT when adding another account (?add=1)
   // Wait for auth to finish loading before redirecting (avoids flash on refresh)
@@ -74,6 +85,17 @@ function LoginPageInner() {
     setRetryIn(0);
   }, []);
 
+  /**
+   * Editing either credential clears the previous server error and cancels any
+   * scheduled auto-retry — otherwise a retry fires with the old values a
+   * moment after the customer has corrected them.
+   */
+  const resetTransientState = useCallback(() => {
+    setError('');
+    cancelPendingRetry();
+    retryCountRef.current = 0;
+  }, [cancelPendingRetry]);
+
   // ── OTP resend countdown ──────────────────────────────────────────────────
   const startResendTimer = useCallback(() => {
     setTimer(60);
@@ -87,14 +109,17 @@ function LoginPageInner() {
   }, []);
 
   // ── Step 1: verify credentials → send OTP ────────────────────────────────
-  const handleSendOtp = useCallback(async (e: React.FormEvent, isRetry = false) => {
+  // Called by RHF's handleSubmit, so the values are already validated against
+  // loginSchema by the time this runs — the manual blank checks that used to
+  // live here are now the schema's job, and their messages render per-field
+  // rather than as one banner. `isRetry` re-enters from the network-retry
+  // timer below, bypassing validation because nothing has changed.
+  const handleSendOtp = useCallback(async (isRetry = false) => {
+    const { identifier, password } = credentialsForm.getValues();
     if (!isRetry) {
-      e.preventDefault();
       retryCountRef.current = 0;   // reset counter on every fresh submit
       cancelPendingRetry();
     }
-    if (!identifier.trim()) { setError('Email or mobile number is required'); return; }
-    if (!password)           { setError('Password is required');               return; }
 
     // ── Check if account is already signed in ────────────────────────────────
     const id = identifier.trim().toLowerCase();
@@ -141,7 +166,7 @@ function LoginPageInner() {
         // Single retry after WAIT seconds
         retryTimeoutRef.current = setTimeout(() => {
           retryTimeoutRef.current = null;
-          handleSendOtp(e, true);
+          handleSendOtp(true);
         }, WAIT * 1000);
 
       } else if (!err.response) {
@@ -157,7 +182,7 @@ function LoginPageInner() {
     } finally {
       setLoading(false);
     }
-  }, [identifier, password, cancelPendingRetry, startResendTimer]);
+  }, [credentialsForm, sessions, cancelPendingRetry, startResendTimer]);
 
   // ── Completes sign-in once we have a token — shared by OTP verify & device eviction ─
   const completeSignIn = (access_token: string, user: any) => {
@@ -176,7 +201,10 @@ function LoginPageInner() {
     setLoading(true);
     setError('');
     try {
-      const res = await authAPI.verifyLoginOtp({ identifier: identifier.trim(), otp_code: otp });
+      const res = await authAPI.verifyLoginOtp({
+        identifier: credentialsForm.getValues('identifier').trim(),
+        otp_code: otp,
+      });
       completeSignIn(res.data.access_token, res.data.user);
     } catch (err: any) {
       const detail = err.response?.data?.detail;
@@ -211,6 +239,7 @@ function LoginPageInner() {
     setLoading(true);
     setError('');
     try {
+      const { identifier, password } = credentialsForm.getValues();
       await authAPI.sendLoginOtp({ identifier: identifier.trim(), password });
       setOtp('');
       startResendTimer();
@@ -315,17 +344,22 @@ function LoginPageInner() {
 
           {/* ── STEP 1: Credentials ──────────────────────────────────── */}
           {step === 'credentials' && (
-            <form onSubmit={handleSendOtp} noValidate autoComplete="on" className="space-y-5">
+            <form onSubmit={credentialsForm.handleSubmit(() => handleSendOtp())} noValidate autoComplete="on" className="space-y-5">
               <div>
                 <label className="label">Email or Mobile Number *</label>
                 <input
-                  id="identifier" name="username" type="text"
-                  value={identifier}
-                  onChange={e => { setIdentifier(e.target.value); setError(''); cancelPendingRetry(); retryCountRef.current = 0; }}
+                  id="identifier" type="text"
+                  {...credentialsForm.register('identifier', { onChange: resetTransientState })}
                   placeholder="email@example.com or 9876543210"
                   className="input-field"
                   autoComplete="username"
+                  aria-invalid={!!credentialsForm.formState.errors.identifier}
                 />
+                {credentialsForm.formState.errors.identifier && (
+                  <p className="text-xs text-red-600 mt-1.5">
+                    {credentialsForm.formState.errors.identifier.message}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -337,19 +371,24 @@ function LoginPageInner() {
                 </div>
                 <div className="relative">
                   <input
-                    id="password" name="password"
+                    id="password"
                     type={showPass ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => { setPassword(e.target.value); setError(''); cancelPendingRetry(); retryCountRef.current = 0; }}
+                    {...credentialsForm.register('password', { onChange: resetTransientState })}
                     placeholder="Enter your password"
                     className="input-field pr-12"
                     autoComplete="current-password"
+                    aria-invalid={!!credentialsForm.formState.errors.password}
                   />
                   <button type="button" onClick={() => setShowPass(v => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1">
                     {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
+                {credentialsForm.formState.errors.password && (
+                  <p className="text-xs text-red-600 mt-1.5">
+                    {credentialsForm.formState.errors.password.message}
+                  </p>
+                )}
               </div>
 
               <button

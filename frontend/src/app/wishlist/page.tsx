@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Heart, ShoppingCart, Trash2, ArrowLeft, Package } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
-import { wishlistAPI } from '@/lib/api';
+import { wishlistQuery, qk } from '@/lib/query';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
@@ -15,30 +16,42 @@ export default function WishlistPage() {
   const { addItem } = useCart();
   const router = useRouter();
 
-  const [items, setItems]     = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [addingId, setAddingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!user) { router.push('/auth/login'); return; }
-    load();
-  }, [user]);
+    if (!user) router.push('/auth/login');
+  }, [user, router]);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await wishlistAPI.getAll();
-      setItems(res.data || []);
-    } catch {
-      toast.error('Failed to load wishlist');
-    } finally {
-      setLoading(false);
-    }
+  const { data, isLoading, isError } = useQuery({
+    ...wishlistQuery(),
+    enabled: !!user,
+  });
+  const items = (data ?? []) as any[];
+  // isLoading, not isPending: a disabled query stays `pending` forever because
+  // it has no data and never will until enabled. Using isPending here rendered
+  // the skeleton permanently for a signed-out visitor instead of letting the
+  // redirect above take them to login.
+  const loading = isLoading;
+
+  useEffect(() => {
+    if (isError) toast.error('Failed to load wishlist');
+  }, [isError]);
+
+  /**
+   * Removals write straight into the cache rather than a local copy of the
+   * list. Filtering a useState array left the query cache holding the removed
+   * item, so navigating away and back brought it straight back.
+   */
+  const dropFromCache = (productId: number) => {
+    queryClient.setQueryData(qk.wishlist.list, (prev: any) =>
+      Array.isArray(prev) ? prev.filter((i: any) => i.product_id !== productId) : prev,
+    );
   };
 
   const handleRemove = async (productId: number) => {
     await toggle(productId);
-    setItems(prev => prev.filter(i => i.product_id !== productId));
+    dropFromCache(productId);
   };
 
   const handleAddToCart = async (item: any) => {
@@ -58,7 +71,7 @@ export default function WishlistPage() {
     try {
       await addItem(item.product_id, 1);
       await toggle(item.product_id);
-      setItems(prev => prev.filter(i => i.product_id !== item.product_id));
+      dropFromCache(item.product_id);
       toast.success('Moved to cart!');
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Failed to move to cart');

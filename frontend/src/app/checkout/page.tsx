@@ -10,6 +10,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { ordersAPI, addressAPI } from '@/lib/api';
 import api from '@/lib/api';
+import { shippingAddressSchema } from '@/lib/schemas';
 import toast from 'react-hot-toast';
 
 const INDIA_STATES = [
@@ -154,20 +155,35 @@ export default function CheckoutPage() {
     setAddrErrors({ ...addrErrors, [f]: '' });
   };
 
+  /**
+   * Address validation now runs through the shared Zod schema rather than a
+   * hand-written copy of the same rules.
+   *
+   * This matters more here than anywhere else in the app: shippingAddressSchema
+   * mirrors backend/schemas.py:370 field for field, including the Indian mobile
+   * pattern the server enforces. When the two drifted, the failure surfaced as
+   * a 422 *after* the customer had already been sent to Razorpay.
+   *
+   * The form's own state model is left alone deliberately. This is the payment
+   * path; swapping it to RHF's register() would touch every field on the one
+   * screen where a regression costs real money, for no validation benefit —
+   * the schema is already the single source of truth either way.
+   */
   const validateAddr = (): boolean => {
+    const result = shippingAddressSchema.safeParse(addr);
+    if (result.success) {
+      setAddrErrors({});
+      return true;
+    }
     const e: Errors = {};
-    if (!addr.full_name.trim())      e.full_name     = 'Full name is required';
-    if (!addr.phone.trim())          e.phone         = 'Mobile number is required';
-    else if (!/^(\+91|91|0)?[6-9]\d{9}$/.test(addr.phone.replace(/\s|-/g,'')))
-                                     e.phone         = 'Enter a valid 10-digit Indian mobile number';
-    if (!addr.address_line1.trim())  e.address_line1 = 'Street address is required';
-    if (!addr.city.trim())           e.city          = 'City is required';
-    if (!addr.state)                 e.state         = 'State is required';
-    if (!addr.pincode.trim())        e.pincode       = 'Pincode is required';
-    else if (!/^\d{6}$/.test(addr.pincode.trim()))
-                                     e.pincode       = 'Pincode must be exactly 6 digits';
+    for (const issue of result.error.issues) {
+      const field = issue.path[0] as keyof Errors;
+      // First issue per field wins — showing a stack of messages under one
+      // input is noise when only the first is actionable.
+      if (field && !e[field]) e[field] = issue.message;
+    }
     setAddrErrors(e);
-    return Object.keys(e).length === 0;
+    return false;
   };
 
   const handleAddrNext = () => {
