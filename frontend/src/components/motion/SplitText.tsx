@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type ElementType } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 /**
  * Per-word headline reveal.
@@ -29,7 +29,15 @@ export default function SplitText({
   duration = 620,
 }: {
   text: string;
-  as?: ElementType;
+  /**
+   * Concrete union rather than ElementType. Under React 19, a generic
+   * ElementType makes TS infer the rendered tag's props as `never`, so every
+   * attribute — ref, className, aria-label — becomes a type error. The same
+   * inference already broke the account and support pages during the React 19
+   * upgrade; a narrow union is the fix that keeps the component polymorphic
+   * without the inference collapsing.
+   */
+  as?: 'span' | 'div' | 'p' | 'h1' | 'h2' | 'h3';
   className?: string;
   delay?: number;
   /** Gap between consecutive words, ms. */
@@ -63,7 +71,11 @@ export default function SplitText({
   }, []);
 
   return (
-    <Tag ref={ref} className={className} aria-label={text}>
+    <Tag
+      ref={ref as React.Ref<HTMLHeadingElement & HTMLParagraphElement & HTMLSpanElement & HTMLDivElement>}
+      className={className}
+      aria-label={text}
+    >
       {words.map((word, i) => (
         <span
           key={`${word}-${i}`}
