@@ -4,8 +4,9 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { LoginPromptProvider } from '@/context/LoginPromptContext';
 import { WishlistProvider } from '@/context/WishlistContext';
-import NavbarWrapper from '@/components/NavbarWrapper';
+import OverlayNav from '@/components/nav/OverlayNav';
 import FooterWrapper from '@/components/FooterWrapper';
+import { fontVariables } from '@/lib/fonts';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
 import QueryProvider from '@/components/QueryProvider';
@@ -54,13 +55,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <head>
         <link rel="icon" type="image/jpeg" href="/icon-mark.jpg?v=4" />
         <link rel="shortcut icon" href="/icon-mark.jpg?v=4" />
         <link rel="apple-touch-icon" href="/icon-mark.jpg?v=4" />
       </head>
-      <body className="bg-maroon-100 min-h-screen flex flex-col">
+      {/* Cinematic ground. Never pure black — print black is lifted and cool,
+          and the film LUT grades toward that same toe. */}
+      <body className="bg-night min-h-screen flex flex-col font-sans antialiased">
         {/* The single persistent 3D canvas. Sits outside the providers and
             outside PageTransition so it is never remounted by a route change
             — the GL context, compiled shaders and uploaded textures survive
@@ -79,8 +82,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   content. Everything the customer actually reads or clicks
                   stays real HTML, above the canvas. */}
               <div className="relative z-10 flex flex-col flex-1">
-                <NavbarWrapper />
-                <main className="flex-1"><PageTransition>{children}</PageTransition></main>
+                <OverlayNav />
+                <main id="main" className="flex-1"><PageTransition>{children}</PageTransition></main>
                 <FooterWrapper />
               </div>
               {/* Cinematic overlays. Both sit above the canvas and below the

@@ -65,7 +65,11 @@ const dock = (
  */
 const DOCKS: Record<SceneId, Dock> = {
   //                                                    parallax ease  dolly crane  pan
-  entrance: dock(0,    0,    8,     0,  0,   0,          0.55, 0.020,  2.6,  1.1,  0.7),
+  // The homepage is a seven-movement descent, so the entrance dock carries the
+  // longest scroll travel on the site: the camera cranes DOWN (negative rise)
+  // and pushes in past the hanging panels as the page is read, arriving close
+  // on the staged photograph by the time the heirloom section is in view.
+  entrance: dock(0,    1.1,  8.6,   0,  0,   -1.5,       0.45, 0.018,  3.4, -2.2,  0.5),
   gallery:  dock(3.2,  0.4,  7.2,   0.6, 0,  -0.5,       0.42, 0.022,  1.4,  0.5,  0.0),
   chamber:  dock(0,   -0.2,  4.6,   0, -0.1, -1.2,       0.30, 0.026,  1.1,  0.7,  0.4),
   vault:    dock(-2.6, -1.1, 6.6,  -0.4,-0.5,-0.8,       0.34, 0.024,  0.9,  0.3,  0.0),

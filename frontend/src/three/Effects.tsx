@@ -49,12 +49,21 @@ const STAGE: Record<string, StageTuning> = {
   // Homepage: the key sits high and behind the hanging banners so shafts read
   // through the cloth and around its edges. Focus is shallow and sits on the
   // nearest banner, throwing the deeper ones off.
+  /**
+   * Homepage. The source sits high and BEHIND the garment (which stands at
+   * x≈3, z≈-1.6), so the shafts spill around its silhouette and through the
+   * backdrop cloth rather than washing the frame from the front. A god-ray
+   * source in front of the subject produces glare, not shafts — the effect is
+   * entirely about what occludes it.
+   *
+   * Focus is set on the garment plane and the backdrop falls away behind it.
+   */
   entrance: {
-    focusDistance: 0.010, focalLength: 0.032, bokehScale: 4.5,
-    bloomThreshold: 1.02, bloomIntensity: 0.62,
-    sun: [-2.6, 4.2, -7.5], sunSize: 0.9,
-    raysDensity: 0.94, raysDecay: 0.92,
-    vignette: 0.46,
+    focusDistance: 0.013, focalLength: 0.030, bokehScale: 4.0,
+    bloomThreshold: 1.00, bloomIntensity: 0.55,
+    sun: [2.2, 4.3, -6.8], sunSize: 1.0,
+    raysDensity: 0.92, raysDecay: 0.93,
+    vignette: 0.44,
   },
   // Product detail: the tightest focus on the site — this is the shot that has
   // to sell the fabric, so the drape is sharp and everything else goes.
@@ -106,7 +115,7 @@ function KeyLight({ tuning, onReady }: { tuning: StageTuning; onReady: (m: Mesh 
  * conditional, and it is a 130KB fetch that the browser caches, so the cost of
  * loading it unused is far lower than the cost of a hook-order violation.
  */
-function Composer({ budget, tuning, sun }: { budget: TierBudget; tuning: StageTuning; sun: Mesh | null }) {
+function Composer({ budget, tuning, sun, scene }: { budget: TierBudget; tuning: StageTuning; sun: Mesh | null; scene: SceneId }) {
   const caOffset = useMemo(() => new Vector2(0.0005, 0.0003), []);
   // Authored print emulation: lifted cool toe, filmic S-curve, warm shoulder,
   // chroma falloff at both extremes.
@@ -119,7 +128,17 @@ function Composer({ budget, tuning, sun }: { budget: TierBudget; tuning: StageTu
             cheap pass and the only anti-aliasing available at this point. */}
         <SMAA />
 
-        {budget.ssao ? (
+        {/**
+          * Ambient occlusion only where there is occlusion to compute.
+          *
+          * The entrance stages flat planes at separated depths — there are no
+          * contact points, so AO contributes nothing visible while costing a
+          * normal pass plus a full-screen resolve. Measured on an Intel iGPU it
+          * was a large part of what dragged the hero to 10fps and made the
+          * governor suspend the entire chain. The chamber has a drape resting
+          * against physics bodies, which is where it earns its cost.
+          */}
+        {budget.ssao && scene === 'chamber' ? (
           <N8AO aoRadius={1.6} intensity={2.0} distanceFalloff={0.8} halfRes />
         ) : <></>}
 
@@ -131,7 +150,11 @@ function Composer({ budget, tuning, sun }: { budget: TierBudget; tuning: StageTu
             decay={tuning.raysDecay}
             weight={0.42}
             exposure={0.28}
-            samples={48}
+            // 48 samples is film-quality and unaffordable on an integrated
+            // GPU. At 24 with blur on, the banding the extra samples were
+            // suppressing is hidden by the blur anyway — same image, half the
+            // ray-march.
+            samples={24}
             blur
             kernelSize={KernelSize.SMALL}
           />
@@ -195,7 +218,7 @@ export default function Effects({
       {/* Falls back to an ungraded frame for the moment the LUT is in flight,
           rather than blanking the scene. */}
       <Suspense fallback={null}>
-        <Composer budget={budget} tuning={tuning} sun={sun} />
+        <Composer budget={budget} tuning={tuning} sun={sun} scene={scene} />
       </Suspense>
     </>
   );

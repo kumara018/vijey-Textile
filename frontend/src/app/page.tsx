@@ -1,460 +1,238 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Star, Truck, Shield, RotateCcw, Headphones, ChevronLeft, ChevronRight } from 'lucide-react';
-import { productsAPI } from '@/lib/api';
-import { Product } from '@/types';
-import ProductCard from '@/components/ProductCard';
-import Hero3D from '@/components/Hero3D';
+import { useQuery } from '@tanstack/react-query';
+import { productListQuery } from '@/lib/query';
+import { useHeroStore } from '@/store/useHeroStore';
+import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
+import { HERO_FIXTURE } from '@/lib/heroFixture';
+import type { Product } from '@/types';
+import Reveal from '@/components/home/Reveal';
+import OccasionBand from '@/components/home/OccasionBand';
+import HeirloomPlate from '@/components/home/HeirloomPlate';
+import MeasureRule from '@/components/home/MeasureRule';
+import KeptStagger from '@/components/home/KeptStagger';
 
-const OFFERS = [
-  {
-    emoji: '👶',
-    tag: 'Adorable Picks',
-    title: 'Baby Frocks',
-    desc: 'Soft, gentle & cute baby frocks in sizes 12 to 24 — perfect for little ones.',
-    btn: 'Shop Baby Frocks',
-    href: '/products?category=Baby+Frocks',
-    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
-    accent: '🌸',
-  },
-  {
-    emoji: '👘',
-    tag: 'Traditional Elegance',
-    title: 'Chudithar Sets',
-    desc: 'Premium cotton & silk chudithar sets — classic style, modern comfort. Sizes 12–40.',
-    btn: 'Shop Chudithar',
-    href: '/products?category=Chudithar',
-    bg: 'from-gold-50 via-maroon-100 to-gold-50',
-    accent: '🪷',
-  },
-  {
-    emoji: '👗',
-    tag: 'New Arrival',
-    title: 'Frocks Collection',
-    desc: 'Classic cotton frocks, umbrella frocks & lace frocks for every little girl.',
-    btn: 'Shop Frocks',
-    href: '/products?category=Frocks',
-    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
-    accent: '💐',
-  },
-  {
-    emoji: '👒',
-    tag: 'Trending Now',
-    title: 'Western Dresses',
-    desc: 'Stylish A-line dresses, denim pinafores & shirt dresses for modern girls.',
-    btn: 'Shop Western',
-    href: '/products?category=Western+Dresses',
-    bg: 'from-gold-50 via-maroon-100 to-gold-50',
-    accent: '⭐',
-  },
-  {
-    emoji: '💃',
-    tag: 'Festival Special',
-    title: 'Girls Lehenga',
-    desc: 'Stunning silk & net lehengas for weddings, Diwali & all festive occasions.',
-    btn: 'Shop Lehenga',
-    href: '/products?category=Lehenga',
-    bg: 'from-maroon-100 via-gold-50 to-maroon-100',
-    accent: '🌺',
-  },
-  {
-    emoji: '✨',
-    tag: 'Party Ready',
-    title: 'Party Wear',
-    desc: 'Sequin gowns, tutu dresses & velvet frocks — every girl deserves to shine!',
-    btn: 'Shop Party Wear',
-    href: '/products?category=Party+Wear',
-    bg: 'from-gold-50 via-maroon-100 to-gold-50',
-    accent: '🎉',
-  },
-];
+/**
+ * The Trousseau — Vijey Textile homepage.
+ *
+ * A ceremonial descent in seven movements, not a scannable page. The previous
+ * sequence (hero / trust badges / category grid / featured / promo / arrivals)
+ * is gone entirely: there is no badge row, no uniform category grid, and no
+ * promotional banner. Those are conversion furniture from a different kind of
+ * shop; here the structure itself is the argument.
+ *
+ * The canvas behind this page is staging the hero photograph in 3D. The DOM's
+ * only job is typography and whitespace — everything cinematic happens in the
+ * scene, everything editorial happens here, and the two never fight because
+ * they occupy different layers.
+ */
 
-const CATEGORIES = [
-  { name: 'Baby Frocks',      emoji: '👶', desc: 'Soft & Cute Baby Wear',   gradient: 'from-maroon-50 to-maroon-100',   border: 'border-maroon-200' },
-  { name: 'Chudithar',        emoji: '👘', desc: 'Traditional Elegance',    gradient: 'from-gold-50 to-gold-100',       border: 'border-gold-200' },
-  { name: 'Frocks',           emoji: '👗', desc: 'Classic & Printed',       gradient: 'from-maroon-100 to-gold-50',     border: 'border-maroon-300' },
-  { name: 'Western Dresses',  emoji: '👒', desc: 'Modern & Trendy',         gradient: 'from-gold-50 to-gold-100',       border: 'border-gold-200' },
-  { name: 'Lehenga',          emoji: '💃', desc: 'Festive & Bridal',        gradient: 'from-maroon-50 to-maroon-100',   border: 'border-maroon-200' },
-  { name: 'Party Wear',       emoji: '✨', desc: 'Glam & Celebrations',     gradient: 'from-maroon-100 to-gold-50',     border: 'border-maroon-300' },
-];
-
-const FEATURES = [
-  { icon: Truck,      title: 'Fast Delivery',       desc: 'Delivered to your doorstep', href: '/shipping'  },
-  { icon: Shield,     title: '100% Authentic',   desc: 'Genuine quality products',    href: '/authentic' },
-  { icon: RotateCcw,  title: 'Easy Exchange',    desc: '7-day exchange & replacement', href: '/support#returns'   },
-  { icon: Headphones, title: 'Customer Support', desc: 'Mon–Sat, 9AM to 8PM',         href: '/support'   },
-];
-
-// No static fallback — only real verified-buyer reviews from the database
+const unwrap = (raw: unknown): Product[] =>
+  Array.isArray(raw)
+    ? raw
+    : ((raw as { products?: Product[]; items?: Product[]; data?: Product[] })?.products ??
+       (raw as { items?: Product[] })?.items ??
+       (raw as { data?: Product[] })?.data ??
+       []);
 
 export default function HomePage() {
-  const [featured,    setFeatured]    = useState<Product[]>([]);
-  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
-  const [reviews,     setReviews]     = useState<any[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [offerIdx,    setOfferIdx]    = useState(0);
-  const offerTimer = useRef<any>(null);
+  const setHeroImage = useHeroStore((s) => s.setHeroImage);
 
-  // Auto-rotate offers every 4.2s (slow, unhurried pace)
-  useEffect(() => {
-    offerTimer.current = setInterval(() => {
-      setOfferIdx(i => (i + 1) % OFFERS.length);
-    }, 4200);
-    return () => clearInterval(offerTimer.current);
-  }, []);
+  // Featured first — the hero photograph should be a piece the shop has chosen
+  // to lead with, not whatever happens to be newest.
+  const featured = useQuery(productListQuery({ featured: true, limit: 8 }));
+  const recent = useQuery(productListQuery({ sort_by: 'created_at', sort_order: 'desc', limit: 7 }));
 
-  const prevOffer = () => {
-    clearInterval(offerTimer.current);
-    setOfferIdx(i => (i - 1 + OFFERS.length) % OFFERS.length);
-    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 4200);
-  };
-  const nextOffer = () => {
-    clearInterval(offerTimer.current);
-    setOfferIdx(i => (i + 1) % OFFERS.length);
-    offerTimer.current = setInterval(() => setOfferIdx(i => (i + 1) % OFFERS.length), 4200);
-  };
+  const featuredItems = useMemo(() => unwrap(featured.data), [featured.data]);
+  const recentItems = useMemo(() => unwrap(recent.data), [recent.data]);
+
+  // The lead piece: a featured item if one exists, otherwise the newest. If
+  // neither resolves the scene stages the material alone, which is a composed
+  // state rather than a broken one.
+  // A live product always wins. The fixture only fills in when the catalogue
+  // returns nothing, so the hero is never an empty state.
+  const hero = featuredItems[0] ?? recentItems[0] ?? (HERO_FIXTURE as unknown as Product);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [featRes, newRes, revRes] = await Promise.all([
-          productsAPI.getAll({ featured: true, limit: 8 }),
-          productsAPI.getAll({ sort_by: 'created_at', sort_order: 'desc', limit: 8 }),
-          productsAPI.getRecentReviews(6),
-        ]);
-        setFeatured(featRes.data);
-        setNewArrivals(newRes.data);
-        if (Array.isArray(revRes.data)) setReviews(revRes.data);
-      } catch {}
-      finally { setLoading(false); }
-    };
-    load();
-  }, []);
+    const img = hero?.images?.[0] ?? null;
+    setHeroImage(img ?? null);
+    return () => setHeroImage(null);
+  }, [hero, setHeroImage]);
 
   return (
-    <div>
-      {/* Hero — "Heirloom Locket": full-bleed diagonal split, mirrored from Ammalu Tex's
-          layout (locket left / copy right, opposite angle) so both sites read as siblings
-          without either one carrying dead space on the sides. */}
-      <section className="relative min-h-[86vh] flex flex-col overflow-hidden border-b border-maroon-200">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(100deg, #f6f1f3 0%, #f6f1f3 46%, rgba(197,128,89,0.18) 46.4%, #fcfbfb 100%)',
-          }}
-        />
-        {/* Divider — anchored to the 3D box's own right edge (not a guessed
-            percentage) so it can never drift into the headline regardless of
-            viewport width. Straight, not rotated — a rotated line over this
-            height drifts tens of px per degree and cut through the text at
-            some widths. md+ only, once the layout actually splits left/right. */}
-        <div
-          className="hidden md:block absolute w-[2px]"
-          style={{
-            left: 'calc(6% + min(40vw, 420px) + 40px)',
-            top: '8%', bottom: '8%',
-            background: 'linear-gradient(180deg, transparent, #c58059 30%, #c58059 70%, transparent)',
-            boxShadow: '0 0 24px 1px rgba(197,128,89,0.5)',
-          }}
-        />
+    // No background here on purpose. The body paints the ground; anything
+    // opaque on this wrapper covers the canvas sitting behind it at z-0, and
+    // the staged cloth disappears entirely while still costing every draw call.
+    <div className="text-paper-muted">
+      {/**
+        * Copy scrim.
+        *
+        * The scene is live and its luminance changes as the camera moves and
+        * the sheen band crosses the weave, so no fixed text colour can be
+        * guaranteed legible against it. This is the standard solution for
+        * titles over footage: a gradient matte that keeps the copy column
+        * dark while leaving the right side of the frame — where the subject
+        * is staged — completely clear.
+        *
+        * z-0 *within this page's stacking context*, with the content raised
+        * to z-10 below. The whole page already sits above the canvas, so the
+        * scrim only has to beat the canvas, not the copy. Giving it a high
+        * z-index instead put it over the headline and greyed the text out —
+        * the same stacking-context trap the letterbox hit one level up.
+        */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0"
+        style={{
+          background:
+            'linear-gradient(96deg, rgba(20,18,16,0.97) 0%, rgba(20,18,16,0.93) 30%, rgba(20,18,16,0.62) 46%, rgba(20,18,16,0.18) 60%, rgba(20,18,16,0) 72%)',
+        }}
+      />
 
-        <div className="relative z-10 pt-16 md:pt-24 px-6 md:px-12 flex justify-center md:justify-end">
-          <p className="text-[12px] font-bold tracking-[0.16em] uppercase text-maroon-500 max-w-[240px] text-center md:text-right">
-            Baby Frocks · Chudithar · Frocks · Lehenga
-          </p>
-        </div>
+      {/* Everything the visitor reads or clicks sits above the scrim. */}
+      <div className="relative z-10">
 
-        {/* Real 3D hero moment — normal flow + centered on mobile (avoids overlapping the
-            copy below), absolute + mirrored-left on desktop to match Ammalu's fullness */}
-        <div className="relative md:absolute md:z-[2] md:top-[14%] md:left-[6%] w-full md:w-[min(40vw,420px)] h-[280px] md:h-[56vh] mt-6 md:mt-0 px-10 md:px-0 mx-auto md:mx-0">
-          <Hero3D />
-        </div>
+      {/* ═══ I. The opening plate ══════════════════════════════════════
+          One line, at the largest size on the site, over the staged
+          photograph. Nothing else competes for the frame. */}
+      <section className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-[14vh] pt-40 sm:px-10">
+        <div className="mx-auto w-full max-w-[112rem]">
+          <Reveal>
+            <p className="mb-8 text-rule uppercase text-brass-bright">
+              Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
+            </p>
+          </Reveal>
 
-        <div className="relative z-10 px-6 md:px-12 pb-16 md:pb-20 mt-8 md:mt-auto flex justify-center md:justify-end">
-          <div className="hero-copy text-center md:text-left">
-            <motion.h1
-              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
-              className="font-display font-black leading-[0.95] tracking-tight text-maroon-900 mb-6"
-              style={{ fontSize: 'clamp(2.4rem, 7.5vw, 5.5rem)' }}
-            >
-              Heirloom pieces,<br />
-              <span className="text-gold-500">worn once, remembered always.</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-              className="max-w-md mx-auto md:mx-0 text-maroon-500 font-medium mb-8 leading-relaxed"
-            >
-              Every stitch reviewed by hand before it leaves Erode — a capsule built for the moments you&apos;ll photograph for years.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.2 }}
-              className="flex flex-wrap gap-4 justify-center md:justify-start"
-            >
-              <Link href="/products" className="btn-primary inline-flex items-center gap-2">
-                Shop Now <ArrowRight size={18} />
+          <Reveal delay={120}>
+            <h1 className="max-w-[min(15ch,50vw)] font-display text-plate font-light text-paper">
+              Heirloom pieces, worn once, remembered always
+            </h1>
+          </Reveal>
+
+          <Reveal delay={260}>
+            <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-5">
+              <Link
+                href="/products"
+                className="group inline-flex items-baseline gap-4 border-b border-brass/70 pb-2 text-caption uppercase text-paper transition-colors duration-500 hover:border-brass-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                See every piece
+                <span aria-hidden="true" className="transition-transform duration-500 group-hover:translate-x-1.5">→</span>
               </Link>
-              <Link href="/products?featured=true" className="inline-flex items-center gap-2 font-semibold py-2.5 px-6 rounded-lg border-2 border-maroon-800 text-maroon-900 hover:bg-maroon-100 transition-all duration-200 active:scale-95">
-                View Featured
-              </Link>
-            </motion.div>
-          </div>
+              {hero && (
+                <Link
+                  href={`/products/${hero.id}`}
+                  className="text-caption uppercase text-paper-faint transition-colors duration-500 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                >
+                  In frame: {hero.name}
+                </Link>
+              )}
+            </div>
+          </Reveal>
         </div>
       </section>
-      <style jsx>{`
-        .hero-copy { max-width: 36rem; }
-        @media (min-width: 768px) {
-          .hero-copy {
-            max-width: min(36rem, calc(94vw - 130px - min(40vw, 420px)));
-          }
-        }
-      `}</style>
 
-      {/* Features bar — each tile is a clickable link */}
-      <section className="bg-maroon-100 border-y border-maroon-200">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-maroon-200">
-            {FEATURES.map(({ icon: Icon, title, desc, href }) => (
-              <Link
-                key={title}
-                href={href}
-                className="bg-maroon-50 flex items-center gap-3 px-5 py-5 hover:bg-maroon-100 transition-colors group cursor-pointer"
-              >
-                <div className="p-2.5 bg-maroon-100 rounded-xl flex-shrink-0 group-hover:bg-maroon-200 transition-colors">
-                  <Icon size={20} className="text-maroon-700" />
+      {/* ═══ II. The Occasion ══════════════════════════════════════════
+          Three full-bleed alternating bands. This replaces the category
+          grid: a family does not shop by taxonomy, they shop by the day
+          that is coming. */}
+      <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 py-[12vh]">
+        <div className="mx-auto mb-[9vh] w-full max-w-[112rem] px-6 sm:px-10">
+          <Reveal>
+            <h2 id="occasion-heading" className="font-display text-chapter font-light text-paper">
+              The occasion
+            </h2>
+          </Reveal>
+        </div>
+
+        <OccasionBand
+          index="01"
+          title="The naming day"
+          note="First celebrations"
+          copy="The first photograph anyone will keep. Soft-finished cottons and gentle silks, cut for a child who will be passed between every pair of arms in the room."
+          category="Baby Frocks"
+          align="left"
+        />
+        <OccasionBand
+          index="02"
+          title="The wedding"
+          note="The heirloom piece"
+          copy="Weight, drape and a hem that holds its line through a long evening. These are the pieces that come out of the cupboard again a decade later, for a younger cousin."
+          category="Lehenga"
+          align="right"
+        />
+        <OccasionBand
+          index="03"
+          title="The festival"
+          note="For the photographs"
+          copy="Colour that survives a camera flash and a courtyard full of lamps. Made to be seen across a crowded room, and to still look considered up close."
+          category="Party Wear"
+          align="left"
+        />
+      </section>
+
+      {/* ═══ III. The heirloom in frame ════════════════════════════════
+          One piece, one viewport. The camera cranes down it as you
+          scroll — the scene handles that; this is the type over it. */}
+      <HeirloomPlate product={hero} loading={featured.isPending && recent.isPending} />
+
+      {/* ═══ IV. The measure ═══════════════════════════════════════════
+          Sizes 12–40 as an actual rule. Replaces a trust-badge row with
+          the one fact that genuinely reassures a parent buying online. */}
+      <MeasureRule />
+
+      {/* ═══ V. The makers ═════════════════════════════════════════════ */}
+      <section aria-labelledby="makers-heading" className="border-t border-ink-edge/60 py-[12vh]">
+        <div className="mx-auto grid w-full max-w-[112rem] gap-x-16 gap-y-10 px-6 sm:px-10 lg:grid-cols-12">
+          <div className="lg:col-span-5">
+            <Reveal>
+              <h2 id="makers-heading" className="font-display text-chapter font-light text-paper">
+                The makers
+              </h2>
+            </Reveal>
+          </div>
+          <div className="lg:col-span-6 lg:col-start-7">
+            <Reveal delay={120}>
+              <p className="max-w-[46ch] text-lede text-paper-muted">
+                We are a family shop on the ground floor at Texvalley, Gangapuram. Everything
+                here is chosen by hand, checked by hand, and packed by someone who will answer
+                the phone if it is wrong.
+              </p>
+            </Reveal>
+            <Reveal delay={200}>
+              <dl className="mt-12 grid gap-x-10 gap-y-7 sm:grid-cols-2">
+                <div>
+                  <dt className="text-rule uppercase text-paper-faint">Find us</dt>
+                  <dd className="mt-2.5 text-white/75">
+                    Shop No 131, Ground Floor<br />Texvalley, Gangapuram, Erode
+                  </dd>
                 </div>
                 <div>
-                  <p className="font-bold text-sm text-maroon-900 group-hover:underline">{title}</p>
-                  <p className="text-xs text-maroon-600 mt-0.5">{desc}</p>
+                  <dt className="text-rule uppercase text-paper-faint">Speak to us</dt>
+                  <dd className="mt-2.5 space-y-1">
+                    <a href={`tel:${STORE.phone1}`} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
+                      {STORE.phone1}
+                    </a>
+                    <a href={MAIL_URL} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
+                      {STORE.email}
+                    </a>
+                    <a href={MAIL_URL2} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
+                      {STORE.email2}
+                    </a>
+                  </dd>
                 </div>
-              </Link>
-            ))}
+              </dl>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="max-w-7xl mx-auto px-4 py-12">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <p className="text-gold-600 font-medium text-sm mb-1 uppercase tracking-wider">Browse by</p>
-            <h2 className="section-title">Shop by Category</h2>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {CATEGORIES.map(({ name, emoji, desc, gradient, border }, i) => (
-            <motion.div
-              key={name}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.4, delay: i * 0.05, ease: 'easeOut' }}
-              whileHover={{ y: -6, scale: 1.02 }}
-            >
-              <Link
-                href={`/products?category=${encodeURIComponent(name)}`}
-                className={`group card bg-gradient-to-br ${gradient} border-2 ${border} hover:shadow-lg transition-shadow duration-300 p-6 flex flex-col items-center text-center h-full`}
-              >
-                <span className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">{emoji}</span>
-                <h3 className="font-bold text-maroon-900 text-sm leading-tight">{name}</h3>
-                <p className="text-xs text-maroon-600 mt-1">{desc}</p>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+      {/* ═══ VI. Recently kept ═════════════════════════════════════════
+          New arrivals as an offset stagger. Never a uniform row. */}
+      <KeptStagger items={recentItems} loading={recent.isPending} />
 
-      {/* Featured Products */}
-      <section id="featured-products" className="bg-maroon-50 py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <p className="text-gold-600 font-medium text-sm mb-1 uppercase tracking-wider">Hand-picked</p>
-              <h2 className="section-title">Featured Products</h2>
-            </div>
-            <Link href="/products?featured=true" className="text-maroon-800 hover:text-maroon-600 font-semibold text-sm flex items-center gap-1">
-              View All <ArrowRight size={16} />
-            </Link>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {Array(8).fill(0).map((_, i) => (
-                <div key={i} className="card animate-pulse">
-                  <div className="bg-gray-200 aspect-[3/4]" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-3 bg-gray-200 rounded w-1/3" />
-                    <div className="h-4 bg-gray-200 rounded w-2/3" />
-                    <div className="h-8 bg-gray-200 rounded" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : featured.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {featured.map((p) => <ProductCard key={p.id} product={p} />)}
-            </div>
-          ) : (
-            <div className="text-center py-14">
-              <p className="text-4xl mb-3">⭐</p>
-              <p className="text-gray-500 font-medium">No featured products yet.</p>
-              <p className="text-gray-400 text-sm mt-1">Check back soon — we&apos;re hand-picking the best for you!</p>
-              <Link href="/products" className="inline-flex items-center gap-1 mt-4 text-maroon-700 hover:text-maroon-900 font-semibold text-sm">
-                Browse all products <ArrowRight size={14} />
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Rotating Offer Banner */}
-      <section className="max-w-7xl mx-auto px-4 py-10">
-        <div
-          className={`bg-gradient-to-r ${OFFERS[offerIdx].bg} border border-maroon-200 rounded-2xl p-8 md:p-12 text-maroon-900 text-center relative overflow-hidden transition-colors duration-700`}
-          style={{ perspective: 1400 }}
-        >
-          {/* Big background emoji */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={`accent-${offerIdx}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.06 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="absolute inset-0 text-[180px] flex items-center justify-center select-none pointer-events-none"
-            >
-              {OFFERS[offerIdx].accent}
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Prev / Next arrows */}
-          <button
-            onClick={prevOffer}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-maroon-800 flex items-center justify-center transition-colors z-10"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <button
-            onClick={nextOffer}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/70 hover:bg-white text-maroon-800 flex items-center justify-center transition-colors z-10"
-          >
-            <ChevronRight size={20} />
-          </button>
-
-          {/* Content — smooth fade + subtle 3D tilt on each rotation instead
-              of an instant swap */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={offerIdx}
-              initial={{ opacity: 0, rotateX: -8, y: 10 }}
-              animate={{ opacity: 1, rotateX: 0, y: 0 }}
-              exit={{ opacity: 0, rotateX: 8, y: -10 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformStyle: 'preserve-3d' }}
-              className="relative z-10"
-            >
-              <span className="inline-block bg-white/70 border border-gold-300 text-gold-700 text-xs font-semibold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">
-                {OFFERS[offerIdx].tag}
-              </span>
-              <h2 className="text-2xl md:text-4xl font-display font-black mb-3 text-maroon-900">
-                {OFFERS[offerIdx].emoji} {OFFERS[offerIdx].title}
-              </h2>
-              <p className="text-maroon-600 mb-6 max-w-xl mx-auto text-sm md:text-base">
-                {OFFERS[offerIdx].desc}
-              </p>
-              <Link href={OFFERS[offerIdx].href} className="btn-primary inline-flex items-center gap-2">
-                {OFFERS[offerIdx].btn} <ArrowRight size={18} />
-              </Link>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Dot indicators */}
-          <div className="flex justify-center gap-2 mt-6 relative z-10">
-            {OFFERS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { clearInterval(offerTimer.current); setOfferIdx(i); offerTimer.current = setInterval(() => setOfferIdx(j => (j + 1) % OFFERS.length), 4200); }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${i === offerIdx ? 'w-6 bg-gold-500' : 'w-1.5 bg-maroon-300'}`}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* New Arrivals */}
-      <section className="max-w-7xl mx-auto px-4 pb-12">
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <p className="text-gold-600 font-medium text-sm mb-1 uppercase tracking-wider">Just In</p>
-            <h2 className="section-title">New Arrivals</h2>
-          </div>
-          <Link href="/products?sort_by=created_at&sort_order=desc" className="text-maroon-800 hover:text-maroon-600 font-semibold text-sm flex items-center gap-1">
-            View All <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array(8).fill(0).map((_, i) => (
-              <div key={i} className="card animate-pulse">
-                <div className="bg-gray-200 aspect-[3/4]" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-1/3" />
-                  <div className="h-4 bg-gray-200 rounded w-2/3" />
-                  <div className="h-8 bg-gray-200 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : newArrivals.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {newArrivals.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
-        ) : (
-          <p className="text-center text-gray-500 py-12">Products coming soon.</p>
-        )}
-      </section>
-
-      {/* Customer Reviews — real verified-buyer reviews from DB only */}
-      {reviews.length > 0 && (
-        <section className="bg-maroon-50 py-12">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="section-title text-center mb-2">What Our Customers Say</h2>
-            <p className="text-center text-sm text-gray-500 mb-8">Genuine reviews from verified buyers ✓</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {reviews.slice(0, 3).map((rev) => (
-                <div key={rev.id} className="card p-6 flex flex-col">
-                  {/* Stars */}
-                  <div className="flex gap-0.5 mb-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} size={15}
-                        className={i < rev.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'} />
-                    ))}
-                  </div>
-                  {/* Review text */}
-                  <p className="text-gray-700 text-sm leading-relaxed mb-4 flex-1">
-                    &ldquo;{rev.comment}&rdquo;
-                  </p>
-                  {/* Reviewer + product */}
-                  <div className="border-t border-maroon-200 pt-3 flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-maroon-800 text-sm">{rev.reviewer}</p>
-                      <p className="text-xs text-green-600 font-medium">✓ Verified Buyer</p>
-                    </div>
-                    <Link
-                      href={`/products/${rev.product_id}`}
-                      className="text-xs text-maroon-600 hover:underline truncate max-w-[120px]"
-                    >
-                      {rev.product_name}
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+      </div>
     </div>
   );
 }

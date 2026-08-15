@@ -54,12 +54,27 @@ export default function Letterbox() {
 
   if (!enabled) return null;
 
-  // 21:9 of the viewport width is the target frame height; the remainder is
-  // split between the two bars.
-  const bar = 'max(0px, calc((100vh - (100vw / 2.3333)) / 2))';
+  /**
+   * 21:9 of the viewport width is the target frame height, with the remainder
+   * split between the bars — but capped at 9vh each.
+   *
+   * Uncapped, a 1600x1000 window produces 157px bars, which is 31% of the
+   * viewport surrendered to decoration and pushes the opening line off centre.
+   * A matte should trim the frame, not halve it.
+   */
+  const bar = 'min(9vh, max(0px, calc((100vh - (100vw / 2.3333)) / 2)))';
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-20">
+    /**
+     * z-[5]: above the canvas (z-0), below all interface (z-10 and up).
+     *
+     * At z-20 this sat above the content wrapper, and because that wrapper is
+     * `relative z-10` — a stacking context — the header's z-40 was scoped
+     * inside it and lost. The bars covered the navigation entirely until the
+     * page was scrolled. A matte frames the picture; it must never cover the
+     * chrome.
+     */
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-[5]">
       <div
         className="absolute inset-x-0 top-0 bg-black motion-safe:transition-[height,opacity] motion-safe:duration-700 motion-safe:ease-[cubic-bezier(0.22,0.61,0.24,1)]"
         style={{ height: bar, opacity: visible ? 1 : 0 }}

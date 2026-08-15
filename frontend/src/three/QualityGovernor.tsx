@@ -42,18 +42,39 @@ const WINDOW_MS = 2000;
 /** Consecutive bad windows required. Guards against a transient stall. */
 const STRIKES = 2;
 /**
- * Shader compilation, texture upload and route transition all land in the
- * first seconds and are not representative of steady state.
+ * Shader compilation, texture upload, font swap and the first route transition
+ * all land early and are not representative of steady state.
+ *
+ * Measured on a real GPU: startup jank alone read as 8fps and permanently
+ * suspended the whole postprocessing chain on hardware that then held 60fps
+ * for the rest of the session. The governor exists to protect weak devices,
+ * not to punish every device for its first two seconds.
  */
-const WARMUP_MS = 3000;
+const WARMUP_MS = 6000;
 
 export default function QualityGovernor() {
-  const frames = useRef(0);
+  const deltas = useRef<number[]>([]);
   const windowStart = useRef(0);
   const mountedAt = useRef(0);
   const strikes = useRef(0);
 
-  useFrame((state) => {
+  /**
+   * Design-review escape hatch: ?effects=hold keeps the chain open regardless
+   * of frame rate.
+   *
+   * The governor is correct to strip the chain on a slow device, but that makes
+   * the cinematography impossible to evaluate on any machine that cannot afford
+   * it — the reviewer sees the fallback, judges that, and the actual design is
+   * never seen. This holds the full chain so the frame can be looked at, and it
+   * is strictly opt-in via the URL: no visitor ever reaches it.
+   */
+  const hold = useRef(false);
+  if (typeof window !== 'undefined' && !hold.current) {
+    hold.current = new URLSearchParams(window.location.search).get('effects') === 'hold';
+  }
+
+  useFrame((state, delta) => {
+    if (hold.current) return;
     const now = state.clock.elapsedTime * 1000;
 
     if (mountedAt.current === 0) {
@@ -63,16 +84,29 @@ export default function QualityGovernor() {
     }
     if (now - mountedAt.current < WARMUP_MS) {
       windowStart.current = now;
-      frames.current = 0;
+      deltas.current.length = 0;
       return;
     }
 
-    frames.current++;
+    deltas.current.push(delta * 1000);
     const elapsed = now - windowStart.current;
     if (elapsed < WINDOW_MS) return;
 
-    const fps = (frames.current * 1000) / elapsed;
-    frames.current = 0;
+    /**
+     * MEDIAN frame time, not mean.
+     *
+     * A shader compile, a texture upload or a GC pause produces a handful of
+     * 300ms frames. Averaged, those drag a comfortable 60fps window down below
+     * the floor and cost the device its entire effects chain permanently — the
+     * governor only ever steps down. The median ignores them: it answers "what
+     * does a typical frame cost here", which is the question that should decide
+     * quality, while the mean answers "was anything ever slow", which should
+     * not.
+     */
+    const sorted = deltas.current.slice().sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)] || 16.7;
+    const fps = 1000 / median;
+    deltas.current.length = 0;
     windowStart.current = now;
 
     if (fps >= FLOOR_FPS) {
