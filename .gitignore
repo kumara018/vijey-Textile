@@ -32,3 +32,7 @@ frontend/tsconfig.tsbuildinfo
 # Misc
 .DS_Store
 *.log
+
+# Offline hero render intermediates — 500MB+ of lossless PNG.
+# Only the encoded tier ladder under public/hero/<tier>/ is shipped.
+frontend/public/hero/raw/

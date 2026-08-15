@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { attachContextRecovery } from './core/contextRecovery';
 import { Preload } from '@react-three/drei';
 import { useSceneStore } from '@/store/useSceneStore';
 
@@ -15,7 +16,7 @@ import { useSceneStore } from '@/store/useSceneStore';
 function FrameDriver() {
   const target = useRef({ x: 0, y: 0 });
   const eased = useRef({ x: 0, y: 0 });
-  const { gl } = useThree();
+  const { gl, invalidate } = useThree();
 
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
@@ -26,17 +27,38 @@ function FrameDriver() {
     return () => window.removeEventListener('pointermove', onMove);
   }, []);
 
-  // A lost context is recoverable, but only if we stop the default handling
-  // that permanently kills the canvas.
+  /**
+   * Context loss recovery.
+   *
+   * Not an edge case on a canvas that survives every route change: a driver
+   * reset, a backgrounded tab on a memory-pressured phone, another tab claiming
+   * contexts, or a laptop switching graphics adapters will all drop it. The
+   * default browser behaviour leaves the canvas permanently blank.
+   *
+   * The page itself is unaffected — the hero poster and every piece of DOM sit
+   * outside the canvas — so recovery is about restoring decoration, never about
+   * restoring function.
+   */
   useEffect(() => {
     const canvas = gl.domElement;
-    const onLost = (e: Event) => {
-      e.preventDefault();
-      console.warn('[3D] WebGL context lost — pausing scene until restored');
-    };
-    canvas.addEventListener('webglcontextlost', onLost);
-    return () => canvas.removeEventListener('webglcontextlost', onLost);
-  }, [gl]);
+    return attachContextRecovery(canvas, {
+      onLost: () => {
+        // Stop driving the render loop while there is no context to render to.
+        useSceneStore.getState().suspendEffects();
+      },
+      onRestored: () => {
+        // three.js rebuilds its own GPU-side resources on restore; forcing a
+        // fresh frame is what makes that happen immediately rather than on the
+        // next scroll.
+        invalidate();
+      },
+      onFatal: () => {
+        // Repeated loss means this GPU cannot sustain the scene. Drop to the
+        // static layers permanently rather than restoring into another crash.
+        useSceneStore.getState().setTier('off');
+      },
+    });
+  }, [gl, invalidate]);
 
   useFrame(() => {
     const t = target.current;
