@@ -34,7 +34,9 @@ function SceneBody({
   weightRef: React.MutableRefObject<number>;
 }) {
   const tier = useSceneStore((s) => s.tier);
-  const budget = effectiveBudget(tier, scene);
+  const effectsSuspended = useSceneStore((s) => s.effectsSuspended);
+  const reducedMotion = useSceneStore((s) => s.capabilities?.reducedMotion ?? false);
+  const budget = effectiveBudget(tier, scene, { effectsSuspended, reducedMotion });
 
   if (scene === 'plain') return null;
 
@@ -93,7 +95,9 @@ export default function SceneRouter() {
     return () => clearInterval(id);
   }, [outgoing]);
 
-  const budget = effectiveBudget(tier, scene);
+  const effectsSuspended = useSceneStore((s) => s.effectsSuspended);
+  const reducedMotion = useSceneStore((s) => s.capabilities?.reducedMotion ?? false);
+  const budget = effectiveBudget(tier, scene, { effectsSuspended, reducedMotion });
 
   // A device that failed detection gets a completely inert canvas rather than
   // an idling render loop burning battery.
@@ -125,7 +129,7 @@ export default function SceneRouter() {
       <SceneBody scene={scene} weightRef={inWeight} />
       {outgoing ? <SceneBody scene={outgoing} weightRef={outWeight} /> : null}
 
-      {idle ? null : <Effects budget={budget} />}
+      {idle ? null : <Effects budget={budget} scene={scene} />}
     </>
   );
 }

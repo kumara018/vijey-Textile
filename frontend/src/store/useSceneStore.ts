@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 import type { Capabilities, QualityTier, TierBudget } from '@/three/core/capabilities';
-import { TIER_BUDGETS } from '@/three/core/capabilities';
+import { TIER_BUDGETS, withoutEffects, forReducedMotion } from '@/three/core/capabilities';
 
 /**
  * Which 3D environment the persistent canvas is currently showing.
@@ -35,6 +35,16 @@ interface SceneState {
   /** 0..1 scroll progress of the active page, fed by Lenis. */
   scroll: number;
 
+  /**
+   * Set by the frame-rate governor as its FIRST downgrade step, independently
+   * of tier. Postprocessing scales with pixel count rather than scene
+   * complexity, so on a high-DPI display it is where the frame budget actually
+   * goes — surrendering the grade buys more than thinning geometry, and is far
+   * less visible than watching the scene lose detail.
+   */
+  effectsSuspended: boolean;
+  suspendEffects: () => void;
+
   setCapabilities: (c: Capabilities) => void;
   /** Manual override, e.g. a "reduce effects" control in settings. */
   setTier: (t: QualityTier) => void;
@@ -55,6 +65,9 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
   pointer: { x: 0, y: 0 },
   scroll: 0,
+  effectsSuspended: false,
+
+  suspendEffects: () => set({ effectsSuspended: true }),
 
   setCapabilities: (c) =>
     set({ capabilities: c, tier: c.tier, budget: TIER_BUDGETS[c.tier] }),
@@ -104,20 +117,58 @@ export function isRestrained(scene: SceneId): boolean {
   return RESTRAINED.has(scene);
 }
 
-/** Effective budget for the active scene, after the restraint cap. */
-export function effectiveBudget(tier: QualityTier, scene: SceneId): TierBudget {
-  const base = TIER_BUDGETS[tier];
-  if (!isRestrained(scene)) return base;
-  return {
-    ...base,
-    postprocessing: false,
-    bloom: false,
-    depthOfField: false,
-    ssao: false,
-    chromaticAberration: false,
-    physics: false,
-    shadows: false,
-    particles: 0,
-    geometryScale: Math.min(base.geometryScale, 0.5),
-  };
+/**
+ * Scenes that carry the full cinematic chain.
+ *
+ * God rays and the shallow depth-of-field only make sense where there is a
+ * single staged subject to throw light through and focus on. Everywhere else
+ * they would be atmosphere applied to nothing in particular, at full
+ * full-screen cost.
+ */
+const HERO: ReadonlySet<SceneId> = new Set<SceneId>(['entrance', 'chamber']);
+
+export function isHero(scene: SceneId): boolean {
+  return HERO.has(scene);
+}
+
+/**
+ * Effective budget for the active scene.
+ *
+ * Order matters: restraint cap, then hero gating, then the governor's
+ * suspension, then reduced motion. The governor's decision must survive
+ * everything below it — it exists because the device has already been measured
+ * failing, so no per-scene rule may re-enable what it turned off.
+ */
+export function effectiveBudget(
+  tier: QualityTier,
+  scene: SceneId,
+  opts: { effectsSuspended?: boolean; reducedMotion?: boolean } = {},
+): TierBudget {
+  let b = TIER_BUDGETS[tier];
+
+  if (isRestrained(scene)) {
+    b = {
+      ...b,
+      postprocessing: false,
+      bloom: false,
+      depthOfField: false,
+      ssao: false,
+      chromaticAberration: false,
+      godRays: false,
+      lut: false,
+      grain: false,
+      physics: false,
+      shadows: false,
+      particles: 0,
+      geometryScale: Math.min(b.geometryScale, 0.5),
+    };
+  } else if (!isHero(scene)) {
+    // Listing and cart keep the grade and the grain — the things that make the
+    // whole site look like one film — but lose the staging passes.
+    b = { ...b, godRays: false, depthOfField: false, ssao: false };
+  }
+
+  if (opts.effectsSuspended) b = withoutEffects(b);
+  if (opts.reducedMotion) b = forReducedMotion(b);
+  return b;
 }

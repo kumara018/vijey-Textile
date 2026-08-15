@@ -86,7 +86,26 @@ export default function QualityGovernor() {
     if (strikes.current < STRIKES) return;
     strikes.current = 0;
 
-    const { tier, setTier } = useSceneStore.getState();
+    const { tier, setTier, effectsSuspended, suspendEffects } = useSceneStore.getState();
+
+    /**
+     * First downgrade: drop the entire postprocessing chain, keeping the tier.
+     *
+     * Every pass in that chain costs per-pixel, so its price rises with the
+     * square of resolution — on the high-DPI displays this pass targets, the
+     * chain is where the frame budget actually goes, not the geometry. Cutting
+     * it recovers far more than thinning meshes would, and losing the grade is
+     * much less noticeable than watching the scene itself come apart.
+     */
+    if (!effectsSuspended) {
+      console.warn(
+        `[3D] ${fps.toFixed(0)}fps sustained — suspending the postprocessing chain (tier stays "${tier}")`,
+      );
+      suspendEffects();
+      return;
+    }
+
+    // Only once the chain is already gone do we start giving up geometry.
     const next = NEXT_TIER_DOWN[tier];
     if (!next) return;
 

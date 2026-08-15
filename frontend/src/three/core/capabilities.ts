@@ -144,6 +144,12 @@ export interface TierBudget {
   depthOfField: boolean;
   ssao: boolean;
   chromaticAberration: boolean;
+  /** Volumetric shafts. Hero scenes only — it is the most expensive pass here. */
+  godRays: boolean;
+  /** Film-print grade. Cheap (one 3D texture lookup) so it survives low tier. */
+  lut: boolean;
+  /** Film grain. Cheap, and the single biggest cue against a sterile render. */
+  grain: boolean;
   physics: boolean;
   shadows: boolean;
   /** Multiplier applied to segment counts / instance counts. */
@@ -151,9 +157,57 @@ export interface TierBudget {
   particles: number;
 }
 
+/**
+ * Note the deliberate asymmetry: `lut` and `grain` stay on at low tier while
+ * bloom, DoF, SSAO and god rays are off.
+ *
+ * Those two are effectively free — a 17³ texture lookup and a hash per pixel,
+ * with no extra render target between them — and they carry most of what makes
+ * the image read as film rather than as a browser rendering triangles. Dropping
+ * them first would cost the entire look to save almost nothing. The expensive
+ * passes are the ones that allocate and resample full-screen buffers.
+ */
 export const TIER_BUDGETS: Record<QualityTier, TierBudget> = {
-  off:    { postprocessing: false, bloom: false, depthOfField: false, ssao: false, chromaticAberration: false, physics: false, shadows: false, geometryScale: 0,    particles: 0 },
-  low:    { postprocessing: false, bloom: false, depthOfField: false, ssao: false, chromaticAberration: false, physics: false, shadows: false, geometryScale: 0.4,  particles: 0 },
-  medium: { postprocessing: true,  bloom: true,  depthOfField: false, ssao: false, chromaticAberration: false, physics: false, shadows: true,  geometryScale: 0.7,  particles: 120 },
-  high:   { postprocessing: true,  bloom: true,  depthOfField: true,  ssao: true,  chromaticAberration: true,  physics: true,  shadows: true,  geometryScale: 1,    particles: 400 },
+  off:    { postprocessing: false, bloom: false, depthOfField: false, ssao: false, chromaticAberration: false, godRays: false, lut: false, grain: false, physics: false, shadows: false, geometryScale: 0,    particles: 0 },
+  low:    { postprocessing: true,  bloom: false, depthOfField: false, ssao: false, chromaticAberration: false, godRays: false, lut: true,  grain: true,  physics: false, shadows: false, geometryScale: 0.4,  particles: 0 },
+  medium: { postprocessing: true,  bloom: true,  depthOfField: true,  ssao: false, chromaticAberration: false, godRays: false, lut: true,  grain: true,  physics: false, shadows: true,  geometryScale: 0.7,  particles: 120 },
+  high:   { postprocessing: true,  bloom: true,  depthOfField: true,  ssao: true,  chromaticAberration: true,  godRays: true,  lut: true,  grain: true,  physics: true,  shadows: true,  geometryScale: 1,    particles: 400 },
 };
+
+/**
+ * Strips every postprocessing pass while leaving geometry untouched.
+ *
+ * This is the governor's *first* downgrade step. The full-screen passes are
+ * where the cost is — they scale with pixel count, which is exactly what hurts
+ * on the high-DPI displays this pass targets — so surrendering the grade buys
+ * far more frame time than thinning meshes, and it is much less visible than
+ * watching the scene itself lose detail.
+ */
+export function withoutEffects(budget: TierBudget): TierBudget {
+  return {
+    ...budget,
+    postprocessing: false,
+    bloom: false,
+    depthOfField: false,
+    ssao: false,
+    chromaticAberration: false,
+    godRays: false,
+    lut: false,
+    grain: false,
+  };
+}
+
+/**
+ * Reduced motion strips the passes that move or shimmer independently of the
+ * scene — grain crawls every frame and chromatic aberration swims at the edges.
+ * The grade and a static vignette stay: they are still images, and removing
+ * them would make the reduced-motion path look broken rather than calm.
+ */
+export function forReducedMotion(budget: TierBudget): TierBudget {
+  return {
+    ...budget,
+    grain: false,
+    chromaticAberration: false,
+    godRays: false,
+  };
+}

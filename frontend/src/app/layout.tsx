@@ -10,6 +10,8 @@ import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
 import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
+import Letterbox from '@/components/Letterbox';
+import SoundToggle from '@/components/SoundToggle';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
@@ -81,6 +83,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main className="flex-1"><PageTransition>{children}</PageTransition></main>
                 <FooterWrapper />
               </div>
+              {/* Cinematic overlays. Both sit above the canvas and below the
+                  modals, and neither takes pointer events — the path to
+                  checkout is never behind them. */}
+              <Letterbox />
+              <SoundToggle />
               <LoginPromptModal />
               <Toaster
                 position="top-right"
