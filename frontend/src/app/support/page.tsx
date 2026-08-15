@@ -38,7 +38,10 @@ function Accordion({
 }: {
   id?: string;
   title: string;
-  icon: React.ElementType;
+  // Explicit props instead of the bare React.ElementType this used to be:
+  // under React 19's stricter types, ElementType with no props generic infers
+  // its props as `never`, so passing `size` became a type error.
+  icon: React.ComponentType<{ size?: number | string; className?: string }>;
   children: React.ReactNode;
   defaultOpen?: boolean;
   color?: string;

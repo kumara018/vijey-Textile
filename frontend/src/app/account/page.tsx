@@ -223,7 +223,10 @@ export default function AccountPage() {
           { key: 'profile',  label: 'Profile Info',    icon: User },
           { key: 'password', label: 'Change Password', icon: Lock },
           { key: 'devices',  label: 'Linked Devices',  icon: MonitorSmartphone },
-        ] as { key: Tab; label: string; icon: React.ElementType }[]).map(({ key, label, icon: Icon }) => (
+          // Explicit icon props rather than a bare React.ElementType — under
+          // React 19's stricter types that infers props as `never`, which made
+          // <Icon size={15} /> a type error.
+        ] as { key: Tab; label: string; icon: React.ComponentType<{ size?: number | string }> }[]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
