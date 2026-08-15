@@ -24,6 +24,10 @@ backend/uploads/
 # Build output
 frontend/.next/
 frontend/out/
+frontend/tsconfig.tsbuildinfo
+
+# Local tooling (dev-server launch config, agent scratch)
+.claude/
 
 # Misc
 .DS_Store

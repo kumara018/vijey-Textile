@@ -8,6 +8,7 @@ import NavbarWrapper from '@/components/NavbarWrapper';
 import FooterWrapper from '@/components/FooterWrapper';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
+import ThreeProvider from '@/three/ThreeProvider';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
@@ -57,13 +58,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon-mark.jpg?v=4" />
       </head>
       <body className="bg-maroon-100 min-h-screen flex flex-col">
+        {/* The single persistent 3D canvas. Sits outside the providers and
+            outside PageTransition so it is never remounted by a route change
+            — the GL context, compiled shaders and uploaded textures survive
+            navigation. Fixed at z-0; all real UI renders above it. */}
+        <ThreeProvider />
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
             <LoginPromptProvider>
-              <NavbarWrapper />
-              <main className="flex-1"><PageTransition>{children}</PageTransition></main>
-              <FooterWrapper />
+              {/* relative z-10: the canvas is position:fixed, which creates a
+                  stacking context and would otherwise paint over static page
+                  content. Everything the customer actually reads or clicks
+                  stays real HTML, above the canvas. */}
+              <div className="relative z-10 flex flex-col flex-1">
+                <NavbarWrapper />
+                <main className="flex-1"><PageTransition>{children}</PageTransition></main>
+                <FooterWrapper />
+              </div>
               <LoginPromptModal />
               <Toaster
                 position="top-right"
