@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { detectCapabilities } from './core/capabilities';
 import { useSceneStore, sceneForPath } from '@/store/useSceneStore';
+import { useDeliveryTier } from './core/useDeliveryTier';
+import { webglAvailable, shaderCompileHealthy } from './core/contextRecovery';
 
 /**
  * The canvas is client-only: R3F touches window/document at import time, and
@@ -27,6 +29,7 @@ const SceneRouter = dynamic(() => import('./SceneRouter'), { ssr: false });
  */
 export default function ThreeProvider() {
   const pathname = usePathname();
+  const { profile } = useDeliveryTier();
   const setCapabilities = useSceneStore((s) => s.setCapabilities);
   const goToScene = useSceneStore((s) => s.goToScene);
   const capabilities = useSceneStore((s) => s.capabilities);
@@ -34,6 +37,28 @@ export default function ThreeProvider() {
   // ── Capability detection, exactly once ──────────────────────────────
   useEffect(() => {
     let cancelled = false;
+
+    /**
+     * Two hard gates before any capability tiering happens.
+     *
+     * `webglAvailable` is distinct from tiering: tiering asks how much a
+     * device can afford, this asks whether there is a renderer at all. A false
+     * answer must route to the no-WebGL path, because even the lowest tier
+     * still tries to create a context.
+     *
+     * `shaderCompileHealthy` catches drivers that accept a shader, report
+     * success, and take seconds doing it — freezing the main thread. That is
+     * worse than not rendering, because the page is unresponsive meanwhile and
+     * the visitor cannot scroll or tap.
+     */
+    if (!webglAvailable() || !shaderCompileHealthy()) {
+      setCapabilities({
+        renderer: 'none', tier: 'off', reducedMotion: false,
+        maxPixelRatio: 1, gpu: null, deviceMemoryGb: null, hardwareConcurrency: null,
+      });
+      return;
+    }
+
     detectCapabilities().then((caps) => {
       if (!cancelled) setCapabilities(caps);
     });
@@ -102,6 +127,17 @@ export default function ThreeProvider() {
     window.scrollTo(0, 0);
     useSceneStore.getState().setScroll(0);
   }, [pathname]);
+
+  /**
+   * The real-time canvas is a progressive enhancement layered over the
+   * pre-rendered sequence, not the baseline.
+   *
+   * The sequence already carries the hero on every device. Mounting a WebGL
+   * context on a rung that cannot afford it costs the frame budget twice —
+   * once decoding frames, once rendering — for a layer that would immediately
+   * be stripped by the governor anyway.
+   */
+  if (!profile.realtime) return null;
 
   return (
     <CanvasHost>

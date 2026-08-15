@@ -13,6 +13,7 @@ import OccasionBand from '@/components/home/OccasionBand';
 import HeirloomPlate from '@/components/home/HeirloomPlate';
 import MeasureRule from '@/components/home/MeasureRule';
 import KeptStagger from '@/components/home/KeptStagger';
+import SequenceHero from '@/components/hero/SequenceHero';
 
 /**
  * The Trousseau — Vijey Textile homepage.
@@ -98,7 +99,12 @@ export default function HomePage() {
           One line, at the largest size on the site, over the staged
           photograph. Nothing else competes for the frame. */}
       <section className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-[14vh] pt-40 sm:px-10">
-        <div className="mx-auto w-full max-w-[112rem]">
+        {/* The pre-rendered camera move. Its poster paints immediately and
+            stands alone if the sequence never arrives; the real-time canvas
+            behind the page layers on top only at the rich/maximum rungs. */}
+        <SequenceHero posterAlt={hero ? `${hero.name} — Vijey Textile` : 'Vijey Textile'} />
+
+        <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
             <p className="mb-8 text-rule uppercase text-brass-bright">
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
