@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run check:tailwind && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "npm run check:tailwind && next lint",
+    "check:tailwind": "node scripts/check-tailwind-config.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",
