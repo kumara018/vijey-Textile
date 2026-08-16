@@ -1,139 +1,200 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Star, CheckCircle, XCircle } from 'lucide-react';
 import { supportAPI } from '@/lib/api';
-import { STORE } from '@/lib/config';
+import AuthShell from '@/components/system/AuthShell';
+import { ActionButton, ActionLink } from '@/components/system/Action';
+import { Announce } from '@/components/system/States';
 
-const LABELS = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent!'];
-const EMOJIS = ['', '😞',   '😐',   '🙂',    '😊',        '😍'];
+/**
+ * Rate a support conversation.
+ *
+ * Reached from a one-time link in an email, by someone who is not necessarily
+ * signed in and who arrived to do exactly one thing. So it uses AuthShell —
+ * the same stripped frame as sign-in: logo, one card, no navigation. A page
+ * with a single job should not offer a menu.
+ *
+ * THE RATING IS A RADIOGROUP, NOT A ROW OF STARS.
+ *
+ * The old version was five buttons with a hover state and an emoji caption.
+ * That is unusable without a mouse: no arrow-key movement, no announced
+ * selection, and the value lived in a hover variable. Radios give arrow keys,
+ * one tab stop, and "4 of 5" read out — and the visible mark is driven by
+ * :checked, so the keyboard and the pointer agree.
+ *
+ * A token that is expired or already used is a normal outcome here, not an
+ * error: people click these links twice, or a week late. It is worded as a
+ * fact rather than a failure.
+ */
 
-export default function SupportRatePage() {
+const SCALE = [
+  { value: 1, label: 'Poor' },
+  { value: 2, label: 'Not good' },
+  { value: 3, label: 'Fine' },
+  { value: 4, label: 'Good' },
+  { value: 5, label: 'Excellent' },
+];
+
+export default function RateSupportPage() {
   const { token } = useParams<{ token: string }>();
 
-  const [info, setInfo]         = useState<any>(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
-  const [hover, setHover]       = useState(0);
-  const [selected, setSelected] = useState(0);
-  const [comment, setComment]   = useState('');
+  const [info, setInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
-    supportAPI.getRatingPage(token)
-      .then(r => setInfo(r.data))
-      .catch(e => setError(e.response?.data?.detail || 'This rating link is invalid or has already been used.'))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    supportAPI
+      .getRatingPage(token)
+      .then((res) => { if (!cancelled) setInfo(res.data); })
+      .catch((err) => {
+        if (cancelled) return;
+        setLoadError(
+          err?.response?.data?.detail ||
+            'This link has expired or has already been used.',
+        );
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [token]);
 
-  const handleSubmit = async (star: number) => {
-    if (submitting || submitted) return;
-    setSelected(star);
+  useEffect(() => {
+    if (!announcement) return;
+    const t = setTimeout(() => setAnnouncement(''), 1500);
+    return () => clearTimeout(t);
+  }, [announcement]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rating) { setFormError('Choose a rating first.'); return; }
     setSubmitting(true);
+    setFormError('');
     try {
-      await supportAPI.submitTokenRating(token, { rating: star, comment: comment.trim() || undefined });
+      // submitTokenRating, not submitRating: the latter posts to
+      // /api/support/rating, a different (authenticated) endpoint. The
+      // token-scoped one is POST /api/support/rate/{token}.
+      await supportAPI.submitTokenRating(token, { rating, comment: comment.trim() || undefined });
       setSubmitted(true);
-    } catch (e: any) {
-      setError(e.response?.data?.detail || 'Failed to submit. Please try again.');
+    } catch (err: any) {
+      setFormError(err?.response?.data?.detail || 'We could not save that. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return (
-    <div className="min-h-screen bg-maroon-100 flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-maroon-800" />
-    </div>
-  );
+  if (loading) {
+    return (
+      <AuthShell title="One moment">
+        <p className="text-sm text-paper-muted">Checking your link…</p>
+      </AuthShell>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AuthShell
+        title="This link is no longer active"
+        standfirst={loadError}
+      >
+        <p className="text-sm leading-relaxed text-paper-muted">
+          Rating links work once and expire after a while. If you still want to tell us how it
+          went, reply to the email or call the shop — we would rather hear it late than not
+          at all.
+        </p>
+        <div className="mt-8">
+          <ActionLink href="/support">Ways to reach us</ActionLink>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <AuthShell title="Thank you" standfirst="Your rating has been recorded.">
+        <p className="text-sm leading-relaxed text-paper-muted">
+          A real person reads these. If something went wrong and you would like it put right,
+          tell us and we will.
+        </p>
+        <div className="mt-8">
+          <ActionLink href="/products">See every piece</ActionLink>
+        </div>
+      </AuthShell>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-maroon-100 flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-black text-maroon-900">{STORE.name}</h1>
-          <p className="text-xs text-maroon-600 font-medium uppercase tracking-widest mt-1">{STORE.tagline}</p>
+    <AuthShell
+      title="How did we do?"
+      standfirst={
+        info?.agent_name
+          ? `About your conversation with ${info.agent_name}.`
+          : 'About your recent conversation with us.'
+      }
+    >
+      <Announce message={announcement} />
+
+      <form onSubmit={submit} noValidate>
+        <fieldset>
+          <legend className="text-rule uppercase text-paper-faint">Your rating</legend>
+          <div className="mt-5 space-y-1">
+            {SCALE.map((s) => (
+              <label
+                key={s.value}
+                className={`flex cursor-pointer items-baseline gap-4 border-b border-ink-edge/40 py-3 transition-colors duration-500 motion-reduce:transition-none has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brass-bright ${
+                  rating === s.value ? 'text-paper' : 'text-paper-muted hover:text-paper'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="rating"
+                  value={s.value}
+                  checked={rating === s.value}
+                  onChange={() => { setRating(s.value); setFormError(''); setAnnouncement(`${s.value} of 5, ${s.label}.`); }}
+                  className="sr-only"
+                />
+                <span
+                  aria-hidden="true"
+                  className={`text-rule tabular-nums ${rating === s.value ? 'text-brass-bright' : 'text-paper-faint'}`}
+                >
+                  {s.value}
+                </span>
+                <span>{s.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="mt-8">
+          <label htmlFor="comment" className="block text-rule uppercase text-paper-faint">
+            Anything else? (optional)
+          </label>
+          <textarea
+            id="comment"
+            name="comment"
+            rows={4}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            className="mt-2.5 w-full resize-y border-b border-ink-edge bg-transparent pb-2.5 text-paper transition-colors duration-500 motion-reduce:transition-none focus:border-paper-faint focus:outline-none focus-visible:border-brass-bright"
+          />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-maroon-200 p-8 text-center">
-          {error ? (
-            /* Error / Already rated */
-            <div>
-              <XCircle size={48} className="text-red-400 mx-auto mb-4" />
-              <h2 className="text-lg font-bold text-gray-800 mb-2">Link Unavailable</h2>
-              <p className="text-gray-500 text-sm">{error}</p>
-            </div>
-          ) : submitted ? (
-            /* Thank-you */
-            <div>
-              <div className="text-6xl mb-3">{EMOJIS[selected]}</div>
-              <CheckCircle size={32} className="text-green-500 mx-auto mb-3" />
-              <h2 className="text-xl font-bold text-gray-800 mb-1">Thank you, {info?.customer_name?.split(' ')[0]}!</h2>
-              <p className="text-gray-500 text-sm mb-4">Your feedback has been recorded and shared with our team.</p>
-              <div className="flex justify-center gap-1 mb-2">
-                {[1,2,3,4,5].map(i => (
-                  <Star key={i} size={28} fill={i <= selected ? '#facc15' : 'none'} className={i <= selected ? 'text-yellow-400' : 'text-gray-200'} />
-                ))}
-              </div>
-              <p className="text-sm font-semibold text-maroon-700">{LABELS[selected]}</p>
-            </div>
-          ) : (
-            /* Rating form */
-            <div>
-              <div className="w-16 h-16 bg-maroon-50 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⭐</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-1">How was your experience?</h2>
-              {info?.cs_name && (
-                <p className="text-sm text-gray-500 mb-1">
-                  You were helped by <span className="font-semibold text-maroon-700">{info.cs_name}</span>
-                </p>
-              )}
-              {info?.issue_summary && (
-                <p className="text-xs text-gray-400 mb-5">Topic: {info.issue_summary}</p>
-              )}
-              {!info?.issue_summary && <div className="mb-5" />}
+        {formError && (
+          <p role="alert" className="mt-5 text-xs text-brass-bright">{formError}</p>
+        )}
 
-              {/* Stars */}
-              <div className="flex justify-center gap-3 mb-2">
-                {[1,2,3,4,5].map(star => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => handleSubmit(star)}
-                    onMouseEnter={() => setHover(star)}
-                    onMouseLeave={() => setHover(0)}
-                    disabled={submitting}
-                    className="transition-all hover:scale-125 focus:outline-none disabled:opacity-50"
-                  >
-                    <Star
-                      size={52}
-                      fill={(hover || selected) >= star ? '#facc15' : 'none'}
-                      className={(hover || selected) >= star ? 'text-yellow-400 drop-shadow' : 'text-gray-300'}
-                    />
-                  </button>
-                ))}
-              </div>
-
-              <p className={`text-sm font-semibold h-5 mb-5 transition-all ${hover ? 'text-maroon-700' : 'text-gray-300'}`}>
-                {hover ? `${EMOJIS[hover]} ${LABELS[hover]}` : 'Tap a star to rate'}
-              </p>
-
-              {/* Optional comment */}
-              <textarea
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                rows={2}
-                maxLength={200}
-                placeholder="Any additional feedback? (optional)"
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-700 resize-none focus:outline-none focus:border-maroon-400 focus:ring-1 focus:ring-maroon-200 bg-gray-50"
-              />
-              <p className="text-xs text-gray-400 mt-3">Tap any star to submit instantly</p>
-            </div>
-          )}
+        <div className="mt-9">
+          <ActionButton type="submit" disabled={submitting}>
+            {submitting ? 'Sending…' : 'Send rating'}
+          </ActionButton>
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">© {new Date().getFullYear()} {STORE.name}</p>
-      </div>
-    </div>
+      </form>
+    </AuthShell>
   );
 }

@@ -180,7 +180,7 @@ export const supportAPI = {
   createInteraction: (data: object) => api.post('/api/support/interactions', data),
   listInteractions:  ()             => api.get('/api/support/interactions'),
   getRatingPage:     (token: string) => api.get(`/api/support/rate/${token}`),
-  submitTokenRating: (token: string, data: object) => api.post(`/api/support/rate/${token}`, data),
+  submitTokenRating: (token: string, data: C.SupportRatingSubmitPayload) => api.post(`/api/support/rate/${token}`, data),
 };
 
 export const returnsAPI = {

@@ -88,7 +88,7 @@ including the Indian mobile pattern the server enforces.
 |---|---|---|---|
 | `/auth/login` | ✅ | `POST /send-login-otp` → `/verify-login-otp` · `/sessions/evict-and-login` | public |
 | `/auth/register` | ✅ | `POST /register` → `/verify-register-otp` · `/resend-register-otp` | public |
-| `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice` | ✅ | `POST /forgot-password` → `/reset-password` | public |
+| `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice` · `/support/rate/[token]` | ✅ | `POST /forgot-password` → `/reset-password` | public |
 | `/account` | ✅ | `GET/PUT /api/auth/me` · `GET /api/auth/sessions` · `DELETE /sessions/{id}` · addresses CRUD | auth |
 | `/account/delete` | ⬜ | `POST /request-delete-account` → `/confirm-delete-account` · `/cancel-delete-account` · deactivate pair | auth |
 | Sign out | ⬜ | `POST /api/auth/logout` — accepts an explicit token so one saved account can be signed out while switching to another | auth |
@@ -104,7 +104,7 @@ must survive the rebuild.
 | Route | Status | Calls | Guard |
 |---|---|---|---|
 | `/support` | ✅ | `GET /api/support/rating/summary` · `POST /interactions` | public |
-| `/support/rate/[token]` | ⬜ | `GET/POST /api/support/rate/{token}` | public, token-scoped |
+| `/support/rate/[token]` | ✅ | `GET/POST /api/support/rate/{token}` | public, token-scoped |
 | `/shipping` | ✅ | none — static | public |
 | `/terms` | ✅ | none — static | public |
 | `/privacy` | ✅ | none — static | public |
@@ -175,10 +175,10 @@ framework's default and a slow segment showed nothing.
 **30 app routes** (23 + the six new addressable admin views + `[view]`)
 + `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
 
-**18 of 23 rebuilt** · 5 remaining.
+**19 of 23 rebuilt** · 4 remaining.
 
 `/` · `/products` · `/shipping` · `/privacy` · `/terms` · `/cancellation` ·
-`/authentic` · `/cart` · `/wishlist` · `/support` · `/auth/login` · `/auth/register` · `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice`
+`/authentic` · `/cart` · `/wishlist` · `/support` · `/auth/login` · `/auth/register` · `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice` · `/support/rate/[token]`
 
 **4 of 5 app-shell surfaces rebuilt** (404, route error, global error, loading).
 

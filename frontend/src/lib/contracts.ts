@@ -185,3 +185,17 @@ export interface OrderStatusUpdatePayload {
   estimated_delivery?: string | null;
   status_location?: string | null;
 }
+
+/* ── Support ───────────────────────────────────────────────────────────── */
+
+/**
+ * schemas.py:647 SupportRatingSubmit.
+ *
+ * The token is a PATH parameter, not a body field — POST /api/support/rate/{token}.
+ * `supportAPI.submitRating` is a different, authenticated endpoint
+ * (/api/support/rating); the token-scoped one is `submitTokenRating`.
+ */
+export interface SupportRatingSubmitPayload {
+  rating: number;
+  comment?: string | null;
+}
