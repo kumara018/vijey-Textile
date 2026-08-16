@@ -136,7 +136,7 @@ export const cartAPI = {
 };
 
 export const ordersAPI = {
-  place:       (data: object)                => api.post('/api/orders/', data),
+  place:       (data: C.OrderCreatePayload)  => api.post('/api/orders/', data),
   getAll:      ()                            => api.get('/api/orders/'),
   getOne:      (id: number)                  => api.get(`/api/orders/${id}`),
   track:       (id: number)                  => api.get(`/api/orders/${id}/track`),
