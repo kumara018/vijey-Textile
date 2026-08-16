@@ -161,3 +161,50 @@ html[data-capture='1'] [data-sequence-hero] {
 @media (prefers-reduced-motion: reduce) {
   .auth-step { animation: none; }
 }
+
+/* ── Invoice: the one place the palette inverts ───────────────────────
+   On screen the invoice belongs to the site — off-white on warm
+   near-black. On paper it must not: printing #1C1917 across A4 floods
+   a page with toner, bleeds through cheap stock, and prints grey text
+   on grey. This is a document people print for their records and for
+   GST filing.
+
+   So the ground follows the medium and the TYPOGRAPHY carries the
+   brand across both. Same Fraunces wordmark, same tabular figures,
+   same brass rules — brass prints as a real colour, the ground does
+   not need to. One document, one set of numbers, no second template
+   to drift out of sync. */
+@media print {
+  /* The scene, the scrim and every control are screen-only. */
+  canvas,
+  [data-capture-keep],
+  .print\:hidden { display: none !important; }
+
+  html, body {
+    background: #fff !important;
+    color: #1C1917 !important;
+  }
+
+  .invoice {
+    border: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Re-point the palette tokens at ink-on-paper. Utilities keep working;
+     only what they resolve to changes. */
+  .invoice .text-paper        { color: #1C1917 !important; }
+  .invoice .text-paper-muted  { color: #44403C !important; }
+  .invoice .text-paper-faint  { color: #78716C !important; }
+  .invoice .text-brass-bright { color: #A16207 !important; }
+  .invoice .border-ink-edge,
+  .invoice .border-ink-edge\/60,
+  .invoice .border-ink-edge\/40 { border-color: #D6D3D1 !important; }
+  .invoice .border-brass\/60    { border-color: #A16207 !important; }
+
+  /* A row split across a page break is unreadable on a printed invoice. */
+  .invoice tr,
+  .invoice dl { break-inside: avoid; }
+
+  @page { margin: 16mm; }
+}
