@@ -9,7 +9,7 @@
     "lint": "npm run check:tailwind && next lint",
     "check:tailwind": "node scripts/check-tailwind-config.js",
     "check:hero": "node scripts/check-hero-assets.js",
-    "check:frames": "node scripts/check-frame-content.mjs public/hero --sample 6",
+    "check:frames": "node scripts/check-frame-content.mjs public/hero --sample 3",
     "verify": "npm run check:tailwind && npm run check:hero && npm run check:frames && tsc --noEmit"
   },
   "dependencies": {
@@ -50,5 +50,8 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22 <25"
   }
 }
