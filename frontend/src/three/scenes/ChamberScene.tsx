@@ -41,8 +41,8 @@ export default function ChamberScene({
   const material = useMemo(
     () =>
       createSatinMaterial({
-        color: '#a81f4b',
-        sheenColor: '#ffd9e4',
+        color: '#262220',
+        sheenColor: '#C4841A',
         roughness: 0.26,
         sheenStrength: 1.15,
         waveAmp: 0.42,
@@ -56,7 +56,7 @@ export default function ChamberScene({
   const ringMat = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
-        color: '#8f9499',
+        color: '#78716C',
         transparent: true,
         opacity: 0,
         depthWrite: false,
@@ -112,10 +112,10 @@ export default function ChamberScene({
       <directionalLight
         position={[3, 4, 5]}
         intensity={1.35}
-        color="#fff2f6"
+        color="#FFF3DE"
         castShadow={budget.shadows}
       />
-      <pointLight position={[-4, -1, 3]} intensity={0.5} color="#c58059" />
+      <pointLight position={[-4, -1, 3]} intensity={0.5} color="#A16207" />
     </group>
   );
 }

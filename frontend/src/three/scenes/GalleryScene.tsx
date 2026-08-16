@@ -56,7 +56,7 @@ export default function GalleryScene({
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#c58059',
+        color: '#A16207',
         roughness: 0.72,
         metalness: 0.06,
         transparent: true,
@@ -102,7 +102,7 @@ export default function GalleryScene({
         frustumCulled={false}
       />
       <ambientLight intensity={0.7} />
-      <directionalLight position={[-4, 6, 5]} intensity={0.9} color="#ffeede" />
+      <directionalLight position={[-4, 6, 5]} intensity={0.9} color="#FFF3DE" />
     </group>
   );
 }

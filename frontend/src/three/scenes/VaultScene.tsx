@@ -31,7 +31,7 @@ export default function VaultScene({
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#8f9499',
+        color: '#A8A29E',
         roughness: 0.35,
         metalness: 0.75,
         transparent: true,
@@ -88,7 +88,7 @@ export default function VaultScene({
       </group>
 
       <ambientLight intensity={0.6} />
-      <directionalLight position={[2, 4, 6]} intensity={0.85} color="#e8f0f5" />
+      <directionalLight position={[2, 4, 6]} intensity={0.85} color="#FFF3DE" />
     </group>
   );
 }

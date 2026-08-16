@@ -21,10 +21,10 @@ import { useSceneStore } from '@/store/useSceneStore';
  */
 
 const SPOOLS = [
-  { p: [-1.9, 1.4, 0.4] as const, s: 0.34, c: '#a81f4b' },
-  { p: [-0.7, 2.1, -0.3] as const, s: 0.26, c: '#c58059' },
-  { p: [ 0.9, 1.7, 0.5] as const, s: 0.3,  c: '#871c3f' },
-  { p: [ 2.0, 2.4, -0.2] as const, s: 0.22, c: '#8f9499' },
+  { p: [-1.9, 1.4, 0.4] as const, s: 0.34, c: '#A16207' },
+  { p: [-0.7, 2.1, -0.3] as const, s: 0.26, c: '#C4841A' },
+  { p: [ 0.9, 1.7, 0.5] as const, s: 0.3,  c: '#6B420A' },
+  { p: [ 2.0, 2.4, -0.2] as const, s: 0.22, c: '#A8A29E' },
   { p: [ 0.1, 2.8, 0.2] as const, s: 0.28, c: '#631730' },
 ];
 
