@@ -19,7 +19,7 @@
  *   node scripts/render-sequence.mjs --url http://localhost:3100 --frames 120 --width 3840
  */
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -44,9 +44,18 @@ const PORT = 9500;
  * dolly/crane runs across the whole page scroll. Sampling only the first ~45%
  * captures the move while it is still about the garment, before the page has
  * carried on into the editorial sections.
+ *
+ * Read from the same file SequenceHero reads. These were previously two
+ * independent expressions of the same idea — the renderer stepped document
+ * scroll 0→0.45, the component scrubbed on element visibility — and the
+ * mismatch meant the sequence opened mid-move and ran out one viewport down.
+ * One file, both ends.
  */
-const SCROLL_FROM = 0;
-const SCROLL_TO = 0.45;
+const SCRUB = JSON.parse(
+  readFileSync(new URL('../src/lib/heroScrub.json', import.meta.url), 'utf8'),
+);
+const SCROLL_FROM = SCRUB.from;
+const SCROLL_TO = SCRUB.to;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

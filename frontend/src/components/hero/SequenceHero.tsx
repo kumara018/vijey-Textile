@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useDeliveryTier } from '@/three/core/useDeliveryTier';
+import HERO_SCRUB from '@/lib/heroScrub.json';
 
 /**
  * Scroll-scrubbed image sequence.
@@ -149,8 +150,28 @@ export default function SequenceHero({ className = '' }: { className?: string })
       const rect = host.getBoundingClientRect();
       if (rect.height < 1) return;
 
-      const span = rect.height + window.innerHeight;
-      const p = Math.min(1, Math.max(0, (window.innerHeight - rect.top) / span));
+      /**
+       * The scrub MUST use the same parameterisation the renderer used to
+       * produce the frames, and previously it did not.
+       *
+       * The renderer steps document scroll from HERO_SCRUB.from to .to and
+       * captures a frame at each step. This scrubbed on element visibility
+       * instead — `(innerHeight - rect.top) / (rect.height + innerHeight)` —
+       * which is the right formula for something that scrolls INTO view from
+       * below, and the wrong one for a hero that starts at the top of the
+       * document. With a hero one viewport tall it yields p = 0.5 at scroll 0
+       * and p = 1.0 after a single viewport: the sequence opened on frame 60,
+       * ran out one screen down, and then held still for the rest of the page.
+       * It also jumped from the poster (frame 0) to mid-sequence the moment
+       * the frames finished loading.
+       *
+       * Both ends now read the same two numbers from heroScrub.json.
+       */
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const span = max * (HERO_SCRUB.to - HERO_SCRUB.from);
+      const p = span > 0
+        ? Math.min(1, Math.max(0, (window.scrollY - max * HERO_SCRUB.from) / span))
+        : 0;
       const target = Math.round(p * (frames.current.length - 1));
 
       let idx = -1;
