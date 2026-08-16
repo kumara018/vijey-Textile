@@ -96,7 +96,26 @@ module.exports = {
        * what stops a huge serif from reading as loose.
        */
       fontSize: {
-        'plate':   ['clamp(2.9rem, 9.4vw, 9.6rem)', { lineHeight: '0.9', letterSpacing: '-0.03em' }],
+        /**
+         * The hero line, sized on the SMALLER of the two viewport axes.
+         *
+         * `9.4vw` alone is how the headline drove itself through the fixed
+         * header: on a short wide laptop (1920×845) it resolved to ~154px, the
+         * sentence wrapped to four lines at line-height 0.9 ≈ 553px, and with
+         * the eyebrow and the call to action it wanted ~640px of the ~567px
+         * that exists between the header and the fold. A `justify-end` column
+         * overflows UPWARD, so the surplus landed on the logo — the first line
+         * of the brand sentence rendered behind the wordmark.
+         *
+         * Width-only hero type will always do this eventually, because it has
+         * no way to know the screen is short. `min(9.4vw, 12.2vh)` gives it
+         * one: the line takes whichever axis is scarcer. On 1920×1080 it is
+         * 132px, on 1920×845 it is 103px, on a phone the floor takes over.
+         * The sentence stays whole and stays clear of the header at every size
+         * rather than being nudged back by a padding value that only suits the
+         * screen it was tuned on.
+         */
+        'plate':   ['clamp(2.6rem, min(9.4vw, 12.2vh), 9.6rem)', { lineHeight: '0.92', letterSpacing: '-0.03em' }],
         'chapter': ['clamp(2.4rem, 7.5vw, 6.5rem)', { lineHeight: '0.94', letterSpacing: '-0.025em' }],
         'band':    ['clamp(1.9rem, 4.6vw, 3.9rem)', { lineHeight: '1.02', letterSpacing: '-0.02em' }],
         'lede':    ['clamp(1.02rem, 1.5vw, 1.3rem)', { lineHeight: '1.62', letterSpacing: '0' }],

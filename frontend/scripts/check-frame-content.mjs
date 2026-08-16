@@ -82,6 +82,12 @@ const MAX_STROKE = 9;       // ...in runs no wider than this (at W=480)
 const MAX_INK_FRACTION = 0.5;
 const TEXT_ROW_LIMIT = 12;  // more text-like rows than this ⇒ DOM in frame
 const NAV_ROW_LIMIT = 3;    // ...or any real run structure in the nav band
+/**
+ * Percent of the frame that must carry content. Dead frames measure 0.00–0.06%
+ * and live ones 40%+, so anything in this gap works; 2% is set near the dead
+ * end so an intentionally sparse opening frame is not called a failure.
+ */
+const MIN_CONTENT = 2;
 
 /** Median is the right centre here — one long run must not drag the average. */
 function median(xs) {
@@ -170,11 +176,30 @@ async function analyse(file) {
   const whole = bandedRows(flags);
   const nav = bandedRows(flags.slice(0, navRows));
 
+  /**
+   * How much of the frame actually carries content.
+   *
+   * `max - min` was the original test and it is a TWO-PIXEL statistic: one
+   * bright compression artefact on an otherwise black frame produces a large
+   * range. Measured on a frame that renders nothing at all, range came out at
+   * 86–146 against a threshold of 12 — so the gate passed a blank hero, twice,
+   * while reporting every frame healthy.
+   *
+   * The fraction of pixels meaningfully above the frame's own floor is not
+   * foolable that way, because it counts area rather than extremes. On this
+   * sequence it reads 0.00–0.06% for frames where the scene did not render and
+   * 40%+ where it did — three orders of magnitude apart, which is why the
+   * threshold below needs no calibration.
+   */
+  let above = 0;
+  for (let i = 0; i < data.length; i++) if (data[i] > min + 25) above++;
+
   return {
     textRows: whole.total,
     deepestBand: whole.deepest,
     navTextRows: nav.total,
     range: max - min,
+    content: (above / data.length) * 100,
   };
 }
 
@@ -219,8 +244,27 @@ if (totalFrames === 0) {
   process.exit(1);
 }
 
-// Even sampling across each sequence — the end of a camera move can carry DOM
-// the opening frame did not.
+/**
+ * The dead-frame check runs on EVERY frame, not a sample.
+ *
+ * Sampling let a real defect ship. A change to the scene's scroll-driven fade
+ * meant the renderer captured the tail of the camera move after the scene had
+ * already faded out, so the last six frames of every tier were flat ground.
+ * The threshold below would have failed them instantly — the gate simply never
+ * looked: at `--sample 3` across 48 frames the step picks 0, 16 and 32, and the
+ * dead ones live at 42–47.
+ *
+ * A sampled gate can only ever say "the frames I happened to open were fine",
+ * and a blank hero at rest is exactly the thing this file exists to prevent.
+ * The near-flat test is one downscale and a min/max, so running it across all
+ * 545 shipped frames costs a few seconds. The expensive heuristics stay
+ * sampled; the cheap decisive one does not.
+ */
+const everyFrame = [];
+for (const g of groups) {
+  for (const name of g.frames) everyFrame.push({ dir: g.dir, name });
+}
+
 const picked = [];
 for (const g of groups) {
   const step = Math.max(1, Math.floor(g.frames.length / SAMPLE));
@@ -242,7 +286,7 @@ for (const { dir, name } of picked) {
 
   if (VERBOSE) {
     console.log(
-      `  ${label}: banded=${r.textRows} deepest=${r.deepestBand} nav=${r.navTextRows} range=${r.range}`,
+      `  ${label}: banded=${r.textRows} deepest=${r.deepestBand} nav=${r.navTextRows} content=${r.content.toFixed(2)}%`,
     );
   }
 
@@ -277,9 +321,28 @@ for (const { dir, name } of picked) {
   if (STRICT && r.navTextRows > NAV_ROW_LIMIT) {
     failures.push(`${label}: ${r.navTextRows} glyph-like rows in the top band — possible navigation`);
   }
-  if (r.range < 12) {
-    failures.push(`${label}: near-flat image (range ${r.range}) — the scene did not render`);
+}
+
+// ── Every frame, for the one test that is cheap and decisive ───────────
+const dead = [];
+for (const { dir, name } of everyFrame) {
+  const file = join(dir, name);
+  const label = `${dir.split(/[\/]/).pop()}/${name}`;
+  try {
+    const r = await analyse(file);
+    if (r.content < MIN_CONTENT) {
+      dead.push(`${label}: only ${r.content.toFixed(2)}% of the frame is above its own floor — the scene did not render`);
+    }
+  } catch (e) {
+    failures.push(`${label}: unreadable (${e.message})`);
   }
+}
+if (dead.length) {
+  // Report the run compactly: 60 near-identical lines hides the shape of it.
+  failures.push(
+    `${dead.length} of ${everyFrame.length} frames are near-flat — first: ${dead[0]}` +
+      (dead.length > 1 ? `, last: ${dead[dead.length - 1]}` : ''),
+  );
 }
 
 if (failures.length) {
@@ -290,5 +353,6 @@ if (failures.length) {
 }
 
 console.log(
-  `frame check OK — ${picked.length} of ${totalFrames} frames sampled across ${groups.length} sequence(s), scene only`,
+  `frame check OK — every one of ${everyFrame.length} frames has real content; ` +
+    `${picked.length} sampled for structure across ${groups.length} sequence(s)`,
 );

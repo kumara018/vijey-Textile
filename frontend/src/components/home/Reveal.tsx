@@ -41,6 +41,31 @@ export default function Reveal({
     const el = ref.current;
     if (!el) return;
 
+    /**
+     * Anything already on screen at first paint reveals immediately.
+     *
+     * The observer below shrinks its root by 12% at the bottom so a reveal
+     * STARTS just before content arrives from underneath. That is right for
+     * content approaching from below and exactly wrong for content that is
+     * already visible: such an element has to move UP past the inset line
+     * before it counts as intersecting.
+     *
+     * In a pinned hero it never can. The copy block is inside a `sticky`
+     * frame and holds still for the whole 240svh section, so the lowest
+     * element in it sits permanently inside the excluded band. That is how
+     * the homepage's "See every piece" call to action vanished — measured at
+     * `top: 645` in a 720px viewport against an effective bottom edge of
+     * 633.6. Not hidden, not clipped: never told to appear.
+     *
+     * Checking the real viewport once, on mount, fixes the general case too —
+     * nothing above the fold should wait for a scroll that may never come.
+     */
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
+      setShown(true);
+      return;
+    }
+
     const io = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;

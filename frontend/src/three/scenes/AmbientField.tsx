@@ -59,7 +59,9 @@ export default function AmbientField({
   // Particle count comes from the tier budget. When the budget is 0 (low tier
   // or a restrained scene) we still render a minimal field so the space isn't
   // empty — just far fewer motes.
-  const count = Math.max(24, budget.particles);
+  // Halved. Density was doing the same damage as opacity: a sparse field
+  // reads as air, a dense one reads as noise over a photograph.
+  const count = Math.max(16, Math.round(budget.particles * 0.5));
 
   // Positions are generated once and never regenerated: recreating this array
   // on a tier change would visibly reshuffle the field.
@@ -100,7 +102,10 @@ export default function AmbientField({
     // through the same space into different lighting.
     activeColor.current.lerp(color, 0.02);
     material.color.copy(activeColor.current);
-    material.opacity = 0.55 * weightRef.current;
+    // 0.18, not 0.55. At the old value the field read as scattered dots
+    // printed over the frame rather than as light in the air — the "dot
+    // design" that looked wrong. Dust should be felt, not counted.
+    material.opacity = 0.18 * weightRef.current;
 
     for (let i = 0; i < count; i++) {
       const x = seeds[i * 4 + 0];

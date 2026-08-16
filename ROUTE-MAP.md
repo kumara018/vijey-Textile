@@ -138,7 +138,7 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 | `/admin/users` | ✅ | `GET /users` | **admin** |
 | `/admin/ratings` | ✅ | support ratings | **admin** |
 | `/admin/cancellations` | ✅ | `GET /orders` (cancelled) | **admin** |
-| `/admin/admins` | ⬜ | admin accounts | **admin** |
+| `/admin/admins` | ✅ | `GET /admins` · `PATCH /users/{id}/revoke-admin` | **admin** |
 
 The seven views were previously one route switching on component state, with
 `?tab=` as the only handle. They are now **addressable routes** — bookmarkable,

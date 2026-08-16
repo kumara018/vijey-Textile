@@ -125,26 +125,26 @@ export default function HomePage() {
         * below no matter how far it grows.
         */}
       <section className="relative h-[240svh]">
-        <div className="sticky top-0 flex h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[14vh] pt-40 sm:px-10">
+        <div className="sticky top-0 flex h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(3.5rem,12vh,8rem)] pt-[clamp(6.5rem,15vh,10rem)] sm:px-10">
           {/* The pre-rendered camera move. Its poster paints immediately and
               stands alone if the sequence never arrives. */}
           <SequenceHero />
 
           <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
-            <p className="mb-8 text-rule uppercase text-brass-bright">
+            <p className="mb-[clamp(1rem,2.6vh,2rem)] text-rule uppercase text-brass-bright">
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
             </p>
           </Reveal>
 
           <Reveal delay={120}>
-            <h1 className="max-w-[min(15ch,50vw)] font-display text-plate font-light text-paper">
+            <h1 className="max-w-[min(15ch,46vw)] text-balance font-display text-plate font-light text-paper">
               Heirloom pieces, worn once, remembered always
             </h1>
           </Reveal>
 
           <Reveal delay={260}>
-            <div className="mt-12 flex flex-wrap items-center gap-x-10 gap-y-5">
+            <div className="mt-[clamp(1.5rem,4.2vh,3rem)] flex flex-wrap items-center gap-x-10 gap-y-5">
               <Link
                 href="/products"
                 className="group inline-flex items-baseline gap-4 border-b border-brass/70 pb-2 text-caption uppercase text-paper transition-colors duration-500 hover:border-brass-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"

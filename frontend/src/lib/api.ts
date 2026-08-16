@@ -169,6 +169,11 @@ export const adminAPI = {
   markRefunded:            (id: number)                 => api.post(`/api/payments/admin/orders/${id}/mark-refunded`),
   resetToRefundInitiated:  (id: number)                 => api.post(`/api/payments/admin/orders/${id}/reset-to-refund-initiated`),
   getUsers:                ()                           => api.get('/api/admin/users'),
+  // GET /api/admin/admins — any admin may list. The revoke below is
+  // primary-only and enforced server-side (routers/admin.py:459); the client
+  // hides the control, it does not gate the action.
+  getAdmins:               ()                           => api.get('/api/admin/admins'),
+  revokeAdmin:             (id: number)                 => api.patch(`/api/admin/users/${id}/revoke-admin`),
   updateSettings:          (data: object)               => api.put('/api/admin/settings', data),
   getSupportRatings:       ()                           => api.get('/api/admin/support-ratings'),
 };

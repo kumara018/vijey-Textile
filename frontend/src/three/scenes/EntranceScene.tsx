@@ -37,10 +37,22 @@ const STAGE_LEFT = 1.1;
  * Backdrop cloth. Near-black with a gold sheen, receding behind the subject.
  * No panel is nearer than the garment, so none can ever occlude it.
  */
+/**
+ * Backdrop cloth, deliberately almost invisible.
+ *
+ * These read as a flat dull rectangle behind the garment when they carried
+ * enough value to be seen as objects. A backdrop that announces itself is
+ * competing with the piece it exists to set off, and at this scale the eye
+ * reads the panel edge as a box rather than as cloth.
+ *
+ * They now sit within a few points of the ground (#1C1917), so what survives
+ * is the brass sheen travelling across them — light on fabric, which is the
+ * only part that was ever doing useful work.
+ */
 const PANELS = [
-  { x: 3.1, y:  0.2, z: -5.4, w: 4.4, h: 7.2, rot: -0.16, color: '#2A2522', sheen: '#A16207', speed: 0.34, weight: 0.85 },
-  { x: 6.4, y: -0.5, z: -7.2, w: 3.6, h: 6.2, rot: -0.30, color: '#211D1B', sheen: '#8A5406', speed: 0.28, weight: 0.6 },
-  { x: 1.6, y:  1.1, z: -9.0, w: 5.2, h: 6.6, rot:  0.08, color: '#1A1715', sheen: '#6B420A', speed: 0.22, weight: 0.4 },
+  { x: 3.1, y:  0.2, z: -5.4, w: 4.4, h: 7.2, rot: -0.16, color: '#1F1C1A', sheen: '#A16207', speed: 0.34, weight: 0.55 },
+  { x: 6.4, y: -0.5, z: -7.2, w: 3.6, h: 6.2, rot: -0.30, color: '#1C1917', sheen: '#8A5406', speed: 0.28, weight: 0.38 },
+  { x: 1.6, y:  1.1, z: -9.0, w: 5.2, h: 6.6, rot:  0.08, color: '#1A1715', sheen: '#6B420A', speed: 0.22, weight: 0.25 },
 ];
 
 /** The garment. The one thing in the frame that commands attention. */

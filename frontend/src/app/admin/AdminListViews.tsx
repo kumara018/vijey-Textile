@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { adminAPI } from '@/lib/api';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
-import { ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
+import { Announce, ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
 
 /**
  * The three read-mostly admin views: customers, support ratings, and
@@ -302,6 +302,185 @@ export function AdminCancellationsView() {
           ))}
         </Table>
       </Body>
+    </AdminShell>
+  );
+}
+
+/* ── Admin accounts ─────────────────────────────────────────────────────── */
+
+/**
+ * Who can get into this panel.
+ *
+ * The only admin view with a destructive action, so it is the only one that
+ * departs from the read-only table pattern — and the departure is deliberate
+ * rather than incidental.
+ *
+ * TWO THINGS THIS SCREEN MUST NOT DO.
+ *
+ * It must not imply the browser decides. Revoking is primary-only and that is
+ * enforced in `routers/admin.py:459`, which also refuses to revoke the primary
+ * account or the caller's own. Hiding the button for a secondary admin is a
+ * courtesy — it stops them reaching for something that would fail — not a
+ * control. The empty column says WHY the button is absent rather than leaving
+ * a blank cell, which reads as a rendering fault.
+ *
+ * It must not make removing someone a single click. Revocation locks a
+ * colleague out of the shop's operations, so it takes a deliberate second step,
+ * in the row, naming the person. A modal would be heavier and would move focus
+ * away from the row that is about to change.
+ *
+ * FOCUS, after the list reloads. Removing a row while focus sits on that row's
+ * button drops focus to the document and a keyboard user loses their place —
+ * the cart taught this. Focus lands on the standing note instead, which is a
+ * real sentence and sits directly above the table that just changed.
+ */
+export function AdminAdminsView() {
+  const { user } = useAuth();
+  const { rows, loading, failed, load, ready } = useAdminList<any>(adminAPI.getAdmins);
+
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [working, setWorking] = useState<number | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  const [actionError, setActionError] = useState('');
+  const landing = useRef<HTMLParagraphElement>(null);
+
+  const isPrimary = useMemo(
+    () => rows.some((a) => a.is_primary && a.email === user?.email),
+    [rows, user],
+  );
+
+  const revoke = useCallback(
+    async (row: any) => {
+      setWorking(row.id);
+      setActionError('');
+      try {
+        await adminAPI.revokeAdmin(row.id);
+        setAnnouncement(
+          `${row.full_name || row.email} no longer has admin access. Their customer account is untouched.`,
+        );
+        setConfirming(null);
+        await load();
+        landing.current?.focus();
+      } catch (e: any) {
+        setActionError(
+          e?.response?.data?.detail ||
+            'We could not change that account. Nothing has been altered.',
+        );
+      } finally {
+        setWorking(null);
+      }
+    },
+    [load],
+  );
+
+  if (!ready) return null;
+
+  return (
+    <AdminShell
+      title="Admin accounts"
+      standfirst={
+        loading
+          ? undefined
+          : `${rows.length} ${rows.length === 1 ? 'person has' : 'people have'} access to this panel.`
+      }
+      actions={<ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Refresh</ActionButton>}
+    >
+      <Announce message={announcement} />
+
+      <p
+        ref={landing}
+        tabIndex={-1}
+        className="max-w-[62ch] text-sm leading-relaxed text-paper-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+      >
+        {isPrimary
+          ? 'You are the primary admin, so you can remove admin access from anyone on this list. Removing access does not delete their account — they keep their orders and can still shop.'
+          : 'Only the primary admin can grant or remove admin access. You can see who has it.'}
+      </p>
+
+      {actionError && (
+        <p role="alert" className="mt-6 max-w-[62ch] text-sm text-brass-bright">
+          {actionError}
+        </p>
+      )}
+
+      <div className="mt-8">
+        <Body
+          loading={loading}
+          failed={failed}
+          empty={rows.length === 0}
+          emptyCopy="No admin accounts came back. That should not be possible while you are signed in as one, so treat it as a server problem rather than an empty list — refresh, and tell your developer if it repeats."
+          onRetry={load}
+        >
+          <Table
+            caption="Accounts with access to the admin panel"
+            columns={[
+              { label: 'Name' },
+              { label: 'Email' },
+              { label: 'Role' },
+              { label: 'Since' },
+              { label: 'Access', align: 'right' },
+            ]}
+          >
+            {rows.map((a) => {
+              const self = a.email === user?.email;
+              const removable = isPrimary && !a.is_primary && !self;
+              return (
+                <tr key={a.id} className="border-b border-ink-edge/40 align-baseline">
+                  <th scope="row" className="py-4 pr-4 text-left font-normal text-paper">
+                    {a.full_name || '—'}
+                    {self && <span className="ml-3 text-rule uppercase text-paper-faint">You</span>}
+                  </th>
+                  <td className="py-4 pr-4 text-paper-muted">{a.email}</td>
+                  <td className="py-4 pr-4">
+                    <span className={a.is_primary ? 'text-brass-bright' : 'text-paper-muted'}>
+                      {a.is_primary ? 'Primary' : 'Admin'}
+                    </span>
+                  </td>
+                  <td className="py-4 pr-4 tabular-nums text-paper-faint">{shortDate(a.created_at)}</td>
+                  <td className="py-4 text-right">
+                    {!removable ? (
+                      <span className="text-paper-faint">
+                        {a.is_primary
+                          ? 'Cannot be removed'
+                          : self
+                            ? 'Cannot remove yourself'
+                            : 'Primary admin only'}
+                      </span>
+                    ) : confirming === a.id ? (
+                      <span className="inline-flex flex-wrap items-baseline justify-end gap-x-7 gap-y-3">
+                        <span className="text-paper-muted">Remove access?</span>
+                        <ActionButton
+                          arrow={false}
+                          onClick={() => revoke(a)}
+                          disabled={working === a.id}
+                        >
+                          {working === a.id ? 'Removing…' : 'Yes, remove'}
+                        </ActionButton>
+                        <ActionButton
+                          tone="quiet"
+                          arrow={false}
+                          onClick={() => setConfirming(null)}
+                          disabled={working === a.id}
+                        >
+                          Keep
+                        </ActionButton>
+                      </span>
+                    ) : (
+                      <ActionButton
+                        tone="quiet"
+                        arrow={false}
+                        onClick={() => { setConfirming(a.id); setActionError(''); }}
+                      >
+                        Remove access
+                      </ActionButton>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </Table>
+        </Body>
+      </div>
     </AdminShell>
   );
 }

@@ -4,13 +4,18 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run check:tailwind && npm run check:hero && npm run check:frames && next build",
+    "build": "npm run check:tailwind && npm run check:hero && npm run check:frames && npm run check:visual && next build",
     "start": "next start",
     "lint": "npm run check:tailwind && next lint",
     "check:tailwind": "node scripts/check-tailwind-config.js",
     "check:hero": "node scripts/check-hero-assets.js",
     "check:frames": "node scripts/check-frame-content.mjs public/hero --sample 3",
-    "verify": "npm run check:tailwind && npm run check:hero && npm run check:frames && tsc --noEmit"
+    "verify": "npm run check:tailwind && npm run check:hero && npm run check:frames && npm run check:visual && tsc --noEmit",
+    "check:visual": "node scripts/visual-regression.mjs",
+    "shoot": "node scripts/shoot-page.mjs",
+    "measure": "node scripts/measure-routes.mjs",
+    "drills": "node scripts/failure-drills.mjs",
+    "a11y": "node scripts/a11y-pass.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",

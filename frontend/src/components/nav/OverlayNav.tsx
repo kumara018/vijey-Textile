@@ -195,8 +195,12 @@ export default function OverlayNav() {
         aria-label="Index"
         // Kept mounted so the close transition can play; inert to both
         // pointer and assistive tech when shut.
+        //
+        // `inert` is a real boolean prop in React 19. It used to be passed as
+        // the empty string — the React 18 idiom — which React 19 warns will be
+        // read as FALSE, leaving the closed overlay focusable by keyboard.
         aria-hidden={!open}
-        {...(!open ? { inert: '' as unknown as boolean } : {})}
+        {...(!open ? { inert: true } : {})}
         className={`fixed inset-0 z-50 bg-night-deep transition-opacity duration-[520ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] ${
           open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
         }`}

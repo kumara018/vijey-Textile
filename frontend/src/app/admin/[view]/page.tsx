@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import AdminDashboard from '../AdminDashboard';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
-import { AdminUsersView, AdminRatingsView, AdminCancellationsView } from '../AdminListViews';
+import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView } from '../AdminListViews';
 import AdminProductsView from '../AdminProductsView';
 
 /**
@@ -76,6 +76,7 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'ratings') return <AdminRatingsView />;
   if (view === 'cancellations') return <AdminCancellationsView />;
   if (view === 'products') return <AdminProductsView />;
+  if (view === 'admins') return <AdminAdminsView />;
 
   return <AdminDashboard initialView={view} />;
 }

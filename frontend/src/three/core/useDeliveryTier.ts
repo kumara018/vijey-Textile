@@ -50,7 +50,7 @@ const CAPTURE_STATE: DeliveryState = {
   provisional: false,
 };
 
-function isCaptureRender(): boolean {
+export function isCaptureRender(): boolean {
   return typeof window !== 'undefined'
     && new URLSearchParams(window.location.search).get('capture') === '1';
 }
@@ -64,17 +64,34 @@ export interface DeliveryState {
 }
 
 export function useDeliveryTier(): DeliveryState {
-  const [state, setState] = useState<DeliveryState>(() => {
-    // SSR and first paint both need a defensible answer before any measurement
-    // exists. 'standard' is the honest middle: good enough to look right, cheap
-    // enough not to punish a phone if the guess is wrong.
-    if (typeof window === 'undefined') {
-      return { tier: 'standard', profile: TIER_PROFILES.standard, reason: 'server render', provisional: true };
-    }
-    if (isCaptureRender()) return CAPTURE_STATE;
-    const s = readSignals();
-    const { tier, reason } = resolveTier(s);
-    return { tier, profile: TIER_PROFILES[tier], reason, provisional: true };
+  /**
+   * The opening rung is 'standard' on the server AND on the client's first
+   * render — deliberately, and identically.
+   *
+   * This used to branch on `typeof window`: the server emitted 'standard' and
+   * the browser's very first render emitted whatever the device resolved to.
+   * That is a hydration mismatch, and React reported it as one — server HTML
+   * carrying `/hero/standard/poster.avif` against a client tree wanting
+   * `/hero/light/poster.avif`, with the warning that it "won't be patched up".
+   *
+   * The consequence is worse than a console message. React keeps the SERVER's
+   * attributes on a mismatched host node, so the poster could end up pointing
+   * at a directory the tier ladder is not loading frames from, and the sequence
+   * would scrub against a still from a different rung. It also costs a wasted
+   * decode of a poster that is about to be replaced.
+   *
+   * Hydration's contract is that the first client render reproduces the server
+   * exactly; device measurement is by definition not available then. So the
+   * guess is made once, in the effect below, which is where it belonged — one
+   * render at the honest middle rung, then a single resolved swap. 'standard'
+   * is that middle: good enough to look right, cheap enough not to punish a
+   * phone if the guess is wrong.
+   */
+  const [state, setState] = useState<DeliveryState>({
+    tier: 'standard',
+    profile: TIER_PROFILES.standard,
+    reason: 'opening guess',
+    provisional: true,
   });
 
   /** The best rung this device may ever reach, set by the opening guess. */

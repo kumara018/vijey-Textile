@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { detectCapabilities } from './core/capabilities';
 import { useSceneStore, sceneForPath } from '@/store/useSceneStore';
-import { useDeliveryTier } from './core/useDeliveryTier';
+import { useDeliveryTier, isCaptureRender } from './core/useDeliveryTier';
 import { webglAvailable, shaderCompileHealthy } from './core/contextRecovery';
 
 /**
@@ -180,7 +180,20 @@ export default function ThreeProvider() {
    * canvas has nothing to add and one clear way to hurt. Every other route
    * keeps its scene.
    */
-  if (pathname === '/') return null;
+  /**
+   * ...except while the sequence is being MADE.
+   *
+   * The offline renderer captures `/?effects=hold&capture=1`, so suppressing
+   * the scene on `/` unconditionally suppressed the very thing it exists to
+   * photograph. The render refused to start and said so — "no
+   * [data-capture-keep] canvas host" — rather than spending an hour producing
+   * 545 frames of empty ground.
+   *
+   * The two rules are not in conflict once stated properly: the live scene is
+   * redundant on `/` because the sequence already contains it. During capture
+   * there is no sequence yet, and the scene is the subject.
+   */
+  if (pathname === '/' && !isCaptureRender()) return null;
 
   return (
     <CanvasHost>

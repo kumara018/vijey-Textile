@@ -156,6 +156,41 @@ html[data-capture='1'] [data-capture-keep] canvas {
 html[data-capture='1'] [data-sequence-hero] {
   display: none !important;
 }
+/* Next's dev-mode indicator mounts in its own portal element, so
+   `body > *:not([data-capture-keep])` never reached it and the badge was
+   baked into the bottom-left of every rendered frame. Named explicitly.
+   The real fix is to render against a production build, which has no
+   overlay at all — this is the belt to that braces. */
+html[data-capture='1'] nextjs-portal,
+html[data-capture='1'] [data-nextjs-toast],
+html[data-capture='1'] #__next-build-watcher,
+html[data-capture='1'] [data-nextjs-dev-tools-button] {
+  display: none !important;
+}
+
+/* ── Reduced motion: the loading animations, guaranteed ───────────────
+   The shared Skeleton carries `motion-reduce:animate-none` and always has.
+   The inline skeletons that grew up beside it — the products grid, the
+   heirloom plate, the legacy admin tables — did not, and the reduced-motion
+   pass caught them still pulsing: ten running animations on the homepage and
+   three on /products with `prefers-reduced-motion: reduce` set.
+
+   Patching those call sites would fix today and not tomorrow, because the
+   guarantee would still depend on whoever writes the next skeleton
+   remembering a utility class. Stating it once, here, means a spinner or a
+   pulse cannot escape the preference no matter where it is written.
+
+   Scoped to the decorative loading animations on purpose. A blanket
+   `* { animation: none }` also kills animations whose `animationend` fires
+   application logic, which trades a motion bug for a stuck interface. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+}
 
 /* ── Auth step transition ─────────────────────────────────────────────
    The only motion on the auth screens: a 480ms fade with a small rise

@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { attachContextRecovery } from './core/contextRecovery';
 import { Preload } from '@react-three/drei';
 import { useSceneStore } from '@/store/useSceneStore';
+import { isCaptureRender } from './core/useDeliveryTier';
 
 /**
  * Drives per-frame store values that scenes read.
@@ -60,6 +61,22 @@ function FrameDriver() {
     });
   }, [gl, invalidate]);
 
+  /**
+   * Measurement hook, opt-in via `?measure=1`.
+   *
+   * The final audit has to state draw calls and frame cost PER ROUTE, and
+   * there is no way to read `renderer.info` from outside the React tree. This
+   * publishes the live renderer on `window` only when the URL asks for it, so
+   * a customer's page never carries the handle. Read-only by intent: the
+   * measuring script looks at `.info`, it does not drive anything.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (new URLSearchParams(window.location.search).get('measure') !== '1') return;
+    (window as unknown as { __three?: unknown }).__three = gl;
+    return () => { delete (window as unknown as { __three?: unknown }).__three; };
+  }, [gl]);
+
   useFrame(() => {
     const t = target.current;
     const e = eased.current;
@@ -110,6 +127,26 @@ export default function CanvasHost({ children }: { children?: React.ReactNode })
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
+
+    /**
+     * The fade must not run while the sequence is being MADE.
+     *
+     * This fade exists so the fixed canvas stops duplicating the hero behind
+     * the sections below it. The offline renderer, though, drives the page
+     * through a scroll range to capture the camera move — and that range runs
+     * past the point where this fade has already hidden the scene. The result
+     * was a sequence whose tail was empty: measured at 11 frames per tier with
+     * a luminance range of 1, i.e. flat ground, including the final six.
+     *
+     * `check:frames` did not catch it because it samples three frames per tier
+     * and happened to miss them. The dead frames are why the hero looked blank
+     * at rest.
+     */
+    if (isCaptureRender()) {
+      el.style.opacity = '1';
+      el.style.visibility = 'visible';
+      return;
+    }
 
     let pending = false;
     const apply = () => {
