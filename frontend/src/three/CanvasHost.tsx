@@ -90,6 +90,54 @@ function FrameDriver() {
  */
 export default function CanvasHost({ children }: { children?: React.ReactNode }) {
   const capabilities = useSceneStore((s) => s.capabilities);
+  const shellRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The scene is an OPENING, and it fades as the page becomes editorial.
+   *
+   * This fixes a real duplication, not just a mood: the canvas is
+   * `position: fixed`, so it kept staging the hero garment behind every
+   * section below the hero. On the homepage that put the same photograph on
+   * screen twice at once — once inside the pinned hero, once bleeding behind
+   * "The occasion" underneath it. Two renderers, one subject.
+   *
+   * Fading it out across the first stretch of scroll resolves that and states
+   * the intent: the scene belongs to the opening of a page, and everything
+   * past it is type and photography. Driven on rAF from a passive listener,
+   * writing only `opacity` — a compositor-only property, so it never costs a
+   * layout or a repaint of the scene itself.
+   */
+  useEffect(() => {
+    const el = shellRef.current;
+    if (!el) return;
+
+    let pending = false;
+    const apply = () => {
+      pending = false;
+      const node = shellRef.current;
+      if (!node) return;
+      // Fully present for the first viewport, gone by the end of the second.
+      const vh = window.innerHeight || 1;
+      const t = Math.min(1, Math.max(0, (window.scrollY - vh * 0.9) / (vh * 1.1)));
+      node.style.opacity = String(1 - t);
+      // Stop compositing it entirely once invisible.
+      node.style.visibility = t >= 1 ? 'hidden' : 'visible';
+    };
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(apply);
+    };
+
+    apply();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [capabilities]);
+
 
   // Detection hasn't finished, or this device can't render at all. The site
   // is fully usable either way — the canvas is decoration, never content.
@@ -101,6 +149,7 @@ export default function CanvasHost({ children }: { children?: React.ReactNode })
 
   return (
     <div
+      ref={shellRef}
       aria-hidden="true"
       /**
        * The one subtree capture mode keeps. Marked explicitly rather than

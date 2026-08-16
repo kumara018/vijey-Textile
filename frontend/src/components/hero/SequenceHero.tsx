@@ -31,6 +31,7 @@ export default function SequenceHero({ className = '' }: { className?: string })
   const { tier, profile } = useDeliveryTier();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hostRef = useRef<HTMLDivElement>(null);
   const frames = useRef<(ImageBitmap | null)[]>([]);
   const loadedCount = useRef(0);
   const rafPending = useRef(false);
@@ -137,45 +138,59 @@ export default function SequenceHero({ className = '' }: { className?: string })
     };
   }, [tier, profile.frames, reduced, posterFailed]);
 
-  /* ── Scrub ─────────────────────────────────────────────────────────── */
+  /* ── Scrub + scale, driven from one rAF ───────────────────────────── */
   useEffect(() => {
-    if (!ready || reduced) return;
+    if (reduced) return;
 
     const draw = () => {
       rafPending.current = false;
-      const canvas = canvasRef.current;
-      const host = canvas?.parentElement;
-      if (!canvas || !host) return;
-
-      const rect = host.getBoundingClientRect();
-      if (rect.height < 1) return;
+      const host = hostRef.current;
+      if (!host) return;
 
       /**
-       * The scrub MUST use the same parameterisation the renderer used to
-       * produce the frames, and previously it did not.
+       * Progress across the PINNED section, not the document.
        *
-       * The renderer steps document scroll from HERO_SCRUB.from to .to and
-       * captures a frame at each step. This scrubbed on element visibility
-       * instead — `(innerHeight - rect.top) / (rect.height + innerHeight)` —
-       * which is the right formula for something that scrolls INTO view from
-       * below, and the wrong one for a hero that starts at the top of the
-       * document. With a hero one viewport tall it yields p = 0.5 at scroll 0
-       * and p = 1.0 after a single viewport: the sequence opened on frame 60,
-       * ran out one screen down, and then held still for the rest of the page.
-       * It also jumped from the poster (frame 0) to mid-sequence the moment
-       * the frames finished loading.
+       * The hero is now a tall section with a sticky inner frame — the
+       * Accenture / NVIDIA pattern — so the move plays while the section is
+       * pinned and finishes exactly as it releases. The parent's own box is
+       * the range: its top passing 0 is p=0, and its bottom reaching the
+       * viewport floor is p=1.
        *
-       * Both ends now read the same two numbers from heroScrub.json.
+       * (The renderer still CAPTURES the move by stepping document scroll
+       * across heroScrub.json's span. That is how the frames were produced;
+       * where they are replayed is a layout decision, and pinning is the
+       * layout. Frame 0 opens the move and the last frame closes it either
+       * way, which is the invariant that actually matters.)
        */
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      const span = max * (HERO_SCRUB.to - HERO_SCRUB.from);
-      const p = span > 0
-        ? Math.min(1, Math.max(0, (window.scrollY - max * HERO_SCRUB.from) / span))
-        : 0;
-      const target = Math.round(p * (frames.current.length - 1));
+      const section = host.parentElement?.parentElement;
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const span = rect.height - window.innerHeight;
+      const p = span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
 
+      /**
+       * The scale. Small to full-bleed across the pin — one continuous
+       * transform, never a layout change, so it composites on the GPU and
+       * never triggers reflow. This is why the previous version stuttered:
+       * it resized the canvas backing store on every scroll event, which
+       * forces a reallocation and a full repaint per frame.
+       */
+      const scale = 0.62 + 0.38 * p;
+      host.style.transform = `scale(${scale.toFixed(4)})`;
+      host.style.opacity = String(Math.min(1, 0.55 + p * 0.9));
+
+      const canvas = canvasRef.current;
+      if (!canvas || !ready) return;
+
+      const total = frames.current.length;
+      if (total === 0) return;
+      const target = Math.round(p * (total - 1));
+
+      // Nearest loaded frame, bounded. The old version scanned the entire
+      // array on every draw; interleaved loading means the nearest hit is
+      // almost always within a few slots.
       let idx = -1;
-      for (let d = 0; d < frames.current.length; d++) {
+      for (let d = 0; d < 12; d++) {
         if (frames.current[target + d]) { idx = target + d; break; }
         if (frames.current[target - d]) { idx = target - d; break; }
       }
@@ -185,19 +200,28 @@ export default function SequenceHero({ className = '' }: { className?: string })
       if (!bmp) return;
       currentIndex.current = idx;
 
+      // Size the backing store ONCE per viewport, not per scroll tick.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const w = Math.round(rect.width * dpr);
-      const h = Math.round(rect.height * dpr);
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      const w = Math.round(host.clientWidth * dpr);
+      const h = Math.round(host.clientHeight * dpr);
+      if (w > 0 && h > 0 && (canvas.width !== w || canvas.height !== h)) {
+        canvas.width = w;
+        canvas.height = h;
+      }
 
       const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) return;
 
       // Cover-fit, preserving aspect. Stretching a garment is the one
       // unforgivable error on a clothing site.
-      const scale = Math.max(w / bmp.width, h / bmp.height);
-      ctx.drawImage(bmp, (w - bmp.width * scale) / 2, (h - bmp.height * scale) / 2,
-        bmp.width * scale, bmp.height * scale);
+      const s = Math.max(canvas.width / bmp.width, canvas.height / bmp.height);
+      ctx.drawImage(
+        bmp,
+        (canvas.width - bmp.width * s) / 2,
+        (canvas.height - bmp.height * s) / 2,
+        bmp.width * s,
+        bmp.height * s,
+      );
     };
 
     const onScroll = () => {
@@ -217,8 +241,13 @@ export default function SequenceHero({ className = '' }: { className?: string })
 
   return (
     <div
+      ref={hostRef}
       aria-hidden="true"
       data-sequence-hero=""
+      // will-change + a transform origin at the centre keep the scale on the
+      // compositor. Without will-change the browser promotes the layer on the
+      // first scroll tick, which is exactly when the stutter is visible.
+      style={{ transformOrigin: 'center center', willChange: 'transform, opacity' }}
       /**
        * `overflow-hidden` and `inset-0` are load-bearing, not cosmetic. A
        * failed <img> is still a replaced element and will size itself to its

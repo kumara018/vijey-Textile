@@ -56,6 +56,20 @@ export default function HomePage() {
   // returns nothing, so the hero is never an empty state.
   const hero = featuredItems[0] ?? recentItems[0] ?? (HERO_FIXTURE as unknown as Product);
 
+  /**
+   * The heirloom plate must never be the piece already staged in the hero.
+   *
+   * It was `product={hero}` — the same garment — so on a small catalogue the
+   * page showed one photograph twice within two screens, which reads as the
+   * site repeating itself rather than as two movements of one composition.
+   * Pick the first piece that is NOT the hero, falling back to the hero only
+   * when the shop genuinely has one item.
+   */
+  const plate = useMemo(() => {
+    const pool = [...featuredItems, ...recentItems];
+    return pool.find((p) => p.id !== hero?.id) ?? hero;
+  }, [featuredItems, recentItems, hero]);
+
   useEffect(() => {
     const img = hero?.images?.[0] ?? null;
     setHeroImage(img ?? null);
@@ -98,13 +112,25 @@ export default function HomePage() {
       {/* ═══ I. The opening plate ══════════════════════════════════════
           One line, at the largest size on the site, over the staged
           photograph. Nothing else competes for the frame. */}
-      <section className="relative flex min-h-[100svh] flex-col justify-end px-6 pb-[14vh] pt-40 sm:px-10">
-        {/* The pre-rendered camera move. Its poster paints immediately and
-            stands alone if the sequence never arrives; the real-time canvas
-            behind the page layers on top only at the rich/maximum rungs. */}
-        <SequenceHero />
+      {/**
+        * A PINNED hero — the Accenture / NVIDIA pattern.
+        *
+        * The section is 240svh tall and its inner frame is sticky, so the
+        * viewport holds still while the scroll drives the camera move and the
+        * garment grows from a held plate to full bleed. The move therefore
+        * plays over a real distance instead of being over within one screen.
+        *
+        * `overflow-hidden` on the sticky frame is load-bearing: the scaled
+        * media is clipped to the frame, so nothing bleeds into the sections
+        * below no matter how far it grows.
+        */}
+      <section className="relative h-[240svh]">
+        <div className="sticky top-0 flex h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[14vh] pt-40 sm:px-10">
+          {/* The pre-rendered camera move. Its poster paints immediately and
+              stands alone if the sequence never arrives. */}
+          <SequenceHero />
 
-        <div className="relative z-10 mx-auto w-full max-w-[112rem]">
+          <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
             <p className="mb-8 text-rule uppercase text-brass-bright">
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
@@ -135,7 +161,8 @@ export default function HomePage() {
                 </Link>
               )}
             </div>
-          </Reveal>
+            </Reveal>
+          </div>
         </div>
       </section>
 
@@ -181,7 +208,7 @@ export default function HomePage() {
       {/* ═══ III. The heirloom in frame ════════════════════════════════
           One piece, one viewport. The camera cranes down it as you
           scroll — the scene handles that; this is the type over it. */}
-      <HeirloomPlate product={hero} loading={featured.isPending && recent.isPending} />
+      <HeirloomPlate product={plate} loading={featured.isPending && recent.isPending} />
 
       {/* ═══ IV. The measure ═══════════════════════════════════════════
           Sizes 12–40 as an actual rule. Replaces a trust-badge row with
