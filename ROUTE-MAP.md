@@ -3,7 +3,7 @@
 Every route the frontend serves, what it calls, and what guards it. Built by
 reading the backend, **read-only** — no schema, endpoint, or migration touched.
 
-**Status legend:** ✅ rebuilt in the new design · ⬜ still on the old design
+**Status legend:** ✅ rebuilt in the new design · ⬜ still on the old design · n/a not a page
 
 ---
 
@@ -88,10 +88,10 @@ including the Indian mobile pattern the server enforces.
 |---|---|---|---|
 | `/auth/login` | ✅ | `POST /send-login-otp` → `/verify-login-otp` · `/sessions/evict-and-login` | public |
 | `/auth/register` | ✅ | `POST /register` → `/verify-register-otp` · `/resend-register-otp` | public |
-| `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice` · `/support/rate/[token]` · `/orders/[id]` · `/returns/[id]` · `/account/delete` | ✅ | `POST /forgot-password` → `/reset-password` | public |
+| `/auth/forgot-password` | ✅ | `POST /forgot-password` → `/reset-password` | public |
 | `/account` | ✅ | `GET/PUT /api/auth/me` · `GET /api/auth/sessions` · `DELETE /sessions/{id}` · addresses CRUD | auth |
 | `/account/delete` | ✅ | `POST /request-delete-account` → `/confirm-delete-account` · `/cancel-delete-account` · deactivate pair | auth |
-| Sign out | ⬜ | `POST /api/auth/logout` — accepts an explicit token so one saved account can be signed out while switching to another | auth |
+| Sign out | n/a | `POST /api/auth/logout` — accepts an explicit token so one saved account can be signed out while switching to another | auth |
 
 Login is **two-step OTP**, not password-only, and can return **409 `device_limit`**
 carrying `pending_token` + `sessions` for the eviction modal. Both behaviours
@@ -142,10 +142,19 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 
 The seven views were previously one route switching on component state, with
 `?tab=` as the only handle. They are now **addressable routes** — bookmarkable,
-shareable, and correct under the back button — all mounting the one
-`AdminDashboard` component with the view preselected. `?tab=` still resolves,
-so existing links keep working. **Addressability is done; the visual rebuild
-of these seven views is not** — they remain on the old maroon design.
+shareable, and correct under the back button. `?tab=` still resolves, so
+existing links keep working.
+
+`/admin` is rebuilt on the new **`AdminShell`**: no scene, no scrim, no motion
+(the admin resolves to `plain` and renders zero draw calls), a tighter measure
+than the storefront because density is what a work tool needs, and the same
+palette and type because it is the same shop. Its tabs are real links, so
+back, bookmark and open-in-new-tab all work — managing orders in one tab and
+products in another is the normal case.
+
+**The seven working views still mount the legacy `AdminDashboard`.** They cross
+onto `AdminShell` one at a time. The mixed state is deliberate and visible
+rather than hidden behind a flag.
 
 Every `/api/admin/*` endpoint sits behind `get_current_admin` → **403** for a
 signed-in non-admin. The admin dashboard is a work tool used all day, which is
