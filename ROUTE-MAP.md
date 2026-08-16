@@ -103,7 +103,7 @@ must survive the rebuild.
 
 | Route | Status | Calls | Guard |
 |---|---|---|---|
-| `/support` | ⬜ | `GET /api/support/rating/summary` · `POST /interactions` | public |
+| `/support` | ✅ | `GET /api/support/rating/summary` · `POST /interactions` | public |
 | `/support/rate/[token]` | ⬜ | `GET/POST /api/support/rate/{token}` | public, token-scoped |
 | `/shipping` | ✅ | none — static | public |
 | `/terms` | ✅ | none — static | public |
@@ -175,10 +175,10 @@ framework's default and a slow segment showed nothing.
 **30 app routes** (23 + the six new addressable admin views + `[view]`)
 + `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
 
-**9 of 23 rebuilt** · 14 remaining.
+**10 of 23 rebuilt** · 13 remaining.
 
 `/` · `/products` · `/shipping` · `/privacy` · `/terms` · `/cancellation` ·
-`/authentic` · `/cart` · `/wishlist`
+`/authentic` · `/cart` · `/wishlist` · `/support`
 
 **4 of 5 app-shell surfaces rebuilt** (404, route error, global error, loading).
 
