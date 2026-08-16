@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import AdminDashboard from '../AdminDashboard';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
+import { AdminUsersView, AdminRatingsView, AdminCancellationsView } from '../AdminListViews';
 
 /**
  * The admin's views as real, addressable routes.
@@ -70,6 +71,9 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   // mounts the legacy dashboard, which keeps working exactly as before.
   if (view === 'orders') return <AdminOrdersView />;
   if (view === 'returns') return <AdminReturnsView />;
+  if (view === 'users') return <AdminUsersView />;
+  if (view === 'ratings') return <AdminRatingsView />;
+  if (view === 'cancellations') return <AdminCancellationsView />;
 
   return <AdminDashboard initialView={view} />;
 }

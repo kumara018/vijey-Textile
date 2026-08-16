@@ -135,9 +135,9 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 | `/admin/products` | ⬜ | products CRUD + image/video upload | **admin** |
 | `/admin/orders` | ✅ | `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync | **admin** |
 | `/admin/returns` | ✅ | returns status · retry-pickup · attach-awb · retry-replacement | **admin** |
-| `/admin/users` | ⬜ | `GET /users` | **admin** |
-| `/admin/ratings` | ⬜ | support ratings | **admin** |
-| `/admin/cancellations` | ⬜ | `GET /orders` (cancelled) | **admin** |
+| `/admin/users` | ✅ | `GET /users` | **admin** |
+| `/admin/ratings` | ✅ | support ratings | **admin** |
+| `/admin/cancellations` | ✅ | `GET /orders` (cancelled) | **admin** |
 | `/admin/admins` | ⬜ | admin accounts | **admin** |
 
 The seven views were previously one route switching on component state, with
