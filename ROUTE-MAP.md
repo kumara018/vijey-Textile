@@ -131,7 +131,7 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 
 | Route | Status | Calls | Guard |
 |---|---|---|---|
-| `/admin` | ⬜ | `GET /api/admin/dashboard` · products CRUD + image/video upload · `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync/serviceability · returns status/retry-pickup/attach-awb/retry-replacement · notifications · `GET /users` · support ratings · payments refund trio | **admin** |
+| `/admin` | ✅ | `GET /api/admin/dashboard` · products CRUD + image/video upload · `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync/serviceability · returns status/retry-pickup/attach-awb/retry-replacement · notifications · `GET /users` · support ratings · payments refund trio | **admin** |
 | `/admin/products` | ⬜ | products CRUD + image/video upload | **admin** |
 | `/admin/orders` | ⬜ | `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync | **admin** |
 | `/admin/returns` | ⬜ | returns status · retry-pickup · attach-awb · retry-replacement | **admin** |
@@ -166,7 +166,7 @@ framework's default and a slow segment showed nothing.
 | Route error | `app/error.tsx` | ✅ | **New.** Retry, catalogue, home, the shop's phone number, and the Next.js `digest` as a support reference. Imports nothing that can throw. |
 | Global error | `app/global-error.tsx` | ✅ | **New.** Replaces the whole document, so it renders its own `<html>`/`<body>` and every style is an inline literal — it must survive the stylesheet, fonts and providers all being gone. |
 | Loading | `app/loading.tsx` | ✅ | **New.** A skeleton in the shape of the arriving page, not a spinner. Zero JS; honours `prefers-reduced-motion`. |
-| Empty cart · empty wishlist · no orders · no results · no notifications | per-route | ⬜ | Still old design. |
+| Empty cart · empty wishlist · no orders · no kept pieces · no reviews | per-route | ✅ | Rebuilt with each route, via `EmptyState`. Each says WHY it is empty rather than that it is. |
 
 ---
 
@@ -175,7 +175,7 @@ framework's default and a slow segment showed nothing.
 **30 app routes** (23 + the six new addressable admin views + `[view]`)
 + `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
 
-**22 of 23 rebuilt** · 1 remaining.
+**23 of 23 customer routes rebuilt.** The admin component's seven working views remain.
 
 `/` · `/products` · `/shipping` · `/privacy` · `/terms` · `/cancellation` ·
 `/authentic` · `/cart` · `/wishlist` · `/support` · `/auth/login` · `/auth/register` · `/auth/forgot-password` · `/account` · `/products/[id]` · `/checkout` · `/orders` · `/orders/[id]/invoice` · `/support/rate/[token]` · `/orders/[id]` · `/returns/[id]` · `/account/delete`

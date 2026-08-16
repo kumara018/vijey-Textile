@@ -1,11 +1,13 @@
-import AdminDashboard from './AdminDashboard';
+import AdminDashboardView from './AdminDashboardView';
 
 /**
- * /admin — the dashboard overview.
+ * /admin — the overview.
  *
- * The five working views live at their own addresses under this one; see
- * `admin/[view]/page.tsx`.
+ * The seven working views still mount the legacy AdminDashboard via
+ * `admin/[view]`. They are being rebuilt onto AdminShell one at a time; this
+ * is the first. Mixed until they are all across, which is visible and
+ * deliberate rather than hidden behind a flag.
  */
 export default function AdminPage() {
-  return <AdminDashboard initialView="dash" />;
+  return <AdminDashboardView />;
 }
