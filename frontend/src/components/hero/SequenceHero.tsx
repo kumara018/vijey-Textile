@@ -7,35 +7,26 @@ import { useDeliveryTier } from '@/three/core/useDeliveryTier';
  * Scroll-scrubbed image sequence.
  *
  * The camera move was rendered offline at full quality with the whole
- * postprocessing chain open — god rays, depth of field, film LUT, grain. What
- * ships is a decode, not a render. That moves the cost off the customer's
- * device, which matters because the real-time chain measured ~10fps on the
- * integrated graphics most of this shop's customers actually have.
+ * postprocessing chain open. What ships is a decode, not a render — which
+ * moves the cost off the customer's device, where the real-time chain measured
+ * 10-14fps on the integrated graphics most of this shop's customers have.
  *
- * Three rules hold this together:
+ * Four rules, in priority order:
  *
- *  1. THE POSTER IS THE HERO. A sharp first frame paints immediately, from
- *     ordinary <img> markup with fetchPriority high. If the sequence never
- *     arrives — slow link, decode failure, JS disabled, an error five levels
- *     up — that frame is still a finished hero. Everything else is addition.
- *
- *  2. SCRUBBING NEVER BLOCKS. Frames decode in the background and the canvas
- *     draws the nearest one it already holds. A visitor who scrolls before
- *     loading finishes sees the move at lower temporal resolution, never a
- *     stall and never a gap.
- *
- *  3. MOTION NEVER GATES AN ACTION. This is a decorative layer behind the copy.
- *     The product name, the price and the route to buying are ordinary DOM
- *     above it, legible and clickable from the first paint.
+ *  1. THE FRAME NEVER BREAKS. The container owns its dimensions and clips its
+ *     contents, and a solid brand-coloured ground sits underneath everything.
+ *     If the poster 404s, if AVIF and WebP both fail, if JS never runs — the
+ *     hero is still a deliberate dark frame with the headline legible over it.
+ *     A broken-image glyph must never reach a customer.
+ *  2. THE POSTER IS THE HERO. A sharp first frame paints immediately from
+ *     ordinary markup. Everything after it is addition.
+ *  3. SCRUBBING NEVER BLOCKS. Frames decode in the background; the canvas draws
+ *     the nearest one it holds.
+ *  4. MOTION NEVER GATES AN ACTION. Decoration behind the copy. Product name,
+ *     price and the route to buying are DOM above it, from first paint.
  */
 
-export default function SequenceHero({
-  posterAlt,
-  className = '',
-}: {
-  posterAlt: string;
-  className?: string;
-}) {
+export default function SequenceHero({ className = '' }: { className?: string }) {
   const { tier, profile } = useDeliveryTier();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,17 +37,41 @@ export default function SequenceHero({
 
   const [reduced, setReduced] = useState(false);
   const [ready, setReady] = useState(false);
+  /**
+   * Set when BOTH the AVIF source and the WebP fallback fail.
+   *
+   * <picture> falls through from <source> to <img> automatically on a decode
+   * failure, but a 404 on the <img> src is terminal — that is what fires this.
+   */
+  const [posterFailed, setPosterFailed] = useState(false);
+  /**
+   * Only true once the poster has genuinely decoded.
+   *
+   * The poster starts INVISIBLE and fades in on load, rather than starting
+   * visible and being hidden on error. That inversion is deliberate: inside a
+   * <picture>, when the <source> fails the browser does not reliably fire
+   * `error` on the <img>, so an onError-only guard still leaves a broken-image
+   * glyph painted in the corner — which is exactly the artifact that reached
+   * production. Opacity-gated on load, a poster that never arrives is simply
+   * never shown, whatever the browser does or does not report.
+   */
+  const [posterLoaded, setPosterLoaded] = useState(false);
 
   useEffect(() => {
     setReduced(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }, []);
 
+  // A tier change means a different asset directory; give the new poster a
+  // fresh chance rather than staying failed because a previous rung 404'd.
+  useEffect(() => { setPosterFailed(false); setPosterLoaded(false); }, [tier]);
+
   /* ── Load the sequence for the active tier ─────────────────────────── */
   useEffect(() => {
     // Reduced motion and the minimal rung both mean: the poster, held. There is
-    // no camera move to scrub, so there is nothing to fetch. This is the correct
-    // render of the design in that mode, not a degraded one.
-    if (reduced || profile.frames <= 1) {
+    // no camera move to scrub. Also skip entirely when the poster failed —
+    // if the directory 404s the frames in it will too, and firing 120 doomed
+    // requests helps nobody.
+    if (reduced || profile.frames <= 1 || posterFailed) {
       setReady(false);
       return;
     }
@@ -66,15 +81,9 @@ export default function SequenceHero({
     frames.current = bitmaps;
     loadedCount.current = 0;
 
-    /**
-     * Fetch order is interleaved rather than sequential: every other frame
-     * first, then the gaps.
-     *
-     * Loading 0,1,2,3… means a visitor who scrolls early can only scrub the
-     * opening of the move. Loading 0,2,4… gives the whole move at half
-     * temporal resolution almost immediately, and the second pass fills it in.
-     * The move is always complete; only its smoothness improves.
-     */
+    // Interleaved: every other frame, then the gaps. Sequential loading would
+    // let an early scroller scrub only the opening of the move; this gives the
+    // whole move at half temporal resolution almost immediately.
     const order: number[] = [];
     for (let i = 0; i < profile.frames; i += 2) order.push(i);
     for (let i = 1; i < profile.frames; i += 2) order.push(i);
@@ -84,10 +93,9 @@ export default function SequenceHero({
     const ext = supportsAvif ? 'avif' : 'webp';
 
     (async () => {
-      // A small concurrency window. Firing 120 requests at once on a phone
-      // starves the connection and delays the frames actually being looked at.
       const CONCURRENCY = 6;
       let cursor = 0;
+      let consecutiveFailures = 0;
 
       const worker = async () => {
         while (!cancelled && cursor < order.length) {
@@ -95,20 +103,22 @@ export default function SequenceHero({
           const url = `/hero/${tier}/${String(idx).padStart(4, '0')}.${ext}`;
           try {
             const res = await fetch(url, { cache: 'force-cache' });
-            if (!res.ok) continue;
+            if (!res.ok) {
+              // A whole missing tier directory should stop the run, not
+              // generate 120 identical 404s in the network panel.
+              if (++consecutiveFailures > 4) { cursor = order.length; return; }
+              continue;
+            }
+            consecutiveFailures = 0;
             const blob = await res.blob();
             if (cancelled) return;
-            // createImageBitmap decodes off the main thread — decoding 120
-            // frames synchronously would jank the very scroll this exists to
-            // smooth.
             const bmp = await createImageBitmap(blob);
             if (cancelled) { bmp.close(); return; }
             bitmaps[idx] = bmp;
             loadedCount.current++;
             if (loadedCount.current === 1) setReady(true);
           } catch {
-            // A missing frame is survivable: the scrubber falls back to the
-            // nearest one it holds. Never surface this to the visitor.
+            if (++consecutiveFailures > 4) { cursor = order.length; return; }
           }
         }
       };
@@ -124,7 +134,7 @@ export default function SequenceHero({
       currentIndex.current = -1;
       setReady(false);
     };
-  }, [tier, profile.frames, reduced]);
+  }, [tier, profile.frames, reduced, posterFailed]);
 
   /* ── Scrub ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -133,20 +143,16 @@ export default function SequenceHero({
     const draw = () => {
       rafPending.current = false;
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      const host = canvas?.parentElement;
+      if (!canvas || !host) return;
 
-      const host = canvas.parentElement;
-      if (!host) return;
-
-      // Progress across the hero's own height, not the whole page.
       const rect = host.getBoundingClientRect();
+      if (rect.height < 1) return;
+
       const span = rect.height + window.innerHeight;
       const p = Math.min(1, Math.max(0, (window.innerHeight - rect.top) / span));
-
       const target = Math.round(p * (frames.current.length - 1));
 
-      // Nearest loaded frame, searching outward. During loading this is what
-      // keeps the move continuous instead of gapped.
       let idx = -1;
       for (let d = 0; d < frames.current.length; d++) {
         if (frames.current[target + d]) { idx = target + d; break; }
@@ -158,25 +164,19 @@ export default function SequenceHero({
       if (!bmp) return;
       currentIndex.current = idx;
 
-      // Match the backing store to the displayed size, capped at 2x — beyond
-      // that the extra pixels cost fill rate for nothing visible.
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.round(rect.width * dpr);
       const h = Math.round(rect.height * dpr);
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 
       const ctx = canvas.getContext('2d', { alpha: false });
       if (!ctx) return;
 
-      // Cover-fit, preserving the frame's aspect. Stretching a garment is the
-      // one unforgivable error on a clothing site.
+      // Cover-fit, preserving aspect. Stretching a garment is the one
+      // unforgivable error on a clothing site.
       const scale = Math.max(w / bmp.width, h / bmp.height);
-      const dw = bmp.width * scale;
-      const dh = bmp.height * scale;
-      ctx.drawImage(bmp, (w - dw) / 2, (h - dh) / 2, dw, dh);
+      ctx.drawImage(bmp, (w - bmp.width * scale) / 2, (h - bmp.height * scale) / 2,
+        bmp.width * scale, bmp.height * scale);
     };
 
     const onScroll = () => {
@@ -195,25 +195,54 @@ export default function SequenceHero({
   }, [ready, reduced]);
 
   return (
-    <div aria-hidden="true" className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}>
+    <div
+      aria-hidden="true"
+      /**
+       * `overflow-hidden` and `inset-0` are load-bearing, not cosmetic. A
+       * failed <img> is still a replaced element and will size itself to its
+       * alt text — which is how a 404 put "Aari Pattu knots model frock" as
+       * loose text above the navigation. Clipping to an absolutely-positioned
+       * box means a failure can never escape the frame no matter what the
+       * element does internally.
+       */
+      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+    >
       {/**
-        * The poster. Plain <img>, no JavaScript between it and the screen.
-        *
-        * It stays mounted underneath the canvas forever rather than being
-        * swapped out: the canvas draws over it once frames exist, and if they
-        * never do, this is simply what the hero is. Removing it on "ready"
-        * would introduce a moment where a failure leaves nothing at all.
+        * The ground. Always painted, underneath everything, in the brand's own
+        * near-black with a brass wash where the garment is staged. This is what
+        * the hero degrades TO — if every image fails, the frame still reads as
+        * a deliberate dark composition rather than as an empty box.
         */}
-      <picture>
-        <source srcSet={`/hero/${tier}/poster.avif`} type="image/avif" />
-        <img
-          src={`/hero/${tier}/poster.webp`}
-          alt={posterAlt}
-          fetchPriority="high"
-          decoding="async"
-          className="h-full w-full object-cover"
-        />
-      </picture>
+      <div
+        className="absolute inset-0 bg-ink"
+        style={{
+          backgroundImage:
+            'radial-gradient(60% 70% at 68% 45%, rgba(161,98,7,0.20) 0%, rgba(161,98,7,0.07) 45%, rgba(28,25,23,0) 78%)',
+        }}
+      />
+
+      {!posterFailed && (
+        <picture>
+          <source srcSet={`/hero/${tier}/poster.avif`} type="image/avif" />
+          <img
+            src={`/hero/${tier}/poster.webp`}
+            /**
+             * Empty alt, deliberately. This whole container is aria-hidden —
+             * the garment's name and price are real DOM above it — so alt text
+             * here adds nothing for a screen reader and is precisely what
+             * renders as visible broken text when the file 404s.
+             */
+            alt=""
+            fetchPriority="high"
+            decoding="async"
+            onLoad={() => setPosterLoaded(true)}
+            onError={() => setPosterFailed(true)}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ease-[cubic-bezier(0.22,0.61,0.24,1)] ${
+              posterLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        </picture>
+      )}
 
       <canvas
         ref={canvasRef}

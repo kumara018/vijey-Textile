@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run check:tailwind && next build",
+    "build": "npm run check:tailwind && npm run check:hero && next build",
     "start": "next start",
     "lint": "npm run check:tailwind && next lint",
-    "check:tailwind": "node scripts/check-tailwind-config.js"
+    "check:tailwind": "node scripts/check-tailwind-config.js",
+    "check:hero": "node scripts/check-hero-assets.js",
+    "verify": "npm run check:tailwind && npm run check:hero && tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",

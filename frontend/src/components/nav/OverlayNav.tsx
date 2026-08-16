@@ -112,7 +112,31 @@ export default function OverlayNav() {
     <>
       {/* ── Permanent minimal bar ───────────────────────────────────── */}
       <header className="fixed inset-x-0 top-0 z-40 pointer-events-none">
-        <div className="mx-auto flex max-w-[112rem] items-center justify-between px-6 py-6 sm:px-10">
+        {/**
+          * Nav scrim.
+          *
+          * The bar has no background of its own, so on the homepage the staged
+          * garment showed straight through it — the photograph appeared to
+          * bleed across the top of the page and the wordmark and icons lost
+          * contrast against whatever happened to be behind them.
+          *
+          * A short top-down gradient gives the navigation a guaranteed dark bed
+          * on every route, regardless of what the hero is doing underneath. It
+          * is the standard treatment for an overlay nav sitting on imagery, and
+          * it is why the nav can stay transparent-by-design without ever being
+          * illegible. Non-interactive, and it fades out completely well before
+          * the headline starts.
+          */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-32"
+          style={{
+            background:
+              'linear-gradient(to bottom, rgba(20,18,16,0.92) 0%, rgba(20,18,16,0.72) 38%, rgba(20,18,16,0.32) 68%, rgba(20,18,16,0) 100%)',
+          }}
+        />
+
+        <div className="relative mx-auto flex max-w-[112rem] items-center justify-between px-6 py-6 sm:px-10">
           <Link
             href="/"
             className="pointer-events-auto flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"

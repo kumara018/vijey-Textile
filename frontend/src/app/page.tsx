@@ -102,7 +102,7 @@ export default function HomePage() {
         {/* The pre-rendered camera move. Its poster paints immediately and
             stands alone if the sequence never arrives; the real-time canvas
             behind the page layers on top only at the rich/maximum rungs. */}
-        <SequenceHero posterAlt={hero ? `${hero.name} — Vijey Textile` : 'Vijey Textile'} />
+        <SequenceHero />
 
         <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
