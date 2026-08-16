@@ -1,0 +1,11 @@
+{
+  "tier": "maximum",
+  "frames": 120,
+  "width": 3840,
+  "quality": 82,
+  "bytes": {
+    "avif": 15586934,
+    "webp": 17993696,
+    "posterAvif": 238910
+  }
+}
