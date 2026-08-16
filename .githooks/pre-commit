@@ -16,6 +16,7 @@ cd "$(dirname "$0")/../frontend" || exit 0
 echo "pre-commit: verifying…"
 npm run --silent check:tailwind
 npm run --silent check:hero
+npm run --silent check:frames
 npx --no-install tsc --noEmit
 
 echo "pre-commit: ok"

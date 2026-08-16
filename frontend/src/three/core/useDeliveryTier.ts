@@ -29,6 +29,32 @@ import { useSceneStore } from '@/store/useSceneStore';
 const ESCALATE_AFTER_MS = 6000;   // sustained good behaviour before promoting
 const MAX_ESCALATIONS = 2;        // never climb more than two rungs from the guess
 
+/**
+ * Offline-render override — `?capture=1`.
+ *
+ * The ladder exists to protect a customer's device from a cost it cannot pay.
+ * The offline renderer is the exact opposite situation: a headless Chrome on a
+ * real GPU, with no frame budget and no visitor waiting, whose entire job is to
+ * produce the highest-quality frames the scene can express.
+ *
+ * Without this the renderer inherits whatever rung THIS machine resolves to,
+ * and at any rung below `rich` the profile has `realtime: false` — so
+ * ThreeProvider returns null, no scene mounts, and the capture records the
+ * static poster instead of the scene. That is precisely how a sequence ends up
+ * containing a photograph of itself.
+ */
+const CAPTURE_STATE: DeliveryState = {
+  tier: 'maximum',
+  profile: TIER_PROFILES.maximum,
+  reason: 'offline capture',
+  provisional: false,
+};
+
+function isCaptureRender(): boolean {
+  return typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('capture') === '1';
+}
+
 export interface DeliveryState {
   tier: DeliveryTier;
   profile: TierProfile;
@@ -45,6 +71,7 @@ export function useDeliveryTier(): DeliveryState {
     if (typeof window === 'undefined') {
       return { tier: 'standard', profile: TIER_PROFILES.standard, reason: 'server render', provisional: true };
     }
+    if (isCaptureRender()) return CAPTURE_STATE;
     const s = readSignals();
     const { tier, reason } = resolveTier(s);
     return { tier, profile: TIER_PROFILES[tier], reason, provisional: true };
@@ -58,6 +85,8 @@ export function useDeliveryTier(): DeliveryState {
   // Re-resolve on the client after mount. The server-rendered guess had no
   // access to navigator at all.
   useEffect(() => {
+    // A capture render is pinned; nothing measured about this machine applies.
+    if (isCaptureRender()) { setState(CAPTURE_STATE); return; }
     const s = readSignals();
     const { tier, reason } = resolveTier(s);
     // A device may climb two rungs above its opening guess on evidence, but a
@@ -71,6 +100,7 @@ export function useDeliveryTier(): DeliveryState {
 
   // ── Measured throughput from the first substantial asset ──────────────
   useEffect(() => {
+    if (isCaptureRender()) return;
     if (typeof PerformanceObserver === 'undefined') return;
 
     const obs = new PerformanceObserver((list) => {
@@ -109,6 +139,10 @@ export function useDeliveryTier(): DeliveryState {
 
   // ── The governor as a live signal, in both directions ─────────────────
   useEffect(() => {
+    // The governor must never demote a capture render. Offline frames are
+    // allowed to take as long as they take — a slow frame here is the cost
+    // being paid deliberately, not a symptom to react to.
+    if (isCaptureRender()) return;
     const id = setInterval(() => {
       const { effectsSuspended, tier: quality } = useSceneStore.getState();
 

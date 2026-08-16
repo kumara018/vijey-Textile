@@ -20,10 +20,15 @@ import type { SceneId } from '@/store/useSceneStore';
  * jarring than one that stays continuous. It just has almost nothing to say.
  */
 
+/**
+ * Warm stone for the working screens, brass dim for the gate. Matches
+ * AmbientField's axis — the old steel/wine values belonged to a palette this
+ * design replaced.
+ */
 const TINT: Partial<Record<SceneId, string>> = {
-  terminal: '#6f767b',
-  records:  '#6f767b',
-  gate:     '#871c3f',
+  terminal: '#78716C',
+  records:  '#78716C',
+  gate:     '#6B420A',
 };
 
 export default function RestrainedScene({
@@ -36,7 +41,7 @@ export default function RestrainedScene({
   const material = useMemo(
     () =>
       new THREE.LineBasicMaterial({
-        color: new THREE.Color(TINT[scene] ?? '#6f767b'),
+        color: new THREE.Color(TINT[scene] ?? '#78716C'),
         transparent: true,
         opacity: 0,
       }),

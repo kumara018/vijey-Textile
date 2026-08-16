@@ -119,14 +119,25 @@ body {
    and once printed underneath. The sequence is a backdrop; it must
    contain the scene and nothing else.
 
-   The canvas is deliberately exempt, and so is its fixed wrapper. */
-html[data-capture='1'] body > *:not(:has(canvas)) {
+   The scene canvas host is the ONE exempt subtree, and it identifies itself
+   with data-capture-keep rather than being detected.
+
+   The previous version exempted `:not(:has(canvas))` — anything containing a
+   canvas. That read as a reasonable heuristic and was wrong in a way that
+   silently produced correct-looking CSS: the sequence hero's own scrub canvas
+   lives inside the page content wrapper, so `:has(canvas)` matched that
+   wrapper and spared the navigation, the headline and the entire readable
+   page. The capture attribute was set, the rule fired, and nothing was
+   hidden. An explicit marker cannot drift like that. */
+html[data-capture='1'] body > *:not([data-capture-keep]) {
   visibility: hidden !important;
 }
-html[data-capture='1'] canvas {
+html[data-capture='1'] [data-capture-keep],
+html[data-capture='1'] [data-capture-keep] canvas {
   visibility: visible !important;
 }
-/* The sequence hero itself must not appear in its own source frames. */
+/* The sequence hero must never appear in its own source frames — that is the
+   recursion where the hero photographs itself. */
 html[data-capture='1'] [data-sequence-hero] {
   display: none !important;
 }

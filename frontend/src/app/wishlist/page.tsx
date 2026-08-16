@@ -1,211 +1,260 @@
 'use client';
+
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, ShoppingCart, Trash2, ArrowLeft, Package } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
 import { wishlistQuery, qk } from '@/lib/query';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import PageShell from '@/components/system/PageShell';
+import PageHeader from '@/components/system/PageHeader';
+import { ActionLink, ActionButton } from '@/components/system/Action';
+import {
+  EmptyState,
+  ErrorState,
+  Skeleton,
+  SkeletonLine,
+  SkeletonBlock,
+  Announce,
+} from '@/components/system/States';
+import RouteErrorBoundary from '@/components/resilience/RouteErrorBoundary';
 
-export default function WishlistPage() {
-  const { user } = useAuth();
-  const { toggle, refresh } = useWishlist();
+/**
+ * Kept — the wishlist.
+ *
+ * Named for what it is to this shop: pieces someone is holding in mind for an
+ * occasion that has not arrived yet. That framing is why the empty state talks
+ * about the occasion rather than about the feature.
+ *
+ * Two behaviours carried over from the previous version because they were
+ * genuinely right and easy to lose in a rewrite:
+ *
+ *  1. Removals write into the QUERY CACHE, not a local copy. Filtering a
+ *     useState array left the cache holding the removed item, so navigating
+ *     away and back brought it straight back.
+ *  2. `isLoading`, never `isPending`. A disabled query (auth still resolving)
+ *     is permanently `pending`, which pinned the skeleton on screen forever
+ *     for a signed-out visitor instead of letting the redirect happen.
+ */
+
+function WishlistInner() {
+  const { user, loading: authLoading } = useAuth();
+  const { toggle } = useWishlist();
   const { addItem } = useCart();
   const router = useRouter();
-
-  const [addingId, setAddingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!user) router.push('/auth/login');
-  }, [user, router]);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [announcement, setAnnouncement] = useState('');
 
-  const { data, isLoading, isError } = useQuery({
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/auth/login');
+  }, [user, authLoading, router]);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     ...wishlistQuery(),
     enabled: !!user,
   });
   const items = (data ?? []) as any[];
-  // isLoading, not isPending: a disabled query stays `pending` forever because
-  // it has no data and never will until enabled. Using isPending here rendered
-  // the skeleton permanently for a signed-out visitor instead of letting the
-  // redirect above take them to login.
-  const loading = isLoading;
 
   useEffect(() => {
-    if (isError) toast.error('Failed to load wishlist');
-  }, [isError]);
+    if (!announcement) return;
+    const t = setTimeout(() => setAnnouncement(''), 1200);
+    return () => clearTimeout(t);
+  }, [announcement]);
 
-  /**
-   * Removals write straight into the cache rather than a local copy of the
-   * list. Filtering a useState array left the query cache holding the removed
-   * item, so navigating away and back brought it straight back.
-   */
   const dropFromCache = (productId: number) => {
     queryClient.setQueryData(qk.wishlist.list, (prev: any) =>
       Array.isArray(prev) ? prev.filter((i: any) => i.product_id !== productId) : prev,
     );
   };
 
-  const handleRemove = async (productId: number) => {
-    await toggle(productId);
-    dropFromCache(productId);
-  };
-
-  const handleAddToCart = async (item: any) => {
-    setAddingId(item.product_id);
+  const remove = async (productId: number, name: string) => {
+    setBusyId(productId);
     try {
-      await addItem(item.product_id, 1);
-      toast.success(`${item.product.name} added to cart!`);
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to add to cart');
+      await toggle(productId);
+      dropFromCache(productId);
+      setAnnouncement(`${name} removed from kept.`);
+      document.getElementById('kept-heading')?.focus();
+    } catch {
+      setAnnouncement(`Could not remove ${name}. Please try again.`);
     } finally {
-      setAddingId(null);
+      setBusyId(null);
     }
   };
 
-  const handleMoveToCart = async (item: any) => {
-    setAddingId(item.product_id);
+  const moveToCart = async (item: any) => {
+    const name = item.product.name;
+    setBusyId(item.product_id);
     try {
       await addItem(item.product_id, 1);
       await toggle(item.product_id);
       dropFromCache(item.product_id);
-      toast.success('Moved to cart!');
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to move to cart');
+      setAnnouncement(`${name} moved to your bag.`);
+    } catch {
+      setAnnouncement(`Could not move ${name} to your bag. Please try again.`);
     } finally {
-      setAddingId(null);
+      setBusyId(null);
     }
   };
 
-  if (loading) {
+  // The redirect above is in flight; rendering anything here would flash.
+  if (authLoading || !user) return null;
+
+  if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="flex justify-center items-center gap-3 text-maroon-700">
-          <span className="animate-spin rounded-full h-6 w-6 border-b-2 border-maroon-700" />
-          Loading your wishlist...
-        </div>
-      </div>
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Kept" title="Pieces you are holding in mind" />
+        <Skeleton label="Loading your kept pieces">
+          <div className="grid gap-x-12 gap-y-10 sm:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-6 border-t border-ink-edge/60 pt-8">
+                <SkeletonBlock className="h-36 w-28 shrink-0" />
+                <div className="flex-1 space-y-4 pt-1">
+                  <SkeletonLine w="w-20" h="h-2" />
+                  <SkeletonLine w="w-4/5" h="h-5" />
+                  <SkeletonLine w="w-24" h="h-4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Skeleton>
+      </PageShell>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Kept" title="Pieces you are holding in mind" />
+        <ErrorState
+          title="We could not load your kept pieces"
+          body="Nothing has been removed — this is a problem reaching our server, not a change to your list."
+          onRetry={() => refetch()}
+          retrying={isFetching}
+        />
+      </PageShell>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Kept" title="Pieces you are holding in mind" />
+        <EmptyState
+          title="You have not kept anything yet"
+          body="Nothing is missing — this list fills up when you keep a piece for an occasion that has not arrived yet. Use the keep control on any product."
+          action={<ActionLink href="/products">See every piece</ActionLink>}
+        />
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/products" className="p-2 hover:bg-orange-100 rounded-lg transition-colors">
-          <ArrowLeft size={20} />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-maroon-900 flex items-center gap-2">
-            <Heart size={24} fill="#ef4444" className="text-red-500" /> My Wishlist
-          </h1>
-          <p className="text-sm text-gray-500">{items.length} item{items.length !== 1 ? 's' : ''} saved</p>
-        </div>
-      </div>
+    <PageShell rhythm="tight">
+      <PageHeader
+        eyebrow="Kept"
+        title="Pieces you are holding in mind"
+        standfirst={`${items.length} ${items.length === 1 ? 'piece' : 'pieces'} kept. Nothing here is reserved — keeping a piece does not hold stock.`}
+      />
 
-      {/* Empty state */}
-      {items.length === 0 && (
-        <div className="card p-12 text-center">
-          <Heart size={64} className="text-gray-200 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-700 mb-2">Your wishlist is empty</h2>
-          <p className="text-gray-500 mb-6">Save items you love by tapping the ❤️ heart on any product.</p>
-          <Link href="/products" className="btn-primary px-8 py-3 inline-flex items-center gap-2">
-            <Package size={18} /> Browse Products
-          </Link>
-        </div>
-      )}
+      <h2 id="kept-heading" tabIndex={-1} className="sr-only">
+        Kept pieces
+      </h2>
+      <Announce message={announcement} />
 
-      {/* Wishlist grid */}
-      {items.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {items.map(item => {
-            const p = item.product;
-            const discount = p.compare_price
-              ? Math.round(((p.compare_price - p.price) / p.compare_price) * 100)
+      <ul className="grid gap-x-12 gap-y-2 sm:grid-cols-2">
+        {items.map((item) => {
+          const p = item.product;
+          const busy = busyId === p.id;
+          const image = p.images?.[0];
+          const src =
+            image && !image.includes('placeholder')
+              ? image.startsWith('http')
+                ? image
+                : `${process.env.NEXT_PUBLIC_API_URL}${image}`
               : null;
+          const soldOut = p.stock === 0;
 
-            return (
-              <div key={item.id} className="card p-4 flex gap-4">
-                {/* Image */}
-                <Link href={`/products/${p.id}`} className="flex-shrink-0">
-                  <div className="w-24 h-28 rounded-xl overflow-hidden bg-maroon-50">
-                    {p.images?.[0] && !p.images[0].includes('placeholder') ? (
-                      <img
-                        src={p.images[0].startsWith('http') ? p.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${p.images[0]}`}
-                        alt={p.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl">
-                        {p.category === 'Lehenga' ? '👗' : p.category === 'Chudithar' ? '👘' : '👚'}
-                      </div>
-                    )}
-                  </div>
-                </Link>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0 flex flex-col">
-                  <p className="text-xs text-maroon-600 font-medium">{p.category}</p>
-                  <Link href={`/products/${p.id}`}>
-                    <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 hover:text-maroon-700 transition-colors mt-0.5">
-                      {p.name}
-                    </h3>
-                  </Link>
-
-                  {/* Price */}
-                  <div className="flex items-baseline gap-2 mt-1.5">
-                    <span className="text-base font-bold text-maroon-900">₹{p.price.toLocaleString()}</span>
-                    {p.compare_price && (
-                      <span className="text-xs text-gray-400 line-through">₹{p.compare_price.toLocaleString()}</span>
-                    )}
-                    {discount && (
-                      <span className="text-xs font-bold text-green-600">{discount}% off</span>
-                    )}
-                  </div>
-
-                  {/* Stock */}
-                  {p.stock === 0 && (
-                    <span className="text-xs text-red-500 font-medium mt-1">Out of Stock</span>
+          return (
+            <li key={item.id} className="flex gap-6 border-t border-ink-edge/60 py-8">
+              <Link
+                href={`/products/${p.id}`}
+                className="shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                <div className="h-36 w-28 overflow-hidden bg-ink-raised">
+                  {src ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={src} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div aria-hidden="true" className="h-full w-full bg-ink-raised" />
                   )}
+                </div>
+              </Link>
 
-                  {/* Actions */}
-                  <div className="flex gap-2 mt-auto pt-3">
-                    <button
-                      onClick={() => handleMoveToCart(item)}
-                      disabled={p.stock === 0 || addingId === p.id}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-maroon-800 hover:bg-maroon-900 text-white text-xs font-semibold transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      {addingId === p.id
-                        ? <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white" />
-                        : <ShoppingCart size={14} />}
-                      {p.stock === 0 ? 'Out of Stock' : 'Move to Cart'}
-                    </button>
-                    <button
-                      onClick={() => handleRemove(p.id)}
-                      className="p-2 rounded-lg border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-                      title="Remove from wishlist"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+              <div className="flex min-w-0 flex-1 flex-col">
+                <p className="text-rule uppercase text-paper-faint">{p.category}</p>
+                <h3 className="mt-2 font-display text-xl font-light text-paper">
+                  <Link
+                    href={`/products/${p.id}`}
+                    className="transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                  >
+                    {p.name}
+                  </Link>
+                </h3>
+
+                <p className="mt-3 flex items-baseline gap-3 tabular-nums">
+                  <span className="text-paper">₹{p.price.toLocaleString()}</span>
+                  {p.compare_price && (
+                    <span className="text-sm text-paper-faint line-through">
+                      ₹{p.compare_price.toLocaleString()}
+                    </span>
+                  )}
+                </p>
+
+                {soldOut && (
+                  <p className="mt-2 text-rule uppercase text-brass-bright">Sold out</p>
+                )}
+
+                <div className="mt-auto flex flex-wrap items-center gap-x-8 gap-y-3 pt-6">
+                  <ActionButton
+                    arrow={false}
+                    disabled={busy || soldOut}
+                    onClick={() => moveToCart(item)}
+                  >
+                    {busy ? 'Working…' : soldOut ? 'Unavailable' : 'Move to bag'}
+                  </ActionButton>
+                  <ActionButton
+                    tone="quiet"
+                    arrow={false}
+                    disabled={busy}
+                    onClick={() => remove(p.id, p.name)}
+                    aria-label={`Remove ${p.name} from kept`}
+                  >
+                    Remove
+                  </ActionButton>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            </li>
+          );
+        })}
+      </ul>
 
-      {/* Continue shopping */}
-      {items.length > 0 && (
-        <div className="mt-8 text-center">
-          <Link href="/products" className="text-maroon-700 hover:underline text-sm font-medium">
-            ← Continue Shopping
-          </Link>
-        </div>
-      )}
-    </div>
+      <div className="mt-[7vh] border-t border-ink-edge/60 pt-10">
+        <ActionLink href="/products" tone="quiet">
+          Keep looking
+        </ActionLink>
+      </div>
+    </PageShell>
+  );
+}
+
+export default function WishlistPage() {
+  return (
+    <RouteErrorBoundary routeName="kept" fallbackHref="/products" fallbackLabel="See every piece">
+      <WishlistInner />
+    </RouteErrorBoundary>
   );
 }

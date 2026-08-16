@@ -26,7 +26,7 @@ The axios layer already implements both critical behaviours and must not change:
 | Route | Status | Calls | Guard |
 |---|---|---|---|
 | `/` | ✅ | `GET /api/products/` (featured, recent) | public |
-| `/products` | ⬜ | `GET /api/products/` · `GET /api/products/categories` | public |
+| `/products` | ✅ | `GET /api/products/` · `GET /api/products/categories` | public |
 | `/products/[id]` | ⬜ | `GET /api/products/{id}` · `/reviews` · `/can-review` · `POST /reviews` | public; review posting needs auth |
 
 `/products` filters map to query params on `GET /api/products/`: `category`,
@@ -42,8 +42,8 @@ one is `/products?category=<name>`. Six links, one page.
 
 | Route | Status | Calls | Guard |
 |---|---|---|---|
-| `/cart` | ⬜ | `GET/POST /api/cart/` · `PUT /api/cart/{id}?quantity=` · `DELETE /api/cart/{id}` · `DELETE /api/cart/` | auth |
-| `/wishlist` | ⬜ | `GET /api/wishlist/` · `/ids` · `POST` · `DELETE /{product_id}` | auth |
+| `/cart` | ✅ | `GET/POST /api/cart/` · `PUT /api/cart/{id}?quantity=` · `DELETE /api/cart/{id}` · `DELETE /api/cart/` | auth |
+| `/wishlist` | ✅ | `GET /api/wishlist/` · `/ids` · `POST` · `DELETE /{product_id}` | auth |
 
 **Quantity is a query parameter, not a body field** — `PUT /api/cart/{id}?quantity=N`.
 Easy to get wrong when rebuilding.
@@ -105,7 +105,20 @@ must survive the rebuild.
 |---|---|---|---|
 | `/support` | ⬜ | `GET /api/support/rating/summary` · `POST /interactions` | public |
 | `/support/rate/[token]` | ⬜ | `GET/POST /api/support/rate/{token}` | public, token-scoped |
-| `/shipping` `/terms` `/privacy` `/cancellation` `/authentic` | ⬜ | none — static | public |
+| `/shipping` | ✅ | none — static | public |
+| `/terms` | ✅ | none — static | public |
+| `/privacy` | ✅ | none — static | public |
+| `/cancellation` | ✅ | none — static | public |
+| `/authentic` | ✅ | none — static | public |
+
+The rebuilt policy pages share one `PolicyDoc` component: numbered sections
+with a sticky contents rail, a ~68ch measure, and hairline rules between
+clauses. The numbering is load-bearing — support can say "point 4 of the
+shipping policy" and the customer can find it.
+
+**Every clause was carried over verbatim.** Restyling a policy is not amending
+one, so the legal content and each page's "last updated" date are unchanged;
+moving the date would tell readers the terms had changed when they had not.
 
 Footer links `Size Guide`, `Shipping Policy` and `Cancel/Return/Exchange FAQ`
 are **anchors into `/support`** (`#size-guide`, `#shipping`, `#returns`), not
@@ -119,6 +132,20 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 | Route | Status | Calls | Guard |
 |---|---|---|---|
 | `/admin` | ⬜ | `GET /api/admin/dashboard` · products CRUD + image/video upload · `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync/serviceability · returns status/retry-pickup/attach-awb/retry-replacement · notifications · `GET /users` · support ratings · payments refund trio | **admin** |
+| `/admin/products` | ⬜ | products CRUD + image/video upload | **admin** |
+| `/admin/orders` | ⬜ | `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync | **admin** |
+| `/admin/returns` | ⬜ | returns status · retry-pickup · attach-awb · retry-replacement | **admin** |
+| `/admin/users` | ⬜ | `GET /users` | **admin** |
+| `/admin/ratings` | ⬜ | support ratings | **admin** |
+| `/admin/cancellations` | ⬜ | `GET /orders` (cancelled) | **admin** |
+| `/admin/admins` | ⬜ | admin accounts | **admin** |
+
+The seven views were previously one route switching on component state, with
+`?tab=` as the only handle. They are now **addressable routes** — bookmarkable,
+shareable, and correct under the back button — all mounting the one
+`AdminDashboard` component with the view preselected. `?tab=` still resolves,
+so existing links keep working. **Addressability is done; the visual rebuild
+of these seven views is not** — they remain on the old maroon design.
 
 Every `/api/admin/*` endpoint sits behind `get_current_admin` → **403** for a
 signed-in non-admin. The admin dashboard is a work tool used all day, which is
@@ -126,19 +153,48 @@ why it resolves to the `plain` scene and renders **zero** draw calls.
 
 ---
 
-## 8. Not-found and empty states
+## 8. App shell — the states with no route of their own
 
-| Surface | Status |
-|---|---|
-| `/_not-found` (404) | ⬜ |
-| Empty cart · empty wishlist · no orders · no results · no notifications | ⬜ |
+These are not pages a visitor navigates to; they are the surfaces Next.js
+renders when something goes wrong or is still arriving. They had no
+implementation at all before this pass, which meant a data failure showed the
+framework's default and a slow segment showed nothing.
+
+| Surface | File | Status | Notes |
+|---|---|---|---|
+| 404 | `app/not-found.tsx` | ✅ | Rebuilt. Was 🧵 emoji + maroon + `.btn-primary`, none of which exist in this design system. Now a wayfinding index of all six departments — a navigation failure answered with navigation. |
+| Route error | `app/error.tsx` | ✅ | **New.** Retry, catalogue, home, the shop's phone number, and the Next.js `digest` as a support reference. Imports nothing that can throw. |
+| Global error | `app/global-error.tsx` | ✅ | **New.** Replaces the whole document, so it renders its own `<html>`/`<body>` and every style is an inline literal — it must survive the stylesheet, fonts and providers all being gone. |
+| Loading | `app/loading.tsx` | ✅ | **New.** A skeleton in the shape of the arriving page, not a spinner. Zero JS; honours `prefers-reduced-motion`. |
+| Empty cart · empty wishlist · no orders · no results · no notifications | per-route | ⬜ | Still old design. |
 
 ---
 
 ## Route count
 
-**23 app routes** + `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
-**1 of 23 rebuilt** (`/`). 22 remaining.
+**30 app routes** (23 + the six new addressable admin views + `[view]`)
++ `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
+
+**9 of 23 rebuilt** · 14 remaining.
+
+`/` · `/products` · `/shipping` · `/privacy` · `/terms` · `/cancellation` ·
+`/authentic` · `/cart` · `/wishlist`
+
+**4 of 5 app-shell surfaces rebuilt** (404, route error, global error, loading).
+
+### The shared system
+
+Built before the back half of the routes, so the standard is encoded once
+rather than reimprovised per page:
+
+| Piece | What it fixes |
+|---|---|
+| `PageShell` | The legibility scrim over the live scene, the site's one measure, and the z-index discipline that greyed out the homepage headline when it was got wrong. |
+| `PageHeader` | Eyebrow / display line / standfirst — the masthead that makes routes read as one publication. |
+| `Action` | The only two action styles. No filled buttons anywhere; 500ms colour transitions, no spring or bounce; `focus-visible` rings; `motion-reduce` disables all of it; `aria-disabled` on disabled controls. |
+| `States` | `EmptyState`, `ErrorState`, `Skeleton*`, `Announce`. Empty copy must say **why** it is empty — "you have not ordered anything yet" and "we could not load your orders" are different sentences and only one needs a retry. |
+| `PolicyDoc` | Numbered sections, sticky contents, ~68ch measure. |
+| Query backoff | Exponential with jitter (~600ms / 1.2s / 2.4s). Flat retries all landed inside one Render cold start; the jitter stops a route's several queries retrying in lockstep. |
 
 ---
 

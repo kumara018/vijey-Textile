@@ -16,6 +16,7 @@
  */
 import { readdirSync, mkdirSync, statSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { cpus } from 'node:os';
 import sharp from 'sharp';
 import { TIER_PROFILES_JSON } from './tier-profiles.mjs';
 
@@ -64,6 +65,49 @@ function sample(files, count) {
   return [...new Set(out)];
 }
 
+/**
+ * Encode frames in parallel rather than one at a time.
+ *
+ * The original loop awaited each `toFile` in turn, which meant the whole
+ * encode ran on one core: ~25 minutes, almost all of it the `maximum` rung
+ * (120 frames at 3840 in AVIF effort 6, several seconds each). Combined with
+ * a ~15 minute render, every change touching the hero scene cost 40 minutes
+ * before it could be looked at — a cost that compounds across iterations.
+ *
+ * Two changes, and the order matters:
+ *
+ *  1. `sharp.concurrency(1)`. By default libvips threads a SINGLE operation
+ *     across all cores. Running many operations in parallel while each still
+ *     tries to claim every core produces oversubscription — more context
+ *     switching, not more throughput. Parallelism has to live in exactly one
+ *     place, and here that place is the pool below.
+ *  2. A bounded pool over frames. Unbounded `Promise.all` over 120 frames at
+ *     3840 would hold every decoded source in memory at once; a pool sized to
+ *     the machine keeps peak memory flat while keeping every core busy.
+ *
+ * Tiers stay sequential on purpose — running them concurrently too would
+ * multiply peak memory by five for no extra core utilisation, since the pool
+ * already saturates the machine within one tier.
+ */
+sharp.concurrency(1);
+const POOL = Math.max(1, Math.min(cpus().length - 1 || 1, 8));
+
+/** Runs `fn` over `items` with at most `limit` in flight, preserving order. */
+async function mapPool(items, limit, fn) {
+  const out = new Array(items.length);
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < items.length) {
+      const i = cursor++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
+}
+
+console.log(`  encoding with a pool of ${POOL} (libvips pinned to 1 thread per op)\n`);
+
 const report = [];
 
 for (const profile of TIER_PROFILES_JSON) {
@@ -73,26 +117,40 @@ for (const profile of TIER_PROFILES_JSON) {
   mkdirSync(dir, { recursive: true });
 
   const chosen = sample(source, frames);
-  let avif = 0;
-  let webp = 0;
+  const started = Date.now();
 
-  for (let i = 0; i < chosen.length; i++) {
-    const src = join(RAW, chosen[i]);
+  const sizes = await mapPool(chosen, POOL, async (file, i) => {
+    const src = join(RAW, file);
     const stem = join(dir, String(i).padStart(4, '0'));
 
     // effort 6 is slow to encode and meaningfully smaller. This runs once,
-    // offline, so encode time is free and every byte saved is paid back on
-    // every visit.
-    await sharp(src).resize({ width, withoutEnlargement: true })
-      .avif({ quality, effort: 6, chromaSubsampling: '4:2:0' })
-      .toFile(`${stem}.avif`);
-    await sharp(src).resize({ width, withoutEnlargement: true })
-      .webp({ quality, effort: 6 })
-      .toFile(`${stem}.webp`);
+    // offline, so encode time is worth spending and every byte saved is paid
+    // back on every visit.
+    //
+    // The two formats for one frame are independent, so they run together —
+    // the source is decoded twice either way, and waiting for AVIF before
+    // starting WebP bought nothing.
+    await Promise.all([
+      sharp(src).resize({ width, withoutEnlargement: true })
+        .avif({ quality, effort: 6, chromaSubsampling: '4:2:0' })
+        .toFile(`${stem}.avif`),
+      sharp(src).resize({ width, withoutEnlargement: true })
+        .webp({ quality, effort: 6 })
+        .toFile(`${stem}.webp`),
+    ]);
 
-    avif += statSync(`${stem}.avif`).size;
-    webp += statSync(`${stem}.webp`).size;
-  }
+    return {
+      avif: statSync(`${stem}.avif`).size,
+      webp: statSync(`${stem}.webp`).size,
+    };
+  });
+
+  const avif = sizes.reduce((n, s) => n + s.avif, 0);
+  const webp = sizes.reduce((n, s) => n + s.webp, 0);
+  console.log(
+    `  ${tier.padEnd(10)} ${String(chosen.length).padStart(3)} frames @ ${width}  ` +
+    `${((Date.now() - started) / 1000).toFixed(0)}s`,
+  );
 
   /**
    * The static first frame, encoded separately at higher quality.

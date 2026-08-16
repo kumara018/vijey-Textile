@@ -20,16 +20,28 @@ import { useSceneStore } from '@/store/useSceneStore';
  * up immediately on mid-range Android.
  */
 
-/** Per-scene identity within one continuous world. */
+/**
+ * Per-scene identity within one continuous world.
+ *
+ * These were the last holdout of the old wine-and-steel palette — `#b42251`
+ * put crimson dust through the hero, which is off-spec against a system whose
+ * only accent is muted gold. It was invisible in code review and obvious the
+ * moment a rendered frame was opened and looked at.
+ *
+ * The range now runs along ONE axis: brass at the top for the scenes that
+ * should feel lit, warm stone neutrals for the working screens. Warm, not
+ * cool — a steel grey reads as a different palette next to #1C1917, because
+ * it is one.
+ */
 const SCENE_TINT: Record<SceneId, THREE.ColorRepresentation> = {
-  entrance: '#b42251',  // wine — the brand core
-  gallery:  '#c58059',  // blush-gold
-  chamber:  '#e3bfcb',  // pale wine, brighter for product focus
-  vault:    '#8f9499',  // steel
-  terminal: '#6f767b',  // deep steel — transactional, calm
-  records:  '#6f767b',
-  gate:     '#871c3f',
-  plain:    '#8f9499',
+  entrance: '#A16207',  // brass — the one accent
+  gallery:  '#8A5406',  // brass, stepped back
+  chamber:  '#C4841A',  // brass bright — product focus
+  vault:    '#A8A29E',  // warm stone
+  terminal: '#78716C',  // deeper stone — transactional, calm
+  records:  '#78716C',
+  gate:     '#6B420A',  // brass dim
+  plain:    '#57534E',  // the admin's ground: quietest of all
 };
 
 export default function AmbientField({

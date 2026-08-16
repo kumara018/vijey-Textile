@@ -1,203 +1,314 @@
 'use client';
-import { useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+import { STORE } from '@/lib/config';
+import PageShell from '@/components/system/PageShell';
+import PageHeader from '@/components/system/PageHeader';
+import { ActionLink, ActionButton } from '@/components/system/Action';
+import {
+  EmptyState,
+  Skeleton,
+  SkeletonLine,
+  SkeletonBlock,
+  Announce,
+} from '@/components/system/States';
+import RouteErrorBoundary from '@/components/resilience/RouteErrorBoundary';
 
-export default function CartPage() {
-  const { items, count, total, loading, fetchCart, updateItem, removeItem, clearCart } = useCart();
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+/**
+ * The bag.
+ *
+ * A cart is a working surface, not an editorial one — someone is here to
+ * change a quantity, remove a mistake and move on. So the rhythm is tighter
+ * than the homepage and every control is reachable without a pointer.
+ *
+ * The specific things this route has to get right, which the previous version
+ * did not:
+ *
+ *  - QUANTITY CHANGES ARE ANNOUNCED. Changing a quantity updates a total
+ *    elsewhere on the page and removes nothing from the DOM a screen reader is
+ *    focused on, so without a live region the change is completely silent.
+ *  - REMOVAL IS ANNOUNCED AND FOCUS SURVIVES. Removing the row the keyboard is
+ *    inside destroys the focused element; focus falls to <body> and the
+ *    visitor is dumped at the top of the document.
+ *  - IN-FLIGHT CONTROLS ARE DISABLED, NOT HIDDEN. A control that vanishes
+ *    mid-interaction moves everything below it.
+ *  - THE TOTAL IS NEVER A GUESS. Shipping is a real, named figure from config,
+ *    not a hardcoded 49 that could drift from what checkout charges.
+ */
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    fetchCart();
-  }, [user, authLoading]);
+function CartInner() {
+  const { items, count, total, loading, updateItem, removeItem } = useCart();
 
-  if (authLoading || !user) return null;
+  /** The id currently being mutated — disables just that row's controls. */
+  const [busyId, setBusyId] = useState<number | null>(null);
+  /** What to tell a screen reader about the last non-navigating change. */
+  const [announcement, setAnnouncement] = useState('');
 
-  const shipping = 49;
+  const shipping = STORE.shippingFee;
   const grandTotal = total + shipping;
 
-  const handleUpdate = async (itemId: number, qty: number) => {
+  // Clear a stale announcement so the same message announced twice in a row
+  // is actually read out twice rather than being seen as unchanged text.
+  useEffect(() => {
+    if (!announcement) return;
+    const t = setTimeout(() => setAnnouncement(''), 1200);
+    return () => clearTimeout(t);
+  }, [announcement]);
+
+  const changeQuantity = async (itemId: number, next: number, name: string) => {
+    if (next < 1) return;
+    setBusyId(itemId);
     try {
-      await updateItem(itemId, qty);
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to update quantity');
+      await updateItem(itemId, next);
+      setAnnouncement(`${name}, quantity ${next}.`);
+    } catch {
+      setAnnouncement(`Could not update ${name}. Please try again.`);
+    } finally {
+      setBusyId(null);
     }
   };
 
-  const handleRemove = async (itemId: number, name: string) => {
+  const drop = async (itemId: number, name: string) => {
+    setBusyId(itemId);
     try {
       await removeItem(itemId);
-      toast.success(`${name} removed from cart`);
+      setAnnouncement(`${name} removed from your bag.`);
+      // Focus would otherwise die with the removed row. The heading is the
+      // nearest stable landmark above it.
+      document.getElementById('bag-heading')?.focus();
     } catch {
-      toast.error('Failed to remove item');
+      setAnnouncement(`Could not remove ${name}. Please try again.`);
+    } finally {
+      setBusyId(null);
     }
   };
 
-  const handleClear = async () => {
-    if (!confirm('Remove all items from cart?')) return;
-    try {
-      await clearCart();
-      toast.success('Cart cleared');
-    } catch {
-      toast.error('Failed to clear cart');
-    }
-  };
-
-  if (loading) return (
-    <div className="max-w-6xl mx-auto px-4 py-12">
-      <div className="animate-pulse space-y-4">
-        {Array(3).fill(0).map((_, i) => (
-          <div key={i} className="card p-4 flex gap-4">
-            <div className="w-24 h-24 bg-gray-200 rounded-xl" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-1/2" />
-              <div className="h-4 bg-gray-200 rounded w-1/3" />
-              <div className="h-6 bg-gray-200 rounded w-24" />
+  /* ── Loading: shaped like the real thing ──────────────────────────────── */
+  if (loading) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Your bag" title="What you have chosen" />
+        <Skeleton label="Loading your bag">
+          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-12">
+            <div className="space-y-8 lg:col-span-7">
+              {[0, 1].map((i) => (
+                <div key={i} className="flex gap-7 border-t border-ink-edge/60 pt-8">
+                  <SkeletonBlock className="h-40 w-32 shrink-0" />
+                  <div className="flex-1 space-y-4 pt-2">
+                    <SkeletonLine w="w-24" h="h-2" />
+                    <SkeletonLine w="w-3/4" h="h-5" />
+                    <SkeletonLine w="w-32" h="h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="lg:col-span-4 lg:col-start-9">
+              <div className="space-y-5 border-t border-ink-edge/60 pt-8">
+                <SkeletonLine w="w-full" h="h-4" />
+                <SkeletonLine w="w-full" h="h-4" />
+                <SkeletonLine w="w-2/3" h="h-7" />
+              </div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
+        </Skeleton>
+      </PageShell>
+    );
+  }
 
-  if (items.length === 0) return (
-    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-      <ShoppingBag size={80} className="mx-auto text-maroon-200 mb-6" />
-      <h2 className="text-2xl font-bold text-gray-800 mb-3">Your cart is empty</h2>
-      <p className="text-gray-500 mb-8">Looks like you haven&apos;t added anything yet. Explore our beautiful collection!</p>
-      <Link href="/products" className="btn-primary inline-flex items-center gap-2">
-        <ShoppingCart size={18} /> Start Shopping
-      </Link>
-    </div>
-  );
+  /* ── Empty: says WHY, and where to go ─────────────────────────────────── */
+  if (items.length === 0) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Your bag" title="What you have chosen" />
+        <EmptyState
+          title="You have not put anything in your bag yet"
+          body="Nothing has been lost — an empty bag means nothing has been added, not that something went wrong. The whole rail is one link away."
+          action={
+            <>
+              <ActionLink href="/products">See every piece</ActionLink>
+              <ActionLink href="/wishlist" tone="quiet">
+                Your wishlist
+              </ActionLink>
+            </>
+          }
+        />
+      </PageShell>
+    );
+  }
 
+  /* ── The bag ──────────────────────────────────────────────────────────── */
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="section-title">Shopping Cart <span className="text-gold-600">({count} item{count !== 1 ? 's' : ''})</span></h1>
-        <button onClick={handleClear} className="text-sm text-red-500 hover:text-red-700 font-medium flex items-center gap-1.5">
-          <Trash2 size={15} /> Clear Cart
-        </button>
-      </div>
+    <PageShell rhythm="tight">
+      <PageHeader
+        eyebrow="Your bag"
+        title="What you have chosen"
+        standfirst={`${count} ${count === 1 ? 'piece' : 'pieces'}, held for you while you decide.`}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Cart items */}
-        <div className="lg:col-span-2 space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className="card p-4">
-              <div className="flex gap-4">
-                {/* Image */}
-                <div className="w-24 h-24 rounded-xl bg-gradient-to-br from-maroon-100 to-gold-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {item.product.images?.[0] && !item.product.images[0].includes('placeholder') ? (
-                    <img
-                      src={item.product.images[0].startsWith('http') ? item.product.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${item.product.images[0]}`}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-3xl">
-                      {item.product.category === 'Lehenga' ? '👗' : item.product.category === 'Chudithar' ? '👘' : '👚'}
-                    </span>
-                  )}
-                </div>
+      {/* tabIndex -1 so focus can be moved here after a removal destroys the
+          element the keyboard was inside. Never in the tab order itself. */}
+      <h2 id="bag-heading" tabIndex={-1} className="sr-only">
+        Items in your bag
+      </h2>
 
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <Link href={`/products/${item.product_id}`} className="font-semibold text-gray-900 hover:text-maroon-800 line-clamp-2 text-sm leading-snug">
-                    {item.product.name}
-                  </Link>
-                  <p className="text-xs text-gray-500 mt-1">{item.product.category}</p>
-                  <div className="flex gap-3 mt-1 text-xs text-gray-500">
-                    {item.size  && <span>Size: <b className="text-gray-700">{item.size}</b></span>}
-                    {item.color && <span>Colour: <b className="text-gray-700">{item.color}</b></span>}
+      <Announce message={announcement} />
+
+      <div className="grid gap-x-16 gap-y-[6vh] lg:grid-cols-12">
+        <ul className="lg:col-span-7">
+          {items.map((item) => {
+            const p = item.product;
+            const busy = busyId === item.id;
+            const image = p.images?.[0];
+            const src =
+              image && !image.includes('placeholder')
+                ? image.startsWith('http')
+                  ? image
+                  : `${process.env.NEXT_PUBLIC_API_URL}${image}`
+                : null;
+
+            return (
+              <li
+                key={item.id}
+                className="flex gap-7 border-t border-ink-edge/60 py-8 first:border-t-0 first:pt-0"
+              >
+                <Link
+                  href={`/products/${p.id}`}
+                  className="shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                >
+                  <div className="h-40 w-32 overflow-hidden bg-ink-raised">
+                    {src ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={src}
+                        alt={p.name}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div aria-hidden="true" className="h-full w-full bg-ink-raised" />
+                    )}
                   </div>
+                </Link>
 
-                  <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
-                    {/* Price */}
-                    <div>
-                      <span className="font-bold text-maroon-900">₹{(item.product.price * item.quantity).toLocaleString()}</span>
-                      {item.quantity > 1 && (
-                        <span className="text-xs text-gray-400 ml-1">₹{item.product.price.toLocaleString()} each</span>
-                      )}
-                    </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <p className="text-rule uppercase text-paper-faint">{p.category}</p>
+                  <h3 className="mt-2 font-display text-2xl font-light text-paper">
+                    <Link
+                      href={`/products/${p.id}`}
+                      className="transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                    >
+                      {p.name}
+                    </Link>
+                  </h3>
 
-                    <div className="flex items-center gap-3">
-                      {/* Qty control */}
-                      <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                        <button
-                          onClick={() => handleUpdate(item.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="px-2.5 py-1.5 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="px-3 py-1.5 font-semibold text-sm min-w-[32px] text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => handleUpdate(item.id, item.quantity + 1)}
-                          disabled={item.quantity >= item.product.stock || item.quantity >= 10}
-                          className="px-2.5 py-1.5 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
+                  {(item.size || item.color) && (
+                    <p className="mt-2 text-sm text-paper-faint">
+                      {[item.size && `Size ${item.size}`, item.color].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
 
-                      {/* Remove */}
+                  <p className="mt-3 text-lede tabular-nums text-paper">
+                    ₹{(p.price * item.quantity).toLocaleString()}
+                  </p>
+
+                  <div className="mt-auto flex flex-wrap items-center gap-x-8 gap-y-4 pt-6">
+                    {/* A real labelled group. Two buttons and a live number
+                        beats a <select> for one-tap adjustment, but only if
+                        the number is announced — which is what the group
+                        label and the live region above provide together. */}
+                    <div
+                      role="group"
+                      aria-label={`Quantity for ${p.name}`}
+                      className="flex items-center gap-5 border border-ink-edge px-4 py-2"
+                    >
                       <button
-                        onClick={() => handleRemove(item.id, item.product.name)}
-                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        type="button"
+                        onClick={() => changeQuantity(item.id, item.quantity - 1, p.name)}
+                        disabled={busy || item.quantity <= 1}
+                        aria-label={`Reduce quantity of ${p.name}`}
+                        className="text-lg leading-none text-paper-muted transition-colors duration-500 hover:text-paper disabled:opacity-30 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
                       >
-                        <Trash2 size={16} />
+                        −
+                      </button>
+                      <span className="min-w-[2ch] text-center tabular-nums text-paper">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => changeQuantity(item.id, item.quantity + 1, p.name)}
+                        disabled={busy || item.quantity >= (p.stock ?? 99)}
+                        aria-label={`Increase quantity of ${p.name}`}
+                        className="text-lg leading-none text-paper-muted transition-colors duration-500 hover:text-paper disabled:opacity-30 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                      >
+                        +
                       </button>
                     </div>
+
+                    <ActionButton
+                      tone="quiet"
+                      arrow={false}
+                      disabled={busy}
+                      onClick={() => drop(item.id, p.name)}
+                      aria-label={`Remove ${p.name} from your bag`}
+                    >
+                      {busy ? 'Working…' : 'Remove'}
+                    </ActionButton>
                   </div>
                 </div>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Summary */}
+        <aside aria-labelledby="summary-heading" className="lg:col-span-4 lg:col-start-9">
+          <div className="border-t border-ink-edge/60 pt-8 lg:sticky lg:top-32">
+            <h2 id="summary-heading" className="text-rule uppercase text-paper-faint">
+              Summary
+            </h2>
+
+            <dl className="mt-8 space-y-4">
+              <div className="flex items-baseline justify-between gap-6">
+                <dt className="text-paper-muted">
+                  Subtotal · {count} {count === 1 ? 'piece' : 'pieces'}
+                </dt>
+                <dd className="tabular-nums text-paper">₹{total.toLocaleString()}</dd>
               </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Order summary */}
-        <div className="lg:col-span-1">
-          <div className="card p-6 sticky top-28">
-            <h2 className="font-bold text-lg text-maroon-900 mb-5">Order Summary</h2>
-
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-gray-700">
-                <span>Subtotal ({count} item{count !== 1 ? 's' : ''})</span>
-                <span className="font-medium">₹{total.toLocaleString()}</span>
+              <div className="flex items-baseline justify-between gap-6">
+                <dt className="text-paper-muted">Shipping</dt>
+                <dd className="tabular-nums text-paper">₹{shipping.toLocaleString()}</dd>
               </div>
-              <div className="flex justify-between text-gray-700">
-                <span>Shipping</span>
-                <span className="font-medium">₹{shipping}</span>
+              <div className="flex items-baseline justify-between gap-6 border-t border-ink-edge/60 pt-5">
+                <dt className="text-paper">Total</dt>
+                <dd className="font-display text-2xl tabular-nums text-paper">
+                  ₹{grandTotal.toLocaleString()}
+                </dd>
               </div>
-              <div className="border-t border-maroon-200 pt-3 flex justify-between font-bold text-lg">
-                <span className="text-maroon-900">Total</span>
-                <span className="text-maroon-900">₹{grandTotal.toLocaleString()}</span>
-              </div>
-            </div>
+            </dl>
 
-            <Link href="/checkout" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 mt-6 text-base">
-              Proceed to Checkout <ArrowRight size={18} />
-            </Link>
+            <p className="mt-5 text-sm text-paper-faint">
+              Final shipping is confirmed at checkout from the parcel’s weight.
+            </p>
 
-            <Link href="/products" className="block text-center text-sm text-maroon-700 hover:underline mt-4">
-              ← Continue Shopping
-            </Link>
-
-            <div className="mt-5 pt-4 border-t border-maroon-200">
-              <p className="text-xs text-gray-400 text-center">🔒 Secure checkout with SSL encryption</p>
+            <div className="mt-10 flex flex-col items-start gap-6">
+              <ActionLink href="/checkout">Go to checkout</ActionLink>
+              <ActionLink href="/products" tone="quiet">
+                Keep looking
+              </ActionLink>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
-    </div>
+    </PageShell>
+  );
+}
+
+export default function CartPage() {
+  return (
+    <RouteErrorBoundary routeName="your bag" fallbackHref="/products" fallbackLabel="See every piece">
+      <CartInner />
+    </RouteErrorBoundary>
   );
 }

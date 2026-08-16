@@ -102,6 +102,12 @@ export default function CanvasHost({ children }: { children?: React.ReactNode })
   return (
     <div
       aria-hidden="true"
+      /**
+       * The one subtree capture mode keeps. Marked explicitly rather than
+       * detected by "contains a canvas" — the sequence hero owns a canvas too,
+       * and detecting on that spared the whole page.
+       */
+      data-capture-keep=""
       className="fixed inset-0 z-0 pointer-events-none"
     >
       <Canvas

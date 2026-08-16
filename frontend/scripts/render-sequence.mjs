@@ -119,6 +119,63 @@ try {
   // first frames were captured mid-fade is unusable.
   await sleep(20000);
 
+  /**
+   * Preconditions, checked in the live page before a single frame is written.
+   *
+   * This exists because the render has now silently produced unusable output
+   * twice — once with the whole page composited into every frame, once with
+   * capture mode active but ineffective — and both times the failure was only
+   * discovered by opening a PNG afterwards. An hour of GPU time is too
+   * expensive to spend on faith.
+   *
+   * Each of these is a thing that must be TRUE in the page, not a thing the
+   * script believes it requested:
+   *
+   *   capture    — the attribute actually landed (it is applied by a React
+   *                effect, so it depends on hydration having finished)
+   *   sceneOnly  — the marked canvas host is present and every other body
+   *                child is genuinely computed-hidden
+   *   heroHidden — the sequence hero is display:none, so the hero cannot end
+   *                up photographing its own poster
+   *   canvas     — there is a scene canvas with real pixel dimensions, i.e.
+   *                the tier override put a real-time scene on screen
+   */
+  const pre = await cdp.send('Runtime.evaluate', {
+    returnByValue: true,
+    expression: `(() => {
+      const keep = document.querySelector('[data-capture-keep]');
+      const canvas = keep && keep.querySelector('canvas');
+      const leaked = [...document.body.children]
+        .filter(el => !el.hasAttribute('data-capture-keep'))
+        .filter(el => el.tagName !== 'SCRIPT')
+        .filter(el => getComputedStyle(el).visibility !== 'hidden')
+        .map(el => el.tagName + '.' + (el.className || '').toString().slice(0, 30));
+      const hero = document.querySelector('[data-sequence-hero]');
+      return {
+        capture: document.documentElement.getAttribute('data-capture'),
+        hasHost: !!keep,
+        canvas: canvas ? [canvas.width, canvas.height] : null,
+        heroHidden: !hero || getComputedStyle(hero).display === 'none',
+        leaked,
+      };
+    })()`,
+  });
+
+  const s = pre.result?.value ?? {};
+  const problems = [];
+  if (s.capture !== '1') problems.push('capture attribute never applied (hydration?)');
+  if (!s.hasHost) problems.push('no [data-capture-keep] canvas host — no real-time scene mounted');
+  if (!s.canvas || s.canvas[0] < 2) problems.push(`scene canvas absent or unsized: ${JSON.stringify(s.canvas)}`);
+  if (!s.heroHidden) problems.push('sequence hero still visible — it would photograph itself');
+  if (s.leaked?.length) problems.push(`DOM still visible: ${s.leaked.join(', ')}`);
+
+  if (problems.length) {
+    throw new Error(
+      'capture preconditions failed, refusing to render:\n    - ' + problems.join('\n    - '),
+    );
+  }
+  console.log(`  preconditions OK — scene canvas ${s.canvas[0]}x${s.canvas[1]}, DOM stripped`);
+
   const started = Date.now();
   for (let f = 0; f < FRAMES; f++) {
     const p = FRAMES === 1 ? 0 : f / (FRAMES - 1);

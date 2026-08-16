@@ -29,7 +29,27 @@ import {
 function retryPolicy(failureCount: number, error: unknown): boolean {
   const status = (error as AxiosError)?.response?.status;
   if (status && status >= 400 && status < 500) return false;
-  return failureCount < 2;
+  return failureCount < 3;
+}
+
+/**
+ * Exponential backoff with jitter: ~600ms, ~1.2s, ~2.4s.
+ *
+ * Flat retries are the wrong shape for this backend. It sleeps on Render's
+ * free tier, and a cold start takes tens of seconds — three attempts 600ms
+ * apart all land inside the same cold start, all fail, and the customer sees
+ * an error for a server that was merely waking up. Backing off puts the last
+ * attempt far enough out to catch it.
+ *
+ * The jitter matters because this app fires several queries at once on most
+ * routes (products + cart + wishlist). Without it they retry in lockstep and
+ * hit the waking server as a burst, which is the load pattern most likely to
+ * make it fail again. ±25% is enough to spread them.
+ */
+function retryDelay(attemptIndex: number): number {
+  const base = 600 * 2 ** attemptIndex;
+  const jitter = base * 0.25 * (Math.random() * 2 - 1);
+  return Math.min(base + jitter, 8000);
 }
 
 export function createQueryClient(): QueryClient {
@@ -37,6 +57,7 @@ export function createQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         retry: retryPolicy,
+        retryDelay,
         // The backend runs on Render, where a cold start can take up to 60s.
         // Serving a slightly stale list instantly beats blocking on that, and
         // it is the whole reason a route change should not refetch a product

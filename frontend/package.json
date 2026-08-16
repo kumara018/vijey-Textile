@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run check:tailwind && npm run check:hero && next build",
+    "build": "npm run check:tailwind && npm run check:hero && npm run check:frames && next build",
     "start": "next start",
     "lint": "npm run check:tailwind && next lint",
     "check:tailwind": "node scripts/check-tailwind-config.js",
     "check:hero": "node scripts/check-hero-assets.js",
-    "verify": "npm run check:tailwind && npm run check:hero && tsc --noEmit"
+    "check:frames": "node scripts/check-frame-content.mjs public/hero --sample 6",
+    "verify": "npm run check:tailwind && npm run check:hero && npm run check:frames && tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",
