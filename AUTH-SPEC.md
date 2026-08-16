@@ -99,11 +99,15 @@ parents, which is worse than an average leak.
    responses are trivially distinguishable. **The mitigation was intended and
    not implemented.**
 
-2. **`/send-login-otp` is mostly correct** — a missing user and a wrong password
-   both return the same 401 ("Incorrect email/phone or password"). But two
-   branches below it break the tie: a deactivated account returns **403
-   "Your account has been deactivated"**, and an unverified one returns **403
-   "Please verify your account first"**. Both confirm the account exists.
+2. **`/send-login-otp` leaks by timing, not by response.** The bodies are
+   correctly identical — a missing user and a wrong password both return the
+   same 401. But `if not user or not verify_password(...)` short-circuits, so a
+   missing account skips bcrypt entirely and answers ~1000× faster. See **R3**,
+   which is the actionable form of this.
+
+   *(An earlier draft of this document claimed the two 403 branches below that
+   check — deactivated, unverified — were the leak. They are not: both sit
+   behind a successful password verification. That claim is withdrawn in §3.5.)*
 
 3. **`/verify-login-otp` returns 404 "Account not found."**
 
@@ -315,13 +319,215 @@ also invalidate the caller's own token.
 |---|---|---|---|
 | 1 | **Rate limiting on all auth endpoints** | **Highest** | None exists. Independent of everything else here. |
 | 2 | Fix `/forgot-password` to return one identical response either way | **High** | The mitigation is commented but not implemented. |
-| 3 | Make the 403 deactivated/unverified branches non-distinguishing on `send-login-otp` | High | They defeat the uniform 401 above them. |
+| 3 | **R3** — always run bcrypt on `send-login-otp`, even with no user | High | The short-circuit makes a missing account answer ~1000x faster. The real oracle. |
 | 4 | `POST /sessions/revoke-all` | Medium | Needed for a credible "sign out everywhere". |
 | 5 | `POST /auth/begin` + `/auth/continue` (Option B) **or** `/auth/identify` (Option A) | Medium | Progressive sign-in. Only after 1–3. |
 | 6 | Confirm the `evict-and-login` re-409 race behaviour | Low | Contract clarity. |
 
 **Items 1–3 are worth doing on their own merits even if progressive sign-in is
 never built.** Item 1 in particular is a live exposure today.
+
+---
+
+## Part 3.5 — Remediation, prioritised and actionable
+
+For the backend owner. Each item gives the endpoint, the current behaviour, and
+the change. **None of this has been made — spec only.**
+
+### A correction to §1.2, finding 3
+
+My first pass claimed the two 403 branches in `send-login-otp` (deactivated,
+unverified) leak account existence. **That was wrong and I am withdrawing it.**
+Read the order:
+
+```python
+user = _find_user(db, payload.identifier)
+if not user or not auth_utils.verify_password(payload.password, user.password_hash):
+    raise HTTPException(401, "Incorrect email/phone or password. …")
+if not user.is_active:
+    raise HTTPException(403, "Your account has been deactivated. …")
+if not user.is_verified:
+    raise HTTPException(403, "Please verify your account first — …")
+```
+
+Both 403s sit **after** a successful password check. An attacker who reaches
+them already holds valid credentials, so they confirm nothing that person did
+not already know. They are not an enumeration vector, and fixing them is not a
+priority.
+
+**However, the same two lines contain a worse oracle than the one I withdrew.**
+See R3.
+
+---
+
+### R1 — No rate limiting on any auth endpoint  ·  **Priority: highest**
+
+**Current:** nothing. Searched for `slowapi`, `limiter`, `RateLimit` — no
+match anywhere outside `venv/`. Every auth endpoint answers as fast as the
+server can.
+
+**Why it is first:** every other item here is a leak of *one bit per request*.
+Rate limiting is what decides whether one bit per request is a curiosity or a
+customer list. It is also the only item that helps even if nothing else is
+touched.
+
+**Change:** add `slowapi` (works with the installed `fastapi==0.110.0`), keyed
+on client IP, applied to `send-login-otp`, `verify-login-otp`,
+`forgot-password`, `reset-password`, `register`, `verify-register-otp`,
+`resend-register-otp`, and `sessions/evict-and-login`.
+
+```python
+# main.py
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+```
+
+```python
+# routers/auth.py  — request: Request must be in the signature for slowapi
+@router.post("/send-login-otp")
+@limiter.limit("5/minute;30/hour")
+def send_login_otp(request: Request, payload: schemas.UserLogin, db: Session = Depends(get_db)):
+```
+
+Suggested budgets: `send-login-otp` and `forgot-password` 5/min and 30/hour;
+`verify-login-otp` and `reset-password` 10/min (legitimate typos are common);
+`register` 3/min.
+
+**Per-IP alone is not enough** — a proxy pool defeats it. Add a second limit
+keyed on the *identifier* for `send-login-otp` and `forgot-password`
+(≈5/hour per identifier), which is what stops a distributed walk of the number
+space. Behind Render's proxy, `get_remote_address` reads the socket peer, so
+also trust `X-Forwarded-For` or every request will share one key.
+
+---
+
+### R2 — `/forgot-password` reveals whether an account exists  ·  **High**
+
+**File:** `routers/auth.py:348`
+
+**Current** — the comment states the intent and the code does the opposite:
+
+```python
+user = _find_user(db, identifier)
+if not user:
+    # Don't reveal if user exists — just return success
+    return {"message": "If this account exists, an OTP has been sent."}
+
+otp = _create_otp(db, user.email, otp_type="reset")
+notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
+return {
+    "message": f"OTP sent to your registered email ({user.email[:3]}***). Valid for 10 minutes.",
+    "email_hint": user.email[:3] + "***@" + user.email.split("@")[-1],
+}
+```
+
+Two different messages, and only one carries `email_hint`. One request answers
+"is this number a customer".
+
+**Correct:** one response shape on both paths.
+
+```python
+user = _find_user(db, identifier)
+if user:
+    otp = _create_otp(db, user.email, otp_type="reset")
+    notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
+
+# Identical on both paths — no email_hint, no branch in the message.
+return {"message": "If an account exists for that phone or email, we've sent a code to its registered email address."}
+```
+
+**Frontend consequence, and it is not cosmetic:** the reset screen currently
+shows `email_hint` so the customer knows *which* inbox to check. Removing it
+means the copy must carry that instead — "check the email address registered to
+this account". I will make that change on the frontend when this lands; the two
+have to ship together or the screen will read as broken.
+
+---
+
+### R3 — The bcrypt short-circuit is a timing oracle  ·  **High**
+
+**File:** `routers/auth.py:389`
+
+**Current:**
+
+```python
+if not user or not auth_utils.verify_password(payload.password, user.password_hash):
+```
+
+Python short-circuits `or`. When `user` is `None`, `verify_password` **never
+runs** — so a missing account returns in microseconds, while a real account
+with a wrong password pays a full bcrypt verification (~100ms by design).
+
+The response bodies are correctly identical. The *response times* differ by
+three orders of magnitude, and that difference is stable, easy to measure
+remotely, and needs no credentials. **This is the real enumeration vector on
+this endpoint** — the one I mistakenly attributed to the 403s.
+
+**Correct:** always pay the hash. Verify against a fixed dummy hash when the
+user is absent, so both paths cost the same.
+
+```python
+# Module level — computed once at import.
+_DUMMY_HASH = auth_utils.hash_password("not-a-real-password")
+
+user = _find_user(db, payload.identifier)
+# Always run a verification, even with no user, so the timing is flat.
+password_ok = auth_utils.verify_password(
+    payload.password, user.password_hash if user else _DUMMY_HASH
+)
+if not user or not password_ok:
+    raise HTTPException(401, "Incorrect email/phone or password. Please check and try again.")
+```
+
+The same pattern applies anywhere else a lookup gates an expensive check.
+
+---
+
+### R4 — `_find_user` returns at different speeds  ·  **Medium**
+
+**File:** `routers/auth.py:33`
+
+**Current:** an email identifier hits an indexed equality on `email`; a phone
+goes through `_normalize_phone` first and then queries `phone`. A miss returns
+on the first query; a hit continues into whatever the caller does next.
+
+On its own this is a much smaller signal than R3 — both branches are one
+indexed query. It matters in one specific case: **if R3 is fixed but the
+endpoint still returns before doing equivalent work on the miss path**, the
+residual difference becomes the next-best oracle. Fixing R3 as written above
+handles `send-login-otp`. Any *new* endpoint (Option A's `/identify`, if you
+choose it) must be written the same way from the start — do the same work on
+both paths, then branch on the result at the end.
+
+**This is only load-bearing for Option A.** Under Option B there is no
+existence-answering endpoint, so there is nothing to time.
+
+---
+
+### R5 — `POST /sessions/revoke-all`  ·  **Medium**
+
+As specified in §3.3. Needed for a credible "sign out everywhere"; must revoke
+in one transaction.
+
+---
+
+### R6 — Progressive sign-in endpoints  ·  **After R1–R3**
+
+Option B: `POST /auth/begin` + `POST /auth/continue`, per §2. Should not be
+built before R1 is in place, because R1 is what bounds the SMS spend the blind
+flow implies.
+
+---
+
+### Ordering
+
+R1 → R2 → R3 → then R5/R6 as scheduling allows. R4 only if Option A is chosen.
+R1–R3 are worth doing whether or not progressive sign-in is ever built.
 
 ---
 
