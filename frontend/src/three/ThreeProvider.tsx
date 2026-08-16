@@ -131,6 +131,26 @@ export default function ThreeProvider() {
    */
   if (!profile.realtime) return null;
 
+  /**
+   * THE HOMEPAGE HERO IS THE SEQUENCE, AND ONLY THE SEQUENCE.
+   *
+   * Both surfaces stage the same garment: SequenceHero scrubs the
+   * pre-rendered camera move, and the real-time scene stages the hero product
+   * fed to it through useHeroStore. Below the `rich` rung only the sequence
+   * runs, so the collision is invisible on most machines — but on a wide
+   * viewport the tier resolves higher, the canvas mounts, and the page shows
+   * the SAME photograph twice at once: the scaled sequence plate on top of a
+   * full-bleed live copy behind it. Captured in a real GPU browser at
+   * y=561 — the scaled plate and its border sitting over a larger duplicate.
+   *
+   * The sequence is the primary path by design: it was rendered offline with
+   * the full postprocessing chain, at a quality the real-time path cannot
+   * afford on a customer's integrated GPU. So on this one route the real-time
+   * canvas has nothing to add and one clear way to hurt. Every other route
+   * keeps its scene.
+   */
+  if (pathname === '/') return null;
+
   return (
     <CanvasHost>
       <SceneRouter />
