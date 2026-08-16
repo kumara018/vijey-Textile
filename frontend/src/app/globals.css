@@ -107,3 +107,26 @@ body {
 ::-webkit-scrollbar-track { background: #eee0e4; }
 ::-webkit-scrollbar-thumb { background: #c58059; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #845033; }
+
+/* ── Capture mode ─────────────────────────────────────────────────────
+   Set by CaptureMode when ?capture=1, used only by the offline sequence
+   renderer. Hides every DOM layer so a screenshot records the 3D scene
+   alone.
+
+   Without this the renderer baked the navigation, the headline and the
+   footer into every frame, and scrubbing those frames drew a photograph
+   of the page inside the page — the headline rendered twice, once live
+   and once printed underneath. The sequence is a backdrop; it must
+   contain the scene and nothing else.
+
+   The canvas is deliberately exempt, and so is its fixed wrapper. */
+html[data-capture='1'] body > *:not(:has(canvas)) {
+  visibility: hidden !important;
+}
+html[data-capture='1'] canvas {
+  visibility: visible !important;
+}
+/* The sequence hero itself must not appear in its own source frames. */
+html[data-capture='1'] [data-sequence-hero] {
+  display: none !important;
+}

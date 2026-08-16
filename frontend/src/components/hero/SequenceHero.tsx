@@ -197,6 +197,7 @@ export default function SequenceHero({ className = '' }: { className?: string })
   return (
     <div
       aria-hidden="true"
+      data-sequence-hero=""
       /**
        * `overflow-hidden` and `inset-0` are load-bearing, not cosmetic. A
        * failed <img> is still a replaced element and will size itself to its

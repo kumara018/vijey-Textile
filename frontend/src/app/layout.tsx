@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -13,6 +14,7 @@ import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
 import Letterbox from '@/components/Letterbox';
 import SoundToggle from '@/components/SoundToggle';
+import CaptureMode from '@/components/CaptureMode';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
@@ -68,6 +70,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             outside PageTransition so it is never remounted by a route change
             — the GL context, compiled shaders and uploaded textures survive
             navigation. Fixed at z-0; all real UI renders above it. */}
+        {/* Offline-render only: strips the DOM so a captured frame contains
+            the scene alone. Inert without ?capture=1. */}
+        <Suspense fallback={null}><CaptureMode /></Suspense>
         <ThreeProvider />
         {/* Outermost of the data providers: AuthContext, CartContext and
             WishlistContext all issue queries, so the client has to exist
