@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useDeliveryTier } from '@/three/core/useDeliveryTier';
+import { useSceneStore } from '@/store/useSceneStore';
 import HERO_SCRUB from '@/lib/heroScrub.json';
 
 /**
@@ -224,18 +225,42 @@ export default function SequenceHero({ className = '' }: { className?: string })
       );
     };
 
-    const onScroll = () => {
+    /**
+     * DRIVEN BY LENIS'S CLOCK, NOT BY NATIVE SCROLL EVENTS.
+     *
+     * This is the half that actually fixes the stutter. With a smooth-scroll
+     * layer running, the browser's `scroll` event and Lenis's interpolated
+     * position are two different numbers on the same frame. Reading one while
+     * the sticky element is positioned by the other is exactly the
+     * disagreement that made the hero judder.
+     *
+     * Subscribing to the store — which ThreeProvider fills from Lenis's own
+     * `scroll` event — means the scrub, the scale and the sticky frame are
+     * all resolved from one value, once per frame, in the same order every
+     * time. The rAF guard still coalesces, so a burst of events costs one
+     * draw.
+     *
+     * `getBoundingClientRect` remains the geometry source: Lenis drives real
+     * scrollTop, so layout is truthful. It is the TIMING that had to be
+     * unified, not the measurement.
+     */
+    draw();
+    const unsubscribe = useSceneStore.subscribe(() => {
+      if (rafPending.current) return;
+      rafPending.current = true;
+      requestAnimationFrame(draw);
+    });
+
+    const onResize = () => {
       if (rafPending.current) return;
       rafPending.current = true;
       requestAnimationFrame(draw);
     };
+    window.addEventListener('resize', onResize, { passive: true });
 
-    draw();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      unsubscribe();
+      window.removeEventListener('resize', onResize);
     };
   }, [ready, reduced]);
 

@@ -72,44 +72,75 @@ export default function ThreeProvider() {
   }, [pathname, goToScene]);
 
   /**
-   * Scroll progress, published from NATIVE scroll.
+   * Lenis smooth scroll — restored, with the actual bug fixed.
    *
-   * Lenis used to drive this — a 1.05s eased virtual scroll layered over the
-   * browser's own. It was removed, and removing it IS the fix for the hero
-   * feeling sticky while dragging.
+   * Lenis was never the problem. TWO smoothers were: Lenis interpolating in
+   * JavaScript AND `html { scroll-behavior: smooth }` interpolating in CSS,
+   * both acting on the same scroll. Against a `position: sticky` hero whose
+   * transform is driven by scroll offset, they disagreed every frame and the
+   * result was judder. Removing Lenis removed the judder and the smoothness
+   * together — the wrong half.
    *
-   * Smooth-scroll libraries take scrolling off the compositor and run it in
-   * JavaScript, one frame behind the input. Against a `position: sticky` hero
-   * whose transform is driven by scroll position, that is two systems
-   * disagreeing about where the page is on every frame: the sticky element is
-   * placed by the browser at the real offset while the animation reads the
-   * interpolated one. The result is exactly the judder that was reported —
-   * and it gets worse the heavier the frame is, which is why it showed up
-   * here and not on a plain page.
+   * So: Lenis stays, the CSS layer is gone (globals.css sets scroll-behavior
+   * to auto, which Lenis requires), and everything scroll-driven now reads
+   * ONE clock.
    *
-   * The studios this hero is modelled on do not hijack scroll either. They
-   * drive animation FROM native scroll and let the compositor own the motion.
-   * That is what this does now: a passive listener, one rAF, no interpolation
-   * layer, nothing for the sticky frame to disagree with.
+   * `lerp: 0.1` rather than `duration: 1.05`. Duration-based easing keeps
+   * animating for a fixed time after input stops, which is what made a drag
+   * feel like it was catching up. Lerp converges proportionally — it tracks
+   * the pointer closely and settles fast, which reads as smooth rather than
+   * as lag.
+   *
+   * The scroll value is published to the store on Lenis's own event, so the
+   * hero scrub, the scene fade and the sticky element are all driven by the
+   * same number on the same frame. That single-clock rule is the whole fix.
    */
   useEffect(() => {
     if (!capabilities) return;
+    // Honouring the OS preference beats any smooth-scroll nicety.
+    if (capabilities.reducedMotion) return;
 
-    let pending = false;
-    const publish = () => {
-      pending = false;
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      useSceneStore.getState().setScroll(max > 0 ? window.scrollY / max : 0);
-    };
-    const onScroll = () => {
-      if (pending) return;
-      pending = true;
-      requestAnimationFrame(publish);
-    };
+    let lenis: import('lenis').default | null = null;
+    let cancelled = false;
+    let cleanup = () => {};
 
-    publish();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    (async () => {
+      const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([
+        import('lenis'),
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+      ]);
+      if (cancelled) return;
+
+      gsap.registerPlugin(ScrollTrigger);
+
+      lenis = new Lenis({
+        lerp: 0.1,
+        // Touch devices already scroll on the compositor; smoothing them adds
+        // lag and fights momentum. Native touch, smoothed wheel.
+        syncTouch: false,
+      });
+
+      lenis.on('scroll', ({ scroll, limit }: { scroll: number; limit: number }) => {
+        ScrollTrigger.update();
+        useSceneStore.getState().setScroll(limit > 0 ? scroll / limit : 0);
+      });
+
+      // One clock: Lenis is driven by GSAP's ticker rather than its own rAF.
+      // Two independent loops drift by a frame and the scene judders against
+      // the DOM — the same class of bug, one level down.
+      const tick = (time: number) => lenis?.raf(time * 1000);
+      gsap.ticker.add(tick);
+      gsap.ticker.lagSmoothing(0);
+
+      cleanup = () => {
+        gsap.ticker.remove(tick);
+        lenis?.destroy();
+        lenis = null;
+      };
+    })();
+
+    return () => { cancelled = true; cleanup(); };
   }, [capabilities]);
 
   // Route changes reset scroll position. This mattered doubly under Lenis,
