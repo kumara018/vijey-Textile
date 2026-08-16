@@ -16,6 +16,9 @@
   animation: pageFadeIn 0.25s ease-out both;
   min-height: 100%;
 }
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation: none; }
+}
 
 :root {
   --primary: #c58059;
@@ -30,7 +33,19 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+/* NO CSS SMOOTH SCROLL.
+   `scroll-behavior: smooth` animates every programmatic scroll and anchor
+   jump, which is a second interpolation layer on top of the browser's own
+   scrolling. Against a `position: sticky` hero whose transform is driven by
+   scroll offset, the sticky element is placed at the real offset while the
+   animation reads the interpolated one — the two disagree on every frame and
+   the result is judder.
+   Measured: with this rule active, window.scrollTo(0, 900) left scrollY at 0
+   after 150ms; with it removed, it lands on 900 immediately.
+   Anchors now jump. Every anchor target on the site already carries
+   scroll-mt-32 to clear the fixed nav, so a jump lands correctly and
+   predictably. */
+html { scroll-behavior: auto; }
 
 /* Smooth transitions on all interactive elements */
 a, button { transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }

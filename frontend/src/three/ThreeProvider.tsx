@@ -25,7 +25,8 @@ const SceneRouter = dynamic(() => import('./SceneRouter'), { ssr: false });
  *   1. capability detection (once, on mount)
  *   2. route → scene mapping, so navigation animates the existing scene
  *      instead of tearing the canvas down
- *   3. Lenis smooth scroll, driven on the same clock as GSAP
+ *   3. publishing scroll progress from native scroll (no smooth-scroll
+ *      layer — see the note on that effect)
  */
 export default function ThreeProvider() {
   const pathname = usePathname();
@@ -70,59 +71,50 @@ export default function ThreeProvider() {
     goToScene(sceneForPath(pathname));
   }, [pathname, goToScene]);
 
-  // ── Lenis + GSAP on one clock ───────────────────────────────────────
+  /**
+   * Scroll progress, published from NATIVE scroll.
+   *
+   * Lenis used to drive this — a 1.05s eased virtual scroll layered over the
+   * browser's own. It was removed, and removing it IS the fix for the hero
+   * feeling sticky while dragging.
+   *
+   * Smooth-scroll libraries take scrolling off the compositor and run it in
+   * JavaScript, one frame behind the input. Against a `position: sticky` hero
+   * whose transform is driven by scroll position, that is two systems
+   * disagreeing about where the page is on every frame: the sticky element is
+   * placed by the browser at the real offset while the animation reads the
+   * interpolated one. The result is exactly the judder that was reported —
+   * and it gets worse the heavier the frame is, which is why it showed up
+   * here and not on a plain page.
+   *
+   * The studios this hero is modelled on do not hijack scroll either. They
+   * drive animation FROM native scroll and let the compositor own the motion.
+   * That is what this does now: a passive listener, one rAF, no interpolation
+   * layer, nothing for the sticky frame to disagree with.
+   */
   useEffect(() => {
     if (!capabilities) return;
-    // Honouring the OS preference beats any smooth-scroll nicety.
-    if (capabilities.reducedMotion) return;
 
-    let lenis: import('lenis').default | null = null;
-    let cancelled = false;
-    let cleanup = () => {};
+    let pending = false;
+    const publish = () => {
+      pending = false;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      useSceneStore.getState().setScroll(max > 0 ? window.scrollY / max : 0);
+    };
+    const onScroll = () => {
+      if (pending) return;
+      pending = true;
+      requestAnimationFrame(publish);
+    };
 
-    (async () => {
-      const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([
-        import('lenis'),
-        import('gsap'),
-        import('gsap/ScrollTrigger'),
-      ]);
-      if (cancelled) return;
-
-      gsap.registerPlugin(ScrollTrigger);
-
-      lenis = new Lenis({ duration: 1.05, smoothWheel: true });
-
-      // ScrollTrigger must be told about Lenis's virtual scroll position, and
-      // Lenis must be driven by GSAP's ticker rather than its own rAF — two
-      // independent loops drift by a frame and the scene visibly judders
-      // against the DOM.
-      lenis.on('scroll', ScrollTrigger.update);
-
-      const tick = (time: number) => lenis?.raf(time * 1000);
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
-
-      // Publish scroll progress for scenes to read.
-      const onScroll = () => {
-        const max = document.documentElement.scrollHeight - window.innerHeight;
-        useSceneStore.getState().setScroll(max > 0 ? window.scrollY / max : 0);
-      };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
-
-      cleanup = () => {
-        window.removeEventListener('scroll', onScroll);
-        gsap.ticker.remove(tick);
-        lenis?.destroy();
-        lenis = null;
-      };
-    })();
-
-    return () => { cancelled = true; cleanup(); };
+    publish();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [capabilities]);
 
-  // Route changes must reset scroll position — Lenis holds its own virtual
-  // offset that survives navigation otherwise, landing users mid-page.
+  // Route changes reset scroll position. This mattered doubly under Lenis,
+  // which held a virtual offset that survived navigation; on native scroll it
+  // is still needed because a client-side transition does not reset it either.
   useEffect(() => {
     window.scrollTo(0, 0);
     useSceneStore.getState().setScroll(0);

@@ -166,6 +166,25 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/**
+        * EVERYTHING AFTER THE PINNED HERO NEEDS AN OPAQUE GROUND.
+        *
+        * A sticky section stays fixed in the viewport while later content
+        * scrolls up the page. If that content is transparent — and every
+        * section here was — the pinned hero shows THROUGH it: the headline
+        * and the staged garment composite underneath "The wedding" and "The
+        * festival" at the same time, which is the overlap that looked like
+        * two images fighting.
+        *
+        * `bg-ink` is the fix and it is not decoration: it is the sheet that
+        * slides over the pinned frame and hides it. z-20 puts it above the
+        * sticky hero; the hero's own copy sits at z-10 inside its frame.
+        *
+        * This is the half of the pinned-hero pattern that is invisible until
+        * it is missing.
+        */}
+      <div className="relative z-20 bg-ink">
+
       {/* ═══ II. The Occasion ══════════════════════════════════════════
           Three full-bleed alternating bands. This replaces the category
           grid: a family does not shop by taxonomy, they shop by the day
@@ -265,6 +284,7 @@ export default function HomePage() {
           New arrivals as an offset stagger. Never a uniform row. */}
       <KeptStagger items={recentItems} loading={recent.isPending} />
 
+      </div>
       </div>
     </div>
   );
