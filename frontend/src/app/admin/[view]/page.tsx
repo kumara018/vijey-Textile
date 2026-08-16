@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import AdminDashboard from '../AdminDashboard';
+import AdminOrdersView from '../AdminOrdersView';
 
 /**
  * The admin's views as real, addressable routes.
@@ -63,5 +64,10 @@ export async function generateMetadata({ params }: { params: Promise<{ view: str
 export default async function AdminViewPage({ params }: { params: Promise<{ view: string }> }) {
   const { view } = await params;
   if (!VIEWS.includes(view as (typeof VIEWS)[number])) notFound();
+
+  // Views cross onto AdminShell one at a time. Anything not yet rebuilt still
+  // mounts the legacy dashboard, which keeps working exactly as before.
+  if (view === 'orders') return <AdminOrdersView />;
+
   return <AdminDashboard initialView={view} />;
 }
