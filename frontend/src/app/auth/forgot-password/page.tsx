@@ -1,162 +1,208 @@
 'use client';
-import { useState } from 'react';
+
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, KeyRound, Send } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authAPI } from '@/lib/api';
-import toast from 'react-hot-toast';
-import { LogoMark } from '@/components/Logo';
+import AuthShell from '@/components/system/AuthShell';
+import { Field, Step } from '@/components/system/Field';
+import { ActionButton } from '@/components/system/Action';
+import { Announce } from '@/components/system/States';
 
-export default function ForgotPasswordPage() {
+/**
+ * Forgotten password.
+ *
+ * identifier → code + new password → back to sign in.
+ *
+ * `?identifier=` carries what was typed on the sign-in screen, so the flow
+ * never asks for it twice.
+ *
+ * ON THE COPY, DELIBERATELY:
+ *
+ * The server currently returns an `email_hint` for a known account and a
+ * generic message for an unknown one — which is an account-enumeration leak
+ * (AUTH-SPEC R2). When that is fixed, `email_hint` disappears and any screen
+ * that depended on it to tell the customer WHICH inbox to check would read as
+ * broken.
+ *
+ * So this screen never depends on it. The standfirst says "the email address
+ * registered to this account" unconditionally, and the hint is shown only as a
+ * bonus when present. The day R2 lands, nothing here needs to change and
+ * nothing degrades — which is the whole point of writing the copy this way
+ * before the fix rather than after it.
+ */
+
+type Stage = 'identifier' | 'reset';
+
+function ForgotInner() {
+  const params = useSearchParams();
   const router = useRouter();
-  const [step, setStep]             = useState<'request' | 'reset'>('request');
-  const [identifier, setIdentifier] = useState('');
-  const [emailHint, setEmailHint]   = useState('');
-  const [form, setForm]             = useState({ otp: '', password: '', confirm: '' });
-  const [loading, setLoading]       = useState(false);
-  const [error, setError]           = useState('');
-  const [showPass, setShowPass]     = useState(false);
 
-  const handleRequest = async (e: React.FormEvent) => {
+  const [stage, setStage] = useState<Stage>('identifier');
+  const [identifier, setIdentifier] = useState(params.get('identifier')?.trim() ?? '');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [hint, setHint] = useState('');
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [announcement, setAnnouncement] = useState('');
+
+  const identifierRef = useRef<HTMLInputElement>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (stage === 'identifier') identifierRef.current?.focus();
+    if (stage === 'reset') codeRef.current?.focus();
+  }, [stage]);
+
+  useEffect(() => {
+    if (!announcement) return;
+    const t = setTimeout(() => setAnnouncement(''), 1500);
+    return () => clearTimeout(t);
+  }, [announcement]);
+
+  const submitIdentifier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!identifier.trim()) { setError('Email or mobile number is required'); return; }
-    setLoading(true); setError('');
+    if (!identifier.trim()) { setError('Enter your phone number or email.'); return; }
+    setBusy(true);
+    setError('');
     try {
       const res = await authAPI.forgotPassword({ identifier: identifier.trim() });
-      setEmailHint(res.data.email_hint || '');
-      toast.success('OTP sent! Check your email.');
-      setStep('reset');
+      // Bonus only. The flow does not depend on this existing — see the note
+      // at the top of this file.
+      setHint(res.data?.email_hint || '');
+      setStage('reset');
+      setAnnouncement('If that account exists, a code is on its way.');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to send OTP. Try again.');
-    } finally { setLoading(false); }
+      if (!err?.response) setError('We could not reach the shop. Check your connection and try again.');
+      else setError(err.response?.data?.detail || 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleReset = async (e: React.FormEvent) => {
+  const submitReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.otp || form.otp.length !== 6) { setError('Enter the 6-digit OTP'); return; }
-    if (form.password.length < 8)           { setError('Password must be at least 8 characters'); return; }
-    if (form.password !== form.confirm)     { setError('Passwords do not match'); return; }
-    setLoading(true); setError('');
+    if (!code.trim()) { setError('Enter the code we sent you.'); return; }
+    if (password.length < 8) { setError('Your new password needs at least 8 characters.'); return; }
+    if (password !== confirm) { setError('The two passwords do not match.'); return; }
+    setBusy(true);
+    setError('');
     try {
       await authAPI.resetPassword({
-        identifier:       identifier.trim(),
-        otp_code:         form.otp,
-        new_password:     form.password,
-        confirm_password: form.confirm,
+        identifier: identifier.trim(),
+        // schemas.OTPVerify: otp_code (not otp), and confirm_password is
+        // required — the server compares the two itself.
+        otp_code: code.trim(),
+        new_password: password,
+        confirm_password: confirm,
       });
-      toast.success('Password reset successfully! Please login.');
-      router.push('/auth/login');
+      // Straight to sign-in with the identifier kept, so the very next thing
+      // they do is the thing they came to do.
+      router.replace(`/auth/login?identifier=${encodeURIComponent(identifier.trim())}`);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid OTP. Please try again.');
-    } finally { setLoading(false); }
+      if (!err?.response) setError('We could not reach the shop. Check your connection and try again.');
+      else setError(err.response?.data?.detail || 'That code is not right, or it has expired.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-maroon-100">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-3 mb-4">
-            <LogoMark size={34} className="text-gold-500 flex-shrink-0" />
-            <div className="flex flex-col text-left">
-              <span className="font-bold text-maroon-900 uppercase leading-tight" style={{ fontSize: '15px', letterSpacing: '0.04em' }}>Vijey Textile</span>
-              <span className="text-maroon-500 font-semibold uppercase leading-tight mt-0.5" style={{ fontSize: '9px', letterSpacing: '0.1em' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
-            </div>
+    <AuthShell
+      title={stage === 'identifier' ? 'Reset your password' : 'Choose a new password'}
+      standfirst={
+        stage === 'identifier'
+          ? 'Tell us the phone number or email on your account and we will send a code to the email address registered to it.'
+          : hint
+            ? `Enter the code we sent to ${hint}, then choose a new password.`
+            : 'Enter the code we sent to the email address registered to this account, then choose a new password.'
+      }
+      footer={
+        <p className="text-center text-sm text-paper-faint">
+          Remembered it?{' '}
+          <Link
+            href="/auth/login"
+            className="text-paper underline underline-offset-4 transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+          >
+            Sign in
           </Link>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {step === 'request' ? 'Forgot Password?' : 'Enter OTP'}
-          </h2>
-          <p className="text-gray-500 text-sm mt-1">
-            {step === 'request'
-              ? 'We\'ll send an OTP to your registered email'
-              : `OTP sent to ${emailHint || 'your email'}`}
-          </p>
-        </div>
+        </p>
+      }
+    >
+      <Announce message={announcement} />
 
-        <div className="card p-8 shadow-lg">
-          {error && (
-            <div className="mb-5 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
-              <AlertCircle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-red-700 text-sm">{error}</p>
+      {stage === 'identifier' && (
+        <Step stepKey="identifier">
+          <form onSubmit={submitIdentifier} noValidate>
+            <Field
+              ref={identifierRef}
+              label="Phone or email"
+              name="identifier"
+              autoComplete="username"
+              value={identifier}
+              onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
+              error={error || undefined}
+            />
+            <div className="mt-9">
+              <ActionButton type="submit" disabled={busy}>
+                {busy ? 'Sending…' : 'Send code'}
+              </ActionButton>
             </div>
-          )}
+          </form>
+        </Step>
+      )}
 
-          {step === 'request' ? (
-            <form onSubmit={handleRequest} className="space-y-5">
-              <div>
-                <label className="label">Email or Mobile Number *</label>
-                <input
-                  type="text"
-                  value={identifier}
-                  onChange={(e) => { setIdentifier(e.target.value); setError(''); }}
-                  placeholder="email@example.com or 9876543210"
-                  className="input-field"
-                />
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
-                {loading
-                  ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Sending OTP...</>
-                  : <><Send size={18} /> Send OTP</>}
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleReset} className="space-y-5">
-              <div>
-                <label className="label">6-Digit OTP *</label>
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={form.otp}
-                  onChange={(e) => { setForm({ ...form, otp: e.target.value.replace(/\D/, '') }); setError(''); }}
-                  placeholder="Enter OTP from email"
-                  className="input-field text-center text-2xl tracking-widest font-bold"
-                />
-              </div>
-              <div>
-                <label className="label">New Password *</label>
-                <div className="relative">
-                  <input
-                    type={showPass ? 'text' : 'password'}
-                    value={form.password}
-                    onChange={(e) => { setForm({ ...form, password: e.target.value }); setError(''); }}
-                    placeholder="Min 8 chars, uppercase, number, symbol"
-                    className="input-field pr-12"
-                  />
-                  <button type="button" onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 p-1 text-xs">
-                    {showPass ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Min 8 chars · Uppercase · Number · Symbol (!@#$...)</p>
-              </div>
-              <div>
-                <label className="label">Confirm New Password *</label>
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={form.confirm}
-                  onChange={(e) => { setForm({ ...form, confirm: e.target.value }); setError(''); }}
-                  placeholder="Re-enter new password"
-                  className="input-field"
-                />
-              </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2 py-3">
-                {loading
-                  ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Resetting...</>
-                  : <><KeyRound size={18} /> Reset Password</>}
-              </button>
-              <button type="button" onClick={() => { setStep('request'); setError(''); }}
-                className="w-full text-sm text-maroon-700 hover:underline text-center">
-                Resend OTP
-              </button>
-            </form>
-          )}
+      {stage === 'reset' && (
+        <Step stepKey="reset">
+          <form onSubmit={submitReset} noValidate className="space-y-7">
+            <Field
+              ref={codeRef}
+              label="Six-digit code"
+              name="otp"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={code}
+              onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }}
+              className="tracking-[0.4em]"
+            />
+            <Field
+              label="New password"
+              name="new_password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
+              error={error || undefined}
+              hint="At least 8 characters, with an uppercase, a lowercase, a number and a symbol."
+            />
+            <Field
+              label="Confirm new password"
+              name="confirm_password"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => { setConfirm(e.target.value); setError(''); }}
+            />
+            <div className="pt-2">
+              <ActionButton type="submit" disabled={busy}>
+                {busy ? 'Saving…' : 'Save and sign in'}
+              </ActionButton>
+            </div>
+          </form>
+        </Step>
+      )}
+    </AuthShell>
+  );
+}
 
-          <div className="mt-6 pt-5 border-t border-maroon-200 text-center">
-            <Link href="/auth/login" className="flex items-center justify-center gap-1 text-sm text-gray-600 hover:text-maroon-800">
-              <ArrowLeft size={14} /> Back to Sign In
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotInner />
+    </Suspense>
   );
 }

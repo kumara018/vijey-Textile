@@ -87,8 +87,8 @@ including the Indian mobile pattern the server enforces.
 | Route | Status | Calls | Guard |
 |---|---|---|---|
 | `/auth/login` | ✅ | `POST /send-login-otp` → `/verify-login-otp` · `/sessions/evict-and-login` | public |
-| `/auth/register` | ⬜ | `POST /register` → `/verify-register-otp` · `/resend-register-otp` | public |
-| `/auth/forgot-password` | ⬜ | `POST /forgot-password` → `/reset-password` | public |
+| `/auth/register` | ✅ | `POST /register` → `/verify-register-otp` · `/resend-register-otp` | public |
+| `/auth/forgot-password` | ✅ | `POST /forgot-password` → `/reset-password` | public |
 | `/account` | ⬜ | `GET/PUT /api/auth/me` · `GET /api/auth/sessions` · `DELETE /sessions/{id}` · addresses CRUD | auth |
 | `/account/delete` | ⬜ | `POST /request-delete-account` → `/confirm-delete-account` · `/cancel-delete-account` · deactivate pair | auth |
 | Sign out | ⬜ | `POST /api/auth/logout` — accepts an explicit token so one saved account can be signed out while switching to another | auth |
@@ -175,10 +175,10 @@ framework's default and a slow segment showed nothing.
 **30 app routes** (23 + the six new addressable admin views + `[view]`)
 + `robots.txt`, `sitemap.xml`, `icon.jpg` generated.
 
-**11 of 23 rebuilt** · 12 remaining.
+**13 of 23 rebuilt** · 10 remaining.
 
 `/` · `/products` · `/shipping` · `/privacy` · `/terms` · `/cancellation` ·
-`/authentic` · `/cart` · `/wishlist` · `/support` · `/auth/login`
+`/authentic` · `/cart` · `/wishlist` · `/support` · `/auth/login` · `/auth/register` · `/auth/forgot-password`
 
 **4 of 5 app-shell surfaces rebuilt** (404, route error, global error, loading).
 

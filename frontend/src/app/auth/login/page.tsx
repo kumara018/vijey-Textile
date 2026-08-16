@@ -161,7 +161,13 @@ function SignInInner() {
     setBusy(true);
     setError('');
     try {
-      const res = await authAPI.verifyLoginOtp({ identifier: identifier.trim(), otp: code.trim() });
+      const res = await authAPI.verifyLoginOtp({
+        identifier: identifier.trim(),
+        // schemas.LoginOTPVerify calls this `otp_code`, not `otp`. api.ts
+        // types payloads as `object`, so tsc cannot catch a wrong key here —
+        // it has to be read off the schema.
+        otp_code: code.trim(),
+      });
       finish(res.data.access_token, res.data.user);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
