@@ -132,7 +132,7 @@ separate pages. `Cancellation, Return & Exchange Policy` is its own route,
 | Route | Status | Calls | Guard |
 |---|---|---|---|
 | `/admin` | ✅ | `GET /api/admin/dashboard` · products CRUD + image/video upload · `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync/serviceability · returns status/retry-pickup/attach-awb/retry-replacement · notifications · `GET /users` · support ratings · payments refund trio | **admin** |
-| `/admin/products` | ⬜ | products CRUD + image/video upload | **admin** |
+| `/admin/products` | ✅ | products CRUD + image/video upload | **admin** |
 | `/admin/orders` | ✅ | `GET /orders` · `PUT /orders/{id}/status` · Delhivery create/sync | **admin** |
 | `/admin/returns` | ✅ | returns status · retry-pickup · attach-awb · retry-replacement | **admin** |
 | `/admin/users` | ✅ | `GET /users` | **admin** |

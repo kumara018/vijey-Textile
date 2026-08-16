@@ -3,6 +3,7 @@ import AdminDashboard from '../AdminDashboard';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
 import { AdminUsersView, AdminRatingsView, AdminCancellationsView } from '../AdminListViews';
+import AdminProductsView from '../AdminProductsView';
 
 /**
  * The admin's views as real, addressable routes.
@@ -74,6 +75,7 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'users') return <AdminUsersView />;
   if (view === 'ratings') return <AdminRatingsView />;
   if (view === 'cancellations') return <AdminCancellationsView />;
+  if (view === 'products') return <AdminProductsView />;
 
   return <AdminDashboard initialView={view} />;
 }
