@@ -1,3 +1,4 @@
+import * as C from './contracts';
 import axios from 'axios';
 
 // Determine backend URL based on where the app is running.
@@ -93,20 +94,20 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  register:            (data: object) => api.post('/api/auth/register', data),
-  verifyRegisterOtp:   (data: object) => api.post('/api/auth/verify-register-otp', data),
-  resendRegisterOtp:   (data: object) => api.post('/api/auth/resend-register-otp', data),
+  register:            (data: C.UserRegisterPayload) => api.post('/api/auth/register', data),
+  verifyRegisterOtp:   (data: { identifier: string; otp_code: string }) => api.post('/api/auth/verify-register-otp', data),
+  resendRegisterOtp:   (data: C.OtpRequestPayload) => api.post('/api/auth/resend-register-otp', data),
   login:               (data: object) => api.post('/api/auth/login', data),
-  sendLoginOtp:        (data: object) => api.post('/api/auth/send-login-otp', data),
-  verifyLoginOtp:      (data: object) => api.post('/api/auth/verify-login-otp', data),
-  evictAndLogin:       (data: object) => api.post('/api/auth/sessions/evict-and-login', data),
+  sendLoginOtp:        (data: C.UserLoginPayload) => api.post('/api/auth/send-login-otp', data),
+  verifyLoginOtp:      (data: C.LoginOtpVerifyPayload) => api.post('/api/auth/verify-login-otp', data),
+  evictAndLogin:       (data: C.DeviceEvictLoginPayload) => api.post('/api/auth/sessions/evict-and-login', data),
   // token: pass the account's own token explicitly when signing it out while
   // switching to another saved account — see the request interceptor above.
   logout:              (token?: string) => api.post('/api/auth/logout', {}, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
   getMe:               ()             => api.get('/api/auth/me'),
   updateProfile:       (data: object) => api.put('/api/auth/me', data),
-  forgotPassword:      (data: object) => api.post('/api/auth/forgot-password', data),
-  resetPassword:       (data: object) => api.post('/api/auth/reset-password', data),
+  forgotPassword:      (data: C.OtpRequestPayload) => api.post('/api/auth/forgot-password', data),
+  resetPassword:       (data: C.ResetPasswordPayload) => api.post('/api/auth/reset-password', data),
   requestDeleteAccount:    ()             => api.post('/api/auth/request-delete-account'),
   confirmDeleteAccount:    (data: object) => api.post('/api/auth/confirm-delete-account', data),
   cancelDeleteAccount:     ()             => api.post('/api/auth/cancel-delete-account'),
