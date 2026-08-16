@@ -10,6 +10,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { ordersAPI, addressAPI } from '@/lib/api';
 import api from '@/lib/api';
+import { STORE } from '@/lib/config';
 import toast from 'react-hot-toast';
 
 const INDIA_STATES = [
@@ -42,6 +43,23 @@ export default function CheckoutPage() {
   // Declare state first so useEffect hooks below can reference them
   const [step,    setStep]    = useState<1 | 2 | 3>(1);
   const [placing, setPlacing] = useState(false);
+
+  /**
+   * Razorpay failure state.
+   *
+   * Razorpay reports a DECLINED payment through the `payment.failed` event —
+   * not through `handler` (which only fires on success) and not through
+   * `modal.ondismiss` (which only fires when the customer closes the modal
+   * themselves). With no subscriber, a declined card left the modal sitting
+   * open with Razorpay's own message while our UI never learned anything had
+   * happened: the customer could not tell whether they had been charged, and
+   * nothing invited them to try again.
+   */
+  const [payFailure, setPayFailure] = useState<{
+    description: string;
+    reason: string;
+    paymentId: string;
+  } | null>(null);
   const [openBox, setOpenBox] = useState(false);
 
   // Set synchronously the instant an order is confirmed — clearCart() empties
@@ -209,6 +227,8 @@ export default function CheckoutPage() {
   // ── Razorpay flow (card / net banking / UPI via Razorpay modal) ──
   const openRazorpay = async (isEmi = false) => {
     if (!validateAddr()) { toast.error('Please fill all address fields'); return; }
+    // A new attempt supersedes whatever went wrong last time.
+    setPayFailure(null);
     setPlacing(true);
     try {
       const orderRes = await api.post('/api/payments/create-order', { amount: grandTotal });
@@ -250,6 +270,35 @@ export default function CheckoutPage() {
       // No custom config — Razorpay shows EMI for eligible credit cards automatically
 
       const rzp = new window.Razorpay(options);
+
+      /**
+       * The declined-card path.
+       *
+       * Razorpay closes its own modal after firing this, so without a handler
+       * the customer is returned to a checkout page that looks exactly as it
+       * did before they tried — no error, no explanation, and the Place Order
+       * button still spinning because `placing` was never reset.
+       *
+       * `error.description` is Razorpay's customer-facing text ("Your card was
+       * declined", "Insufficient funds"); `reason` is the machine code. Both
+       * are surfaced: the description to the customer, the payment id so
+       * support can look the attempt up if they call.
+       *
+       * No order is created here and no money has moved — a failed payment is
+       * a failed payment, so the only correct action is to let them retry.
+       */
+      rzp.on('payment.failed', (resp: {
+        error?: { description?: string; reason?: string; metadata?: { payment_id?: string } };
+      }) => {
+        const e = resp?.error ?? {};
+        setPayFailure({
+          description: e.description || 'The payment could not be completed.',
+          reason: e.reason || '',
+          paymentId: e.metadata?.payment_id || '',
+        });
+        setPlacing(false);
+      });
+
       rzp.open();
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Payment gateway error. Please try again.';
@@ -533,13 +582,47 @@ export default function CheckoutPage() {
                 </div>
               </label>
 
+              {/* Declined-payment notice.
+                  role=alert so a screen reader announces it — the modal has
+                  already closed by this point, so a silent banner would leave a
+                  non-sighted customer with no indication anything happened. */}
+              {payFailure && (
+                <div
+                  role="alert"
+                  className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={18} className="mt-0.5 flex-shrink-0 text-red-600" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-red-800">Payment was not completed</p>
+                      <p className="mt-1 text-sm text-red-700">{payFailure.description}</p>
+                      {/* The reassurance a customer actually needs first: a
+                          declined payment takes no money, and nothing was
+                          ordered. Without this they assume the worst. */}
+                      <p className="mt-2 text-sm text-red-700">
+                        You have not been charged and no order was placed. You can try again
+                        below, or use a different payment method.
+                      </p>
+                      {payFailure.paymentId && (
+                        <p className="mt-2 font-mono text-xs text-red-600">
+                          Reference: {payFailure.paymentId}
+                        </p>
+                      )}
+                      <p className="mt-2 text-xs text-red-600">
+                        Still not working? Call us on {STORE.phone1} and quote that reference.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3">
                 <button onClick={() => setStep(2)} className="btn-secondary flex-1 py-3">← Back</button>
                 <button onClick={handlePlaceOrder} disabled={placing}
                   className="btn-gold flex-1 py-3.5 flex items-center justify-center gap-2 text-base font-bold rounded-xl">
                   {placing
                     ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Processing...</>
-                    : <><Lock size={18} /> {payMethod === 'razorpay' ? 'Pay with Razorpay' : 'Choose EMI Plan'} · ₹{grandTotal.toLocaleString()}</>
+                    : <><Lock size={18} /> {payFailure ? 'Try payment again' : payMethod === 'razorpay' ? 'Pay with Razorpay' : 'Choose EMI Plan'} · ₹{grandTotal.toLocaleString()}</>
                   }
                 </button>
               </div>
