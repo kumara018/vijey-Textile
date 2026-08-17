@@ -8,19 +8,23 @@ import { getApiBase } from './api';
  * was written out by hand in five components as
  * `${process.env.NEXT_PUBLIC_API_URL}${path}`.
  *
- * WHY THAT WAS A LATENT OUTAGE. There is no `.env` file in this repository, so
- * that variable is `undefined` unless the hosting dashboard happens to define
- * it — and `${undefined}` stringifies, it does not throw. The result is a
- * request to `undefined/uploads/x.jpg`, which 404s and shows a broken image on
- * the product page, the cart, the wishlist and the admin. It works in
- * production today only because Vercel supplies the value; it is one dashboard
- * edit away from silently breaking every photograph on the site, and it is
- * already broken for anyone running the project locally.
+ * CORRECTION, recorded rather than quietly dropped. I first justified this file
+ * by claiming those call sites resolved to `undefined/uploads/x.jpg` whenever
+ * the hosting dashboard did not define NEXT_PUBLIC_API_URL. That was wrong.
+ * `next.config.js` sets
  *
- * `AuthContext` had spotted this and defended itself with
- * `|| 'https://vijey-textile.onrender.com'`. The image call sites had not.
- * That difference is the tell: the knowledge existed but lived in one file
- * instead of one function.
+ *     env: { NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || RENDER_URL }
+ *
+ * and Next inlines that at build time, so the variable always has a value and
+ * the images were never broken. I read the five call sites and did not read the
+ * config that feeds them.
+ *
+ * WHAT IS STILL WORTH FIXING. Two independent definitions of "where the backend
+ * is": the Next config's fallback constant, and `getApiBase()` in api.ts, which
+ * exists because that fallback was not trusted for API calls. They agree today
+ * by coincidence, not by construction — change one and images and data would
+ * silently talk to different origins, which is a far harder bug to see than a
+ * broken image. One function, one answer.
  *
  * `getApiBase()` resolves the origin the same way every API call does, so
  * images and data can never disagree about which backend they are talking to.

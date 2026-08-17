@@ -18,7 +18,8 @@
     "a11y": "node scripts/a11y-pass.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:bundle": "node scripts/check-bundle-budget.mjs"
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
+    "check:csp": "node scripts/check-csp.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",

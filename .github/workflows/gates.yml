@@ -94,6 +94,22 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: '1'
 
+      # A CSP is the one security header that can take a shop down: too tight
+      # and the browser silently refuses to open the Razorpay modal, so checkout
+      # appears to simply do nothing. Neither that nor a too-loose policy shows
+      # up in a build, so this drives a real browser and reads the console.
+      # It already caught one break — connect-src built from the build-time API
+      # URL while getApiBase() resolves at runtime.
+      - name: csp breaks nothing
+        run: |
+          npx next start -p 3100 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3100/ || true)
+            [ "$code" = "200" ] && break
+            sleep 1
+          done
+          npm run check:csp -- --url http://localhost:3100
+
       # Only meaningful AFTER a build, since it reads .next's own output.
       # The fps/draw-call half of the performance budget cannot run here — it
       # needs a real GPU and a live server — so this enforces the half that can:
