@@ -19,14 +19,22 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { chromePath } from './chrome-path.mjs';
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME = chromePath();
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
   return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : d;
 };
 const BASE = arg('url', 'http://localhost:3100');
-const ROUTES = (arg('routes', '/,/products,/cart,/auth/login,/checkout,/wishlist')).split(',');
+// Routes arriving from a Git-Bash shell get MSYS path conversion applied to a
+// leading slash — "/" becomes the Git install directory — so a --routes value
+// silently turns into nonsense and CDP answers "Cannot navigate to invalid
+// URL". Normalising here makes the script safe from either shell instead of
+// depending on the caller's environment.
+const ROUTES = (arg('routes', '/,/products,/cart,/auth/login,/checkout,/wishlist'))
+  .split(',')
+  .map((r) => (r.startsWith('/') && !/:[\/]/.test(r) ? r : '/' + r.replace(/^.*?[\/]Git[\/]?/, '')));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const profile = mkdtempSync(join(tmpdir(), 'csp-'));

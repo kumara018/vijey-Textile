@@ -29,8 +29,9 @@ import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { chromePath } from './chrome-path.mjs';
 
-const CHROME = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const CHROME = chromePath();
 const arg = (n, d) => {
   const i = process.argv.indexOf(`--${n}`);
   return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : d;
