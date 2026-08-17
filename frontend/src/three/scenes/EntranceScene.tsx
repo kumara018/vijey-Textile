@@ -240,11 +240,37 @@ export default function EntranceScene({
       {/* A single dramatic key, high and camera-left, so the light rakes across
           the garment rather than flattening it. The god-ray source in
           Effects.tsx is positioned to agree with this. */}
-      <ambientLight intensity={0.34} />
-      <directionalLight position={[-3.2, 4.6, 3.0]} intensity={1.5} color="#FFF3DE" />
+      <ambientLight intensity={0.32} />
+      <directionalLight position={[-3.2, 4.6, 3.0]} intensity={1.6} color="#FFF3DE" />
       {/* Warm bounce from the right, at a fraction of the key — it separates
           the garment's edge from the backdrop without lifting the shadows. */}
-      <pointLight position={[6.5, -1.2, 1.5]} intensity={0.5} color="#A16207" />
+      <pointLight position={[6.5, -1.2, 1.5]} intensity={0.62} color="#A16207" />
+
+      {/**
+       * A broad, soft wash filling the space the garment does not occupy.
+       *
+       * Roughly two thirds of this frame is backdrop, and after the panels were
+       * pulled back to within a few points of the ground it had NOTHING lighting
+       * it — the result read as flat and muddy rather than as a dark room. That
+       * was an over-correction on my part: the complaint about the backdrop was
+       * that its EDGE read as a dull rectangle, not that the space should be
+       * empty. Erasing the panel removed the box and the light together.
+       *
+       * A point light with a large distance and gentle decay restores the light
+       * without restoring the edge. It falls off smoothly to nothing, so there
+       * is no boundary anywhere for the eye to read as a shape — which is
+       * exactly the difference between "a lit dark room" and "a grey area".
+       *
+       * Deliberately dim and deliberately warm: it has to lift the ground off
+       * black without competing with the key raking across the silk.
+       */}
+      <pointLight
+        position={[-6.0, 0.4, -2.5]}
+        intensity={1.05}
+        distance={26}
+        decay={1.6}
+        color="#8A5A18"
+      />
     </group>
   );
 }

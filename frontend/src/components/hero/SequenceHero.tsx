@@ -170,15 +170,33 @@ export default function SequenceHero({ className = '' }: { className?: string })
       const p = span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
 
       /**
-       * The scale. Small to full-bleed across the pin — one continuous
-       * transform, never a layout change, so it composites on the GPU and
-       * never triggers reflow. This is why the previous version stuttered:
-       * it resized the canvas backing store on every scroll event, which
-       * forces a reallocation and a full repaint per frame.
+       * A SLOW PUSH-IN THAT NEVER GOES BELOW FULL BLEED.
+       *
+       * This used to run 0.62 -> 1.00. For most of the pin the element was
+       * therefore SMALLER than its box, and because it is centred with
+       * `transformOrigin: center`, that left the frame floating with visible
+       * edges and dark ground beyond them. On a recording it reads as a
+       * rectangle that changes size while the headline stays still — which is
+       * both the "shape is wrong" and a large part of the "shaking".
+       *
+       * It also made the shake worse mechanically: at 0.62 the browser is
+       * resampling a full-resolution canvas down to 62%, and the resampling
+       * grid shifts every time the scale changes by a fraction of a percent.
+       * Fine detail — the gold border, the woven motifs — crawls. Near 1.0
+       * there is barely any resampling to shift.
+       *
+       * Accenture, NVIDIA and Deloitte all do the same thing: the media covers
+       * the viewport at every moment and the scroll drives a slow zoom INTO it.
+       * The move is felt, not watched. 1.00 -> 1.14 across the whole pin is
+       * roughly the same rate their heroes use, and because the floor is 1.0
+       * there is no scroll position at which an edge can appear.
        */
-      const scale = 0.62 + 0.38 * p;
+      const scale = 1 + 0.14 * p;
       host.style.transform = `scale(${scale.toFixed(4)})`;
-      host.style.opacity = String(Math.min(1, 0.55 + p * 0.9));
+      // Fully present from the first frame. Fading up from 0.55 was the third
+      // thing making the opening look muddy — the darkest part of the sequence
+      // was also being shown at just over half strength.
+      host.style.opacity = '1';
 
       const canvas = canvasRef.current;
       if (!canvas || !ready) return;

@@ -88,11 +88,31 @@ function ProductsContent() {
         fuzzyMatch: fuzzy[0].item.category || fuzzy[0].item.name,
       };
     },
-    // Retry once on a genuine network error; never retry a 4xx the server
-    // actually answered with.
+    /**
+     * Retry on a genuine network error; never retry a 4xx the server actually
+     * answered with — that is a considered reply, not a dropped call.
+     *
+     * EXPONENTIAL BACKOFF WITH JITTER, not a flat ten seconds.
+     *
+     * The previous setting was one retry after a fixed 10s. The failure drill
+     * exposed what that costs: with the API down, a customer watches a skeleton
+     * for ten full seconds before the page says anything at all. Ten seconds of
+     * silence on a shop's main listing is long enough to leave.
+     *
+     * Three attempts at roughly 0.6s, 1.8s and 5.4s reach the same total
+     * patience while making the FIRST retry almost immediate — which is the one
+     * that actually rescues the common case, a single dropped request on a
+     * flaky mobile connection. If all three fail the customer is told at ~8s
+     * instead of ~10s, and has had two more chances to succeed on the way.
+     *
+     * The jitter matters when the cause is the backend restarting: without it,
+     * every browser that failed together retries together and lands as one
+     * synchronised wave on a server that has just come back up.
+     */
     retry: (count, err: unknown) =>
-      !(err as { response?: unknown })?.response && count < 1,
-    retryDelay: 10_000,
+      !(err as { response?: unknown })?.response && count < 3,
+    retryDelay: (attempt) =>
+      Math.min(600 * 3 ** attempt, 6_000) * (0.8 + Math.random() * 0.4),
     // Hold the previous rail on screen while the next loads, instead of
     // collapsing to skeletons on every filter change.
     placeholderData: (prev) => prev,

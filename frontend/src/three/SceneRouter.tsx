@@ -108,7 +108,26 @@ export default function SceneRouter() {
   // "a cheap scene". The substrate stays mounted only long enough to fade the
   // previous scene out, then stops entirely.
   const idle = scene === 'plain';
-  const showAmbient = !idle || outgoing !== null;
+  /**
+   * The dust field is off on the ENTRANCE, and dimming it was not enough.
+   *
+   * It has been raised three times as "dots" that read as printed specks over
+   * the photograph rather than as light in the air. I answered twice by
+   * lowering opacity — 0.55, then 0.18 — and the specks survived both, because
+   * the problem is not their brightness. They are additively blended brass on a
+   * near-black ground, so every one of them is a small saturated orange point
+   * with no falloff into its surroundings. At any opacity that keeps them
+   * visible at all, they are dots.
+   *
+   * The homepage is also the one route where the frame is mostly empty
+   * backdrop, so there is nothing for them to sit against and they read as
+   * dirt on the lens.
+   *
+   * Atmosphere on this route now comes from the soft wash in EntranceScene,
+   * which has falloff and therefore no countable elements. Every other scene
+   * keeps its field: they are busier frames where the motes read as depth.
+   */
+  const showAmbient = (!idle || outgoing !== null) && scene !== 'entrance';
 
   return (
     <>

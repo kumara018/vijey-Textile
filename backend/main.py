@@ -10,6 +10,9 @@ load_dotenv()
 
 from database import engine, Base, SessionLocal
 import models
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from rate_limit import limiter
 from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
 
@@ -512,13 +515,40 @@ async def lifespan(app: FastAPI):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
+# ── Interactive docs: off unless explicitly asked for ────────────────────────
+#
+# /docs and /openapi.json were publicly reachable. That is a free, complete map
+# of the API: every route, every request and response schema, every field name,
+# handed to anyone who asks. It is not a vulnerability by itself — the auth
+# boundary still holds, and the healthcheck confirms every protected route
+# answers 401 to an anonymous caller — but it removes all the guesswork from
+# finding one, and it advertises endpoints like /api/auth/send-login-otp and
+# /api/admin/* that no customer ever needs to know exist.
+#
+# Reconnaissance is cheap to deny and expensive to allow, so the default flips:
+# closed in production, opened with ENABLE_API_DOCS=true when you actually want
+# to read them. Setting that on Render takes a moment and can be turned off
+# again; leaving the map on the doormat cannot be undone once it has been read.
+_DOCS_ENABLED = os.getenv("ENABLE_API_DOCS", "").lower() in ("1", "true", "yes")
+
 app = FastAPI(
     title       = "Vijey Textile API",
     description = "Premium Textile Shopping — Texvalley Gangapuram",
     version     = "3.0.0",
     lifespan    = lifespan,
+    docs_url    = "/docs" if _DOCS_ENABLED else None,
+    redoc_url   = "/redoc" if _DOCS_ENABLED else None,
+    # The schema itself, not just the viewer — leaving this on would defeat
+    # the whole point, since it is the machine-readable version of the map.
+    openapi_url = "/openapi.json" if _DOCS_ENABLED else None,
 )
 
+
+# AUTH-SPEC R1. Registered on app.state because slowapi's decorator looks
+# it up there at request time; the handler turns a breach into a 429 with
+# Retry-After rather than an unhandled exception and a 500.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
