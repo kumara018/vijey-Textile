@@ -13,7 +13,7 @@ import OccasionBand from '@/components/home/OccasionBand';
 import HeirloomPlate from '@/components/home/HeirloomPlate';
 import MeasureRule from '@/components/home/MeasureRule';
 import KeptStagger from '@/components/home/KeptStagger';
-import SequenceHero from '@/components/hero/SequenceHero';
+import HeroStage from '@/components/hero/HeroStage';
 
 /**
  * The Trousseau — Vijey Textile homepage.
@@ -101,8 +101,12 @@ export default function HomePage() {
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-0"
         style={{
+          // Pulled left of where it was. The subject is staged further into the
+          // frame now that it is sized against the frustum, and the old stops
+          // (0.62 at 46%, 0.18 at 60%) put a grey wash across its left third —
+          // which is a slower, subtler version of the same "dull" complaint.
           background:
-            'linear-gradient(96deg, rgba(20,18,16,0.97) 0%, rgba(20,18,16,0.93) 30%, rgba(20,18,16,0.62) 46%, rgba(20,18,16,0.18) 60%, rgba(20,18,16,0) 72%)',
+            'linear-gradient(96deg, rgba(11,9,8,0.97) 0%, rgba(11,9,8,0.92) 24%, rgba(11,9,8,0.58) 37%, rgba(11,9,8,0.16) 50%, rgba(11,9,8,0) 62%)',
         }}
       />
 
@@ -115,20 +119,29 @@ export default function HomePage() {
       {/**
         * A PINNED hero — the Accenture / NVIDIA pattern.
         *
-        * The section is 240svh tall and its inner frame is sticky, so the
-        * viewport holds still while the scroll drives the camera move and the
-        * garment grows from a held plate to full bleed. The move therefore
-        * plays over a real distance instead of being over within one screen.
+        * The inner frame is sticky, so the viewport holds while the scroll
+        * drives the camera move and the garment grows from a staged plate to
+        * near full bleed. The move plays over a real distance instead of being
+        * over within one screen.
         *
-        * `overflow-hidden` on the sticky frame is load-bearing: the scaled
-        * media is clipped to the frame, so nothing bleeds into the sections
-        * below no matter how far it grows.
+        * 190svh, down from 240. `data-hero-section` is what makes that number
+        * a single fact rather than three copies of it: HeroStage measures this
+        * box to publish hero progress, CanvasHost measures it to time the
+        * scene's hand-over, and the camera runs on the progress that comes out.
+        * Changing the height here changes all three together — previously the
+        * fade was a hardcoded two viewports and the section was two and a half,
+        * so the last half-screen of the pin was a dead dark band with nothing
+        * in it. That was the gap.
+        *
+        * `overflow-hidden` on the sticky frame is load-bearing: media is
+        * clipped to the frame, so nothing bleeds into the sections below.
         */}
-      <section className="relative h-[240svh]">
+      <section data-hero-section="" className="relative h-[190svh]">
         <div className="sticky top-0 flex h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(3.5rem,12vh,8rem)] pt-[clamp(6.5rem,15vh,10rem)] sm:px-10">
-          {/* The pre-rendered camera move. Its poster paints immediately and
-              stands alone if the sequence never arrives. */}
-          <SequenceHero />
+          {/* The graded ground and the poster underlay. The live scene behind
+              this cross-fades in over it once it genuinely has the garment
+              drawn; if it never does, this is the hero and it is a still. */}
+          <HeroStage />
 
           <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
@@ -189,8 +202,12 @@ export default function HomePage() {
           Three full-bleed alternating bands. This replaces the category
           grid: a family does not shop by taxonomy, they shop by the day
           that is coming. */}
-      <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 py-[12vh]">
-        <div className="mx-auto mb-[9vh] w-full max-w-[112rem] px-6 sm:px-10">
+      {/* 12vh of padding above the heading plus 9vh below it put roughly a fifth
+          of a screen of empty ground between the hero releasing and the first
+          word of the next movement, on top of whatever the pin had already
+          left. Tightened to 7 + 4.5 — still generous, no longer a void. */}
+      <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 pb-[11vh] pt-[7vh]">
+        <div className="mx-auto mb-[4.5vh] w-full max-w-[112rem] px-6 sm:px-10">
           <Reveal>
             <h2 id="occasion-heading" className="font-display text-chapter font-light text-paper">
               The occasion

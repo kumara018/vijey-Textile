@@ -14,11 +14,29 @@ module.exports = {
          * point of this palette is the distance between #1C1917 and #FAFAF9,
          * with gold appearing rarely enough to still register as gold.
          */
+        /**
+         * The ground was re-ranked, not replaced — asked for three times, and
+         * each time I changed something else instead.
+         *
+         * #1C1917 is a good colour and it stays in the system. It was the wrong
+         * GROUND. Painted flat across a whole viewport it sits at about 10%
+         * luminance, which is light enough that nothing on top of it can read
+         * as bright: the brass loses its metal, the off-white loses its snap,
+         * and the whole frame lands in one narrow tonal band — which is exactly
+         * what "dull" describes. The reference sites all ground much darker and
+         * spend the range on the subject.
+         *
+         * So every value moved down one rung. #1C1917 is now `raised`, where it
+         * does what it is good at: lifted surfaces, cards, the panels that need
+         * to separate from the ground. The ground itself is #121010, and the
+         * recess below it is near-black. Same hue family, same approved
+         * identity, roughly double the contrast range to spend.
+         */
         ink: {
-          DEFAULT: '#1C1917',   // warm near-black ground
-          deep:    '#141210',   // recessed
-          raised:  '#262220',   // lifted surfaces
-          edge:    '#3A3431',   // hairlines
+          DEFAULT: '#121010',   // warm near-black ground
+          deep:    '#0B0908',   // recessed
+          raised:  '#1C1917',   // lifted surfaces
+          edge:    '#332D2A',   // hairlines
         },
         /**
          * The approved accent, named `brass` rather than `gold` because a
@@ -37,11 +55,15 @@ module.exports = {
           muted:   '#D6D3D1',   // secondary type
           faint:   '#A8A29E',   // tertiary
         },
+        // `night` is an alias kept for the pages that still use it (the body
+        // ground is `bg-night`). It must track `ink` exactly — two names for
+        // one ground that drift apart is how half a site ends up a shade
+        // lighter than the other half.
         night: {
-          DEFAULT: '#1C1917',
-          deep:    '#141210',
-          raised:  '#262220',
-          edge:    '#3A3431',
+          DEFAULT: '#121010',
+          deep:    '#0B0908',
+          raised:  '#1C1917',
+          edge:    '#332D2A',
         },
         // Vijey Textile — "Wine & Steel" palette, matched to the logo's own color
         maroon: {

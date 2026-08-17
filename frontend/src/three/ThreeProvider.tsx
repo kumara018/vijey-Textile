@@ -181,20 +181,32 @@ export default function ThreeProvider() {
    * keeps its scene.
    */
   /**
-   * ...except while the sequence is being MADE.
+   * THE HOMEPAGE RUNS THE LIVE SCENE. The sequence was the problem.
    *
-   * The offline renderer captures `/?effects=hold&capture=1`, so suppressing
-   * the scene on `/` unconditionally suppressed the very thing it exists to
-   * photograph. The render refused to start and said so — "no
-   * [data-capture-keep] canvas host" — rather than spending an hour producing
-   * 545 frames of empty ground.
+   * The hero used to scrub a 120-frame image sequence against scroll, and that
+   * is what the customer was seeing as "shaking". A scrubbed sequence advances
+   * in DISCRETE STEPS: at 120 frames across the pinned section each frame owns
+   * a slice of scroll, so the picture snaps from frame N to frame N+1 and every
+   * snap is a visible jump of the camera. Two video frames a third of a second
+   * apart showed the garment in noticeably different positions while the
+   * headline sat still.
    *
-   * The two rules are not in conflict once stated properly: the live scene is
-   * redundant on `/` because the sequence already contains it. During capture
-   * there is no sequence yet, and the scene is the subject.
+   * That is a property of scrubbing, not of the artwork. It cannot be fixed by
+   * re-rendering, by recolouring, or by changing the scale — I tried the first
+   * two and they addressed the wrong layer entirely. The only real cures are
+   * hundreds more frames (enormous, and still stepped), cross-fading every pair
+   * (expensive per frame), or not stepping at all.
+   *
+   * A live WebGL scene does not step. It draws on every animation frame, so the
+   * camera move is continuous by construction — which is exactly what the
+   * reference sites do. It also means the palette is now a value in a file
+   * rather than something baked into 540 images, so a colour change costs
+   * seconds instead of ninety minutes.
+   *
+   * Devices that cannot afford it still get the poster: `profile.realtime` is
+   * false below the `rich` rung and this returns null there, leaving
+   * SequenceHero's poster as a still, which never shakes because it never moves.
    */
-  if (pathname === '/' && !isCaptureRender()) return null;
-
   return (
     <CanvasHost>
       <SceneRouter />

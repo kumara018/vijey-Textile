@@ -58,10 +58,37 @@ const STAGE: Record<string, StageTuning> = {
    *
    * Focus is set on the garment plane and the backdrop falls away behind it.
    */
+  /**
+   * RETUNED FOR A SUBJECT THAT IS NOW 6.4 UNITS FROM THE CAMERA.
+   *
+   * `focusDistance` is normalised across the camera's near..far range (0.1 to
+   * 200), so 0.013 focused at about 2.6 world units — set when the garment was
+   * a fixed plane the camera dollied toward. The subject is placed relative to
+   * the camera now, permanently at 6.4, which was comfortably outside that
+   * focus band: the hero rendered visibly SOFT for as long as the chain was
+   * running, and only looked sharp once the governor suspended it. A blurred
+   * first impression that fixes itself after ten seconds is a worse fault than
+   * no depth of field at all.
+   *
+   * (6.4 − 0.1) / (200 − 0.1) = 0.0315. The longer focal length widens the
+   * in-focus band so the garment stays sharp through the whole push-in, and the
+   * smaller bokeh keeps the cost down on the iGPU where this chain was already
+   * measuring 19fps.
+   *
+   * The key also moved deeper. At z = −6.8 with a radius of 1.0 the source
+   * sphere was itself in shot — a pale disc above the garment, which is a lamp
+   * in frame rather than light in a room. Further back and smaller, it sits
+   * behind the cloth and only its shafts reach the camera, which is the entire
+   * point of the pass.
+   */
   entrance: {
-    focusDistance: 0.013, focalLength: 0.030, bokehScale: 4.0,
+    focusDistance: 0.032, focalLength: 0.055, bokehScale: 2.4,
     bloomThreshold: 1.00, bloomIntensity: 0.55,
-    sun: [2.2, 4.3, -6.8], sunSize: 1.0,
+    // Behind the garment, not above it. At y=4 the sphere cleared the top of
+    // the plate and read as a small moon in the frame; sitting level with the
+    // subject it is occluded by the piece itself, which is what produces
+    // shafts rather than a visible lamp.
+    sun: [3.4, 0.6, -11.5], sunSize: 0.55,
     raysDensity: 0.92, raysDecay: 0.93,
     vignette: 0.44,
   },

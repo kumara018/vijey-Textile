@@ -73,6 +73,30 @@ const nextConfig = {
      */
     const api = process.env.NEXT_PUBLIC_API_URL || RENDER_URL;
     const local = 'http://localhost:8000 http://127.0.0.1:8000';
+    /**
+     * WHERE THE PRODUCT MEDIA ACTUALLY LIVES — and the bug this fixes.
+     *
+     * The policy was written from what the FRONTEND code references, and every
+     * image path in the frontend is backend-relative, so `img-src` allowed the
+     * API origin and nothing else. But the backend does not serve product
+     * media: `routers/admin.py` and `routers/returns.py` upload photographs and
+     * videos to Cloudinary and store the absolute `https://res.cloudinary.com/…`
+     * URL in the database. The API returns those URLs; the browser fetches them
+     * from Cloudinary directly.
+     *
+     * So the policy blocked every product photograph, every return photo and
+     * every product video on the live site. Caught here by loading the built
+     * site in a real browser and reading the console — the build is silent
+     * about it, and so is every page that has no product on it:
+     *
+     *   Loading the image 'https://res.cloudinary.com/…' violates the following
+     *   Content Security Policy directive: "img-src 'self' data: blob: …"
+     *
+     * That is the whole reason a CSP gets its own browser-driven check rather
+     * than a review. Exact host, not a wildcard: this account is the only one
+     * the shop uploads to.
+     */
+    const media = 'https://res.cloudinary.com';
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
@@ -81,8 +105,8 @@ const nextConfig = {
       "form-action 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.razorpay.com",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: " + api + " " + local + " https://*.razorpay.com",
-      "media-src 'self' data: blob:",
+      "img-src 'self' data: blob: " + api + " " + local + " " + media + " https://*.razorpay.com",
+      "media-src 'self' data: blob: " + media,
       "font-src 'self' data:",
       "connect-src 'self' " + api + " " + local + " https://*.razorpay.com https://lumberjack.razorpay.com",
       "frame-src https://api.razorpay.com https://*.razorpay.com",

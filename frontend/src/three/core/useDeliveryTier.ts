@@ -99,6 +99,35 @@ export function useDeliveryTier(): DeliveryState {
   const escalations = useRef(0);
   const lastChange = useRef(Date.now());
 
+  /**
+   * State kept so a LATCHED signal is not read as repeating evidence.
+   *
+   * This is the bug that killed the hero, and it took a live measurement to
+   * see. `effectsSuspended` is a one-way latch — the governor sets it once and
+   * nothing ever clears it — but the interval below treated it as a fresh
+   * observation every 2.5 seconds and stepped the tier down each time. One
+   * slow moment therefore did not cost one rung; it walked the device all the
+   * way to the floor:
+   *
+   *     t=3s   rich      canvas yes   20fps
+   *     t=6s   maximum   canvas yes   18fps   <- postprocessing too expensive
+   *     t=9s   maximum   canvas yes   30fps   <- governor suspends the chain
+   *     t=12s  standard  canvas yes   61fps
+   *     t=15s  light     canvas NO    60fps   <- realtime gate crossed
+   *     t=18s  minimal   canvas NO    60fps   <- hero gone, at a solid 60fps
+   *
+   * The device was holding 60fps from the moment the chain came off. It kept
+   * being demoted for a problem that had already been solved, until the scene
+   * was switched off entirely — which is exactly what "the hero disappears
+   * halfway down the page" looked like.
+   *
+   * So: react to the EDGE, not the level. One step per new piece of evidence.
+   */
+  const sawSuspended = useRef(false);
+  const lastQuality = useRef<string | null>(null);
+  /** Once a device has needed a demotion, it never climbs again this session. */
+  const demoted = useRef(false);
+
   // Re-resolve on the client after mount. The server-rendered guess had no
   // access to navigator at all.
   useEffect(() => {
@@ -163,22 +192,53 @@ export function useDeliveryTier(): DeliveryState {
     const id = setInterval(() => {
       const { effectsSuspended, tier: quality } = useSceneStore.getState();
 
+      /**
+       * Each piece of evidence is worth exactly one rung, and only the first
+       * time it appears.
+       *
+       *   - the chain being suspended: one step, on the rising edge
+       *   - the governor demoting the quality tier: one step per demotion
+       *   - 'off': the device gave up entirely, go to the floor
+       *
+       * Anything else is the same fact being counted again.
+       */
+      const suspendedEdge = effectsSuspended && !sawSuspended.current;
+      const qualityDropped =
+        lastQuality.current !== null &&
+        quality !== lastQuality.current &&
+        (quality === 'low' || quality === 'off');
+      const dead = quality === 'off';
+
+      sawSuspended.current = effectsSuspended;
+      lastQuality.current = quality;
+
       setState((prev) => {
-        // The governor stripping effects is the strongest evidence available
-        // that this device cannot afford what it was given. It measured the
-        // real frame rate; everything else guessed.
-        if (effectsSuspended || quality === 'low' || quality === 'off') {
+        if (dead && prev.tier !== 'minimal') {
+          demoted.current = true;
+          lastChange.current = Date.now();
+          return {
+            tier: 'minimal', profile: TIER_PROFILES.minimal,
+            reason: 'renderer gave up', provisional: false,
+          };
+        }
+
+        if (suspendedEdge || qualityDropped) {
           const down = stepDown(prev.tier);
+          demoted.current = true;
           if (down === prev.tier) return prev;
           lastChange.current = Date.now();
           return {
             tier: down, profile: TIER_PROFILES[down],
-            reason: 'frame rate below floor', provisional: false,
+            reason: suspendedEdge ? 'postprocessing too expensive' : 'frame rate below floor',
+            provisional: false,
           };
         }
 
         // Holding steady on a high quality tier, long enough that it is not
-        // just a quiet moment — promote.
+        // just a quiet moment — promote. Never after a demotion: climbing back
+        // into a cost this device has already failed to pay is how a hero ends
+        // up flickering between present and absent for the whole session.
+        if (demoted.current || effectsSuspended) return prev;
         const settled = Date.now() - lastChange.current > ESCALATE_AFTER_MS;
         if (!settled || escalations.current >= MAX_ESCALATIONS) return prev;
         if (quality !== 'high') return prev;

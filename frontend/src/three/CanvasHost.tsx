@@ -153,9 +153,37 @@ export default function CanvasHost({ children }: { children?: React.ReactNode })
       pending = false;
       const node = shellRef.current;
       if (!node) return;
-      // Fully present for the first viewport, gone by the end of the second.
-      const vh = window.innerHeight || 1;
-      const t = Math.min(1, Math.max(0, (window.scrollY - vh * 0.9) / (vh * 1.1)));
+
+      /**
+       * THE FADE IS MEASURED FROM THE HERO SECTION, NOT FROM A VIEWPORT COUNT.
+       *
+       * It used to be `(scrollY - 0.9vh) / 1.1vh`: fully gone two viewports
+       * down. That was written when the canvas was decoration behind a hero
+       * carried by an image sequence. The canvas IS the hero now, and the
+       * pinned section is taller than two viewports — so the scene was being
+       * faded to nothing while the customer was still inside the pin, leaving
+       * the back half of the opening as an empty dark screen they had to
+       * scroll through. That is the "gap".
+       *
+       * Measured from the section's own box, the scene is at full strength for
+       * the whole pin and hands over exactly as the section releases, which is
+       * the same moment the opaque sections below slide up over it.
+       */
+      const section = document.querySelector('[data-hero-section]') as HTMLElement | null;
+      let t: number;
+      if (section) {
+        const rect = section.getBoundingClientRect();
+        const span = Math.max(1, rect.height - window.innerHeight);
+        const p = Math.min(1, Math.max(0, -rect.top / span));
+        // Hold, then release over the last fifth of the pin.
+        t = Math.min(1, Math.max(0, (p - 0.8) / 0.2));
+      } else {
+        // Routes without a pinned hero keep the original behaviour: the scene
+        // is an opening, and everything past it is type and photography.
+        const vh = window.innerHeight || 1;
+        t = Math.min(1, Math.max(0, (window.scrollY - vh * 0.9) / (vh * 1.1)));
+      }
+
       node.style.opacity = String(1 - t);
       // Stop compositing it entirely once invisible.
       node.style.visibility = t >= 1 ? 'hidden' : 'visible';

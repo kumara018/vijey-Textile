@@ -101,22 +101,66 @@ try {
   await cdp.send('Page.navigate', { url: URL_BASE });
   await sleep(9000);
 
-  for (const [n, mult] of STOPS.entries()) {
-    await cdp.send('Runtime.evaluate', {
-      expression: `window.scrollTo(0, Math.round(innerHeight * ${mult}))`,
-    });
-    // Two frames plus settle: the scrub runs on rAF and the scale is a
-    // transition-free transform, so this is enough for both to land.
+  /**
+   * SCROLL WITH REAL WHEEL EVENTS, NOT window.scrollTo.
+   *
+   * Lenis owns the scroll position. It reads wheel input, interpolates toward a
+   * virtual target, and writes the result to scrollTop on its own rAF — so a
+   * `window.scrollTo` is overwritten on the very next frame and the page snaps
+   * straight back. Every stop in this script was silently landing at y=0 and
+   * screenshotting the same top-of-page frame seven times, which made the run
+   * look successful and told us nothing.
+   *
+   * Synthesised wheel events go in the front of that pipeline instead of behind
+   * it, so the page moves the way a customer's mouse moves it — through the
+   * same easing, with the same settle.
+   */
+  const evalValue = async (expr) => {
+    const r = await cdp.send('Runtime.evaluate', { returnByValue: true, expression: expr });
+    return r.result?.value;
+  };
+
+  async function scrollTo(targetY) {
+    for (let i = 0; i < 12; i++) {
+      const cur = await evalValue('Math.round(scrollY)');
+      const delta = targetY - cur;
+      if (Math.abs(delta) < 10) break;
+      await cdp.send('Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        x: Math.round(WIDTH / 2), y: Math.round(HEIGHT / 2),
+        deltaX: 0, deltaY: delta,
+        pointerType: 'mouse',
+      });
+      // Lenis lerps at 0.1 per frame; ~30 frames is comfortably converged.
+      await sleep(500);
+    }
     await sleep(700);
+  }
+
+  for (const [n, mult] of STOPS.entries()) {
+    await scrollTo(Math.round(HEIGHT * mult));
 
     const probe = await cdp.send('Runtime.evaluate', {
       returnByValue: true,
       expression: `(() => {
+        const sec = document.querySelector('[data-hero-section]');
+        let p = null;
+        if (sec) {
+          const r = sec.getBoundingClientRect();
+          const span = r.height - innerHeight;
+          p = span > 0 ? Math.min(1, Math.max(0, -r.top / span)) : 0;
+        }
         const hero = document.querySelector('[data-sequence-hero]');
-        const m = hero ? getComputedStyle(hero).transform.match(/matrix\\(([^,]+)/) : null;
+        const under = hero && hero.firstElementChild
+          ? Number(getComputedStyle(hero.firstElementChild).opacity).toFixed(2) : 'none';
+        const shell = document.querySelector('[data-capture-keep]');
+        const cvs = shell && shell.querySelector('canvas');
         return {
           y: Math.round(scrollY),
-          scale: m ? Number(m[1]).toFixed(3) : 'none',
+          p: p === null ? 'none' : p.toFixed(3),
+          under,
+          canvas: cvs ? cvs.width + 'x' + cvs.height : 'none',
+          scene: shell ? Number(getComputedStyle(shell).opacity).toFixed(2) : 'none',
           docH: document.documentElement.scrollHeight,
         };
       })()`,
@@ -124,9 +168,12 @@ try {
     const info = probe.result?.value ?? {};
 
     const shot = await cdp.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-    const name = `stop-${String(n).padStart(2, '0')}-y${info.y}-s${info.scale}.png`;
+    const name = `stop-${String(n).padStart(2, '0')}-y${info.y}-p${info.p}.png`;
     writeFileSync(join(OUT, name), Buffer.from(shot.data, 'base64'));
-    console.log(`  ${name}`);
+    console.log(
+      `  ${name.padEnd(30)} heroProgress=${info.p}  poster=${info.under}  ` +
+      `scene=${info.scene}  canvas=${info.canvas}`,
+    );
   }
 
   // Anything the page logged as an error is a real defect, not a measurement.

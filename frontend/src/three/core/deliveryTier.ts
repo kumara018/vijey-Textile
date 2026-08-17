@@ -33,13 +33,30 @@ export const TIER_ORDER: DeliveryTier[] = ['minimal', 'light', 'standard', 'rich
 
 export interface TierProfile {
   tier: DeliveryTier;
-  /** Frames in the hero sequence. 1 means the static plate only. */
+  /**
+   * Frames in the hero sequence.
+   *
+   * VESTIGIAL FOR THE HOMEPAGE HERO, kept because the offline renderer and the
+   * poster pipeline still read it. The hero no longer scrubs a sequence at all
+   * — scrubbing a frame index against scroll is a step function, and that is
+   * what the customer was seeing as shaking. Only `poster.*` is fetched now.
+   */
   frames: number;
-  /** Widest frame variant to request, in CSS pixels. */
+  /** Widest poster variant to request, in CSS pixels. */
   width: number;
   /** Encoder quality for this rung, 0-100. */
   quality: number;
-  /** Layer the real-time WebGL chain on top of the sequence. */
+  /**
+   * Render the hero live in WebGL rather than showing a still.
+   *
+   * This used to mean "layer the real-time chain ON TOP of the sequence", and
+   * that is why it started at `rich`: it was an addition, paid for twice, on a
+   * device already decoding up to 120 frames. It is not an addition any more —
+   * it IS the hero, and it replaces the frame downloads entirely. A live scene
+   * of three cloth planes, one full-screen gradient and one textured quad is
+   * comfortably cheaper than fetching and decoding 48 AVIFs, so the rung it
+   * turns on at came down accordingly.
+   */
   realtime: boolean;
   /** Ambient audio offered (still muted by default, still opt-in). */
   audio: boolean;
@@ -58,7 +75,7 @@ export const TIER_PROFILES: Record<DeliveryTier, TierProfile> = {
   // save-data, 2g, or a device that has already proven it cannot cope.
   minimal:  { tier: 'minimal',  frames: 1,   width: 960,  quality: 58, realtime: false, audio: false },
   light:    { tier: 'light',    frames: 24,  width: 1280, quality: 60, realtime: false, audio: false },
-  standard: { tier: 'standard', frames: 48,  width: 1600, quality: 66, realtime: false, audio: true  },
+  standard: { tier: 'standard', frames: 48,  width: 1600, quality: 66, realtime: true,  audio: true  },
   rich:     { tier: 'rich',     frames: 72,  width: 2048, quality: 72, realtime: true,  audio: true  },
   maximum:  { tier: 'maximum',  frames: 120, width: 3840, quality: 82, realtime: true,  audio: true  },
 };
@@ -142,34 +159,80 @@ export function resolveTier(s: TierSignals): { tier: DeliveryTier; reason: strin
   if (s.cores !== null && s.cores <= 2) {
     return { tier: 'light', reason: `${s.cores} cores` };
   }
-  if (s.effectiveType === '3g') return { tier: 'light', reason: 'connection 3g' };
-
   const throughput = s.measuredMbps ?? s.downlinkMbps;
-  if (throughput !== null && throughput < 2) {
-    return { tier: 'light', reason: `${throughput.toFixed(1)}Mbps` };
-  }
 
-  // Phones get one rung below their apparent capability regardless of network.
-  // A flagship handset has the bandwidth for the top rung and neither the
-  // sustained GPU headroom nor the thermal budget to composite it — the frame
-  // rate collapses two minutes in, which is worse than never offering it.
+  /**
+   * CAPABILITY DECIDES THE RUNG. BANDWIDTH ONLY CAPS IT.
+   *
+   * A slow link used to drop straight to `light` — `3g` or under 2Mbps meant
+   * `light`, whatever the machine was. That was right when the hero was 24 to
+   * 120 image frames: on a 1.35Mbps link the `standard` sequence is about
+   * 1.4MB and takes eight seconds to arrive, so a fast machine on a poor
+   * connection genuinely could not have it.
+   *
+   * The hero does not download frames any more. It downloads one poster and
+   * renders the rest from code that is already in the bundle. Bandwidth
+   * therefore decides how big a POSTER to ask for — it no longer has any
+   * bearing on whether the machine can run the scene, and letting it decide
+   * that was costing a 16GB, 8-core desktop its entire hero because the
+   * Network Information API reported a slow moment. Measured on this laptop:
+   * downlink 1.35Mbps, 16GB, 8 cores — resolved `light`, `realtime: false`, no
+   * canvas mounted at all.
+   *
+   * So the ladder is resolved from memory, cores and viewport, and the link
+   * speed is applied afterwards as a ceiling rather than as a verdict.
+   */
+  let tier: DeliveryTier;
+  let reason: string;
+
   if (s.smallViewport) {
+    // Phones get one rung below their apparent capability regardless of
+    // network. A flagship handset has neither the sustained GPU headroom nor
+    // the thermal budget for the top rung — the frame rate collapses two
+    // minutes in, which is worse than never offering it.
     const strong = (s.deviceMemoryGb ?? 0) >= 6 && (s.cores ?? 0) >= 6;
-    return {
-      tier: strong ? 'standard' : 'light',
-      reason: strong ? 'capable handset' : 'handset',
-    };
+    tier = strong ? 'standard' : 'light';
+    reason = strong ? 'capable handset' : 'handset';
+  } else {
+    const mem = s.deviceMemoryGb ?? 4;
+    const cores = s.cores ?? 4;
+    if (mem >= 8 && cores >= 8) {
+      tier = 'maximum';
+      reason = `${mem}GB / ${cores} cores`;
+    } else if (mem >= 8 && cores >= 6) {
+      tier = 'rich';
+      reason = `${mem}GB / ${cores} cores`;
+    } else if (mem >= 4 && cores >= 4) {
+      tier = 'standard';
+      reason = `${mem}GB / ${cores} cores`;
+    } else {
+      tier = 'light';
+      reason = 'conservative default';
+    }
   }
 
-  const mem = s.deviceMemoryGb ?? 4;
-  const cores = s.cores ?? 4;
+  /**
+   * The link ceiling. `standard` is the floor it can push down to, never
+   * lower: that rung still renders the scene, and its poster is a single
+   * 1600px image — a fraction of what the old sequence asked of the same
+   * connection. A genuinely bad link (2g, Save-Data) was already handled
+   * decisively above and never reaches here.
+   */
+  const slowLink =
+    s.effectiveType === '3g' || (throughput !== null && throughput < 2);
+  const fastLink = throughput === null || throughput >= 10;
 
-  if (mem >= 8 && cores >= 8 && (throughput === null || throughput >= 10)) {
-    return { tier: 'maximum', reason: `${mem}GB / ${cores} cores / fast link` };
+  if (slowLink && TIER_ORDER.indexOf(tier) > TIER_ORDER.indexOf('standard')) {
+    const detail = s.effectiveType === '3g' ? '3g' : `${(throughput ?? 0).toFixed(1)}Mbps`;
+    return { tier: 'standard', reason: `${reason}, capped by ${detail} link` };
   }
-  if (mem >= 8 && cores >= 6) return { tier: 'rich', reason: `${mem}GB / ${cores} cores` };
-  if (mem >= 4 && cores >= 4) return { tier: 'standard', reason: `${mem}GB / ${cores} cores` };
-  return { tier: 'light', reason: 'conservative default' };
+  // The top rung asks for a 3840px poster; that one genuinely does want a fast
+  // link behind it, so it is the only rung bandwidth can still veto upward.
+  if (tier === 'maximum' && !fastLink) {
+    return { tier: 'rich', reason: `${reason} (link below 10Mbps)` };
+  }
+
+  return { tier, reason };
 }
 
 /** One rung down, floored at minimal. */

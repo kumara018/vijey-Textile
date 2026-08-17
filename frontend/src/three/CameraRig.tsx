@@ -65,11 +65,22 @@ const dock = (
  */
 const DOCKS: Record<SceneId, Dock> = {
   //                                                    parallax ease  dolly crane  pan
-  // The homepage is a seven-movement descent, so the entrance dock carries the
-  // longest scroll travel on the site: the camera cranes DOWN (negative rise)
-  // and pushes in past the hanging panels as the page is read, arriving close
-  // on the staged photograph by the time the heirloom section is in view.
-  entrance: dock(0,    1.1,  8.6,   0,  0,   -1.5,       0.45, 0.018,  3.4, -2.2,  0.5),
+  /**
+   * The entrance dock moves the ROOM, not the subject.
+   *
+   * The garment is framed against the live frustum in EntranceScene — it is
+   * placed relative to the camera, so a dolly cannot change its size and a
+   * crane cannot move it in frame. That is what makes the crop impossible.
+   * The camera's job here is therefore parallax: it slides and rises past the
+   * hanging cloth so the room travels behind a subject that is growing on its
+   * own clock.
+   *
+   * The numbers came down accordingly (dolly 3.4 → 1.9, crane -2.2 → -1.0).
+   * At the old values the panels swept most of the frame width during the pin,
+   * which with a fixed subject reads as the background sliding rather than as
+   * depth.
+   */
+  entrance: dock(0,    0.9,  8.6,   0,  0,   -1.5,       0.45, 0.018,  1.9, -1.0,  1.1),
   gallery:  dock(3.2,  0.4,  7.2,   0.6, 0,  -0.5,       0.42, 0.022,  1.4,  0.5,  0.0),
   chamber:  dock(0,   -0.2,  4.6,   0, -0.1, -1.2,       0.30, 0.026,  1.1,  0.7,  0.4),
   vault:    dock(-2.6, -1.1, 6.6,  -0.4,-0.5,-0.8,       0.34, 0.024,  0.9,  0.3,  0.0),
@@ -91,7 +102,21 @@ export default function CameraRig() {
 
   useFrame((state, delta) => {
     const d = DOCKS[scene] ?? DOCKS.plain;
-    const { pointer, scroll, capabilities } = useSceneStore.getState();
+    const { pointer, scroll, heroProgress, capabilities } = useSceneStore.getState();
+
+    /**
+     * The entrance runs on the hero's own ruler, every other scene on the
+     * document's.
+     *
+     * `scroll` is a fraction of the whole document. The homepage is seven
+     * movements long, so the pinned opening is a small slice of it and driving
+     * the entrance camera from `scroll` spent about a tenth of the move on the
+     * hero and the other nine tenths behind opaque sections. The opening
+     * therefore looked locked off while the customer was scrolling through it —
+     * a large part of what read as "this much gap": a screen and a half of
+     * scrolling in which nothing visibly happened.
+     */
+    const drive = scene === 'entrance' ? heroProgress : scroll;
 
     // Reduced motion gets the destination, not the journey — and no camera
     // move, no parallax, no drift. The composition still reads as staged; it
@@ -115,7 +140,7 @@ export default function CameraRig() {
      * the move a lead-in and a long tail — it starts before you notice and
      * arrives after you stop.
      */
-    const p = still ? 0 : easeScroll(Math.min(1, Math.max(0, scroll)));
+    const p = still ? 0 : easeScroll(Math.min(1, Math.max(0, drive)));
 
     // A slow idle breath so hero shots are never locked off, even at rest.
     // Well under a cycle per ten seconds — felt rather than seen.

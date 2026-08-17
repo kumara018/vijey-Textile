@@ -36,6 +36,38 @@ interface SceneState {
   scroll: number;
 
   /**
+   * 0..1 across the PINNED HERO SECTION, which is not the same number as
+   * `scroll` and is the one the opening camera move has to run on.
+   *
+   * `scroll` is a fraction of the whole document. The homepage is seven
+   * movements long, so the hero pin — 190svh of a document several times that
+   * — occupies a small slice of it. Driving the entrance camera from `scroll`
+   * therefore moved it a few percent of its travel during the entire hero and
+   * spent the rest of the range animating behind opaque sections nobody can
+   * see through. That is why the opening read as static and why the pinned
+   * screen felt like dead space: the move was there, it was just being played
+   * against the wrong ruler.
+   *
+   * This is measured from the hero section's own box — 0 when its top reaches
+   * the viewport top, 1 when its bottom reaches the viewport bottom — so the
+   * move begins exactly as the pin engages and lands exactly as it releases.
+   */
+  heroProgress: number;
+  setHeroProgress: (v: number) => void;
+
+  /**
+   * True once the live scene genuinely has the garment on screen.
+   *
+   * The hero poster is real DOM painted at first byte, and it must not be
+   * taken away on a promise. It is only cross-faded out once the texture has
+   * decoded and the scene is drawing it — so the worst case is a customer who
+   * keeps a sharp still, never a customer watching an empty dark rectangle
+   * while a texture downloads.
+   */
+  heroReady: boolean;
+  setHeroReady: (v: boolean) => void;
+
+  /**
    * Set by the frame-rate governor as its FIRST downgrade step, independently
    * of tier. Postprocessing scales with pixel count rather than scene
    * complexity, so on a high-DPI display it is where the frame budget actually
@@ -65,6 +97,8 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
   pointer: { x: 0, y: 0 },
   scroll: 0,
+  heroProgress: 0,
+  heroReady: false,
   effectsSuspended: false,
 
   suspendEffects: () => set({ effectsSuspended: true }),
@@ -87,6 +121,18 @@ export const useSceneStore = create<SceneState>((set, get) => ({
   // cost of correctness here, and it's small.
   setPointer: (x, y) => set({ pointer: { x, y } }),
   setScroll: (v) => set({ scroll: v }),
+
+  // Written on every scroll frame, so it is guarded: a store write notifies
+  // every subscriber, and republishing a value that has not meaningfully
+  // changed wakes the whole tree for nothing.
+  setHeroProgress: (v) => {
+    if (Math.abs(get().heroProgress - v) < 0.0004) return;
+    set({ heroProgress: v });
+  },
+  setHeroReady: (v) => {
+    if (get().heroReady === v) return;
+    set({ heroReady: v });
+  },
 }));
 
 /** Route → scene. Kept beside the store so both stay in sync. */
