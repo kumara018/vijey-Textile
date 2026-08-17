@@ -205,6 +205,73 @@ keyboard-focusable.
 
 ---
 
-## 7. Raw output
+## 7. Platform gaps closed
+
+Four things a shop taking real orders should have had and did not. All free —
+no third-party account, no subscription, nothing leaves your infrastructure.
+
+**CI** (`.github/workflows/gates.yml`). Until now every check ran in exactly two
+places: locally when I chose to run it, and inside `npm run build` on Vercel.
+That is enough to catch a mistake and not enough to prevent one, because a check
+nobody is obliged to run is a suggestion. It now runs on every push and pull
+request: types, tailwind config, hero assets present, every committed frame
+alive, imagery matching the baseline by hash, the tests, the production build,
+and the bundle budget — plus `compileall` on the backend, which catches the
+error class that otherwise first appears when Render boots and the first request
+500s. *(That is not hypothetical: a lazy `__import__` in the error-reporting
+router crashed the entire backend on boot during this session.)*
+
+Deliberately **not** in CI: the hero render (needs a real GPU and ~40 minutes —
+authoring, not verification) and the browser drills and accessibility passes
+(need GPU Chrome against a live server). A gate that cannot honestly run where
+it is wired is worse than no gate.
+
+**Tests.** Vitest, node environment — not jsdom, on purpose: jsdom invites
+component tests asserting against a fake DOM with no compositor or layout,
+which is exactly the "passing test, broken page" pattern this project has
+already been bitten by. Scope is the pure logic where being wrong costs money:
+the four terminal payment states, the route→scene map (including the ordering
+trap where `/products/42` must match before `/products`), and the restraint
+rule that keeps checkout off the full effects stack.
+
+**Mutation-checked, because a suite that cannot fail is decoration.** Breaking
+`isMoneyAtRisk` so an unverified payment counted as safe — the exact bug that
+tells a customer to pay again after their money has already moved — failed
+3 tests. Restored, 10/10 green.
+
+**Error monitoring.** Nothing previously told the shop when a real customer's
+browser threw; the boundaries showed a designed page and the fact died in that
+person's console. Now beaconed to your own backend. Sentry's free tier would do
+this well and the reporter is the seam to swap, but it needs an account and
+creating accounts on your behalf is not something I will do.
+
+Three things stop the monitoring becoming the outage it reports: dedupe by
+message and stack (a render loop throwing every frame would otherwise send
+thousands of beacons), a hard per-session cap, and `sendBeacon` so it never
+blocks navigation or fails on unload. Every path is wrapped so it cannot throw.
+Query strings are stripped before sending, because reset and rating tokens live
+there — a report should make a bug findable, not become a second place customer
+data can leak from.
+
+Verified live: `204` on a report, `19 × 204 then 6 × 429` under a 25-request
+burst against a 20/minute ceiling, `401` on the admin read without a token.
+
+**Performance budget** (`check:bundle`). A ratchet, not an aspiration: set from
+the current build plus 10% headroom so growth has to be deliberate. It enforces
+the half CI can honestly measure — shipped JavaScript weight, which decides
+whether a mid-range Android can use the shop, and which creeps silently when a
+barrel import pulls the whole of drei. The fps and draw-call half needs a real
+GPU and stays local.
+
+**Not built, deliberately:** the `AUTH-SPEC.md` remediation. Auth rate limiting
+and the two timing oracles are real findings, but they change authentication
+behaviour on a shop taking orders — a misconfigured limiter locks out paying
+customers — and the standing instruction was to spec them for the backend owner,
+not build them. The error endpoint was safe to add because it is purely
+additive: one new table, one new route, no existing path touched.
+
+---
+
+## 8. Raw output
 
 _(appended from the runs)_

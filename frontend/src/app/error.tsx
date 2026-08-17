@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { reportError } from '@/lib/errorReporter';
 import Link from 'next/link';
 import { STORE } from '@/lib/config';
 
@@ -33,10 +34,22 @@ export default function RouteError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Console, not a reporting service — there is no error-reporting backend,
-    // and inventing a network call inside an error boundary is how you turn
-    // one failure into two.
     console.error('[route error]', error);
+    /**
+     * Now also reported, which this comment previously said was unsafe.
+     *
+     * The caution was right and still holds: a naive network call inside an
+     * error boundary turns one failure into two. reportError is built for
+     * exactly that objection — every path is wrapped so it cannot throw, it
+     * uses sendBeacon so it neither blocks nor fails on unload, it dedupes by
+     * message and stack so a render loop cannot flood, and it caps per
+     * session. If it breaks, it breaks silently and the customer still sees
+     * this designed page.
+     *
+     * `digest` is the value that connects what the customer saw to the server
+     * log line, so it goes with the report rather than only on screen.
+     */
+    reportError(error, { source: 'boundary', digest: error.digest });
   }, [error]);
 
   return (

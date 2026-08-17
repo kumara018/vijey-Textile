@@ -10,7 +10,7 @@ load_dotenv()
 
 from database import engine, Base, SessionLocal
 import models
-from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks
+from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
 
 os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
@@ -549,6 +549,8 @@ app.include_router(support.router)
 app.include_router(returns.router)
 app.include_router(wishlist.router)
 app.include_router(webhooks.router)
+# Additive: receives browser-side runtime errors. Touches no existing route.
+app.include_router(client_errors.router)
 # Tracking is wired into orders router (/api/orders/{id}/track)
 
 

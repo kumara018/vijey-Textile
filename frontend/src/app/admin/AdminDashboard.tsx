@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { mediaUrl } from '@/lib/media';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Package, ShoppingBag, Users, TrendingUp, Plus, Pencil,
@@ -1100,7 +1101,7 @@ function AdminPageInner({ initialView }: { initialView?: string }) {
                   <tr key={i}><td colSpan={7} className="px-4 py-4"><div className="h-4 bg-gray-100 rounded animate-pulse" /></td></tr>
                 )) : products.map((p) => {
                   const imgSrc = p.images?.[0]
-                    ? (p.images[0].startsWith('http') ? p.images[0] : `${process.env.NEXT_PUBLIC_API_URL}${p.images[0]}`)
+                    ? mediaUrl(p.images[0])
                     : null;
                   const catEmoji: Record<string,string> = {
                     'Baby Frocks':'👶','Chudithar':'👘','Frocks':'👗',
@@ -2004,7 +2005,7 @@ function AdminPageInner({ initialView }: { initialView?: string }) {
                         }`}
                       >
                         <img
-                          src={img.startsWith('http') ? img : `${process.env.NEXT_PUBLIC_API_URL}${img}`}
+                          src={mediaUrl(img)}
                           alt={`Product ${idx + 1}`}
                           className="w-full h-full object-contain p-1"
                         />

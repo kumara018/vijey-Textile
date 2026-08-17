@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { adminAPI } from '@/lib/api';
@@ -481,6 +481,126 @@ export function AdminAdminsView() {
           </Table>
         </Body>
       </div>
+    </AdminShell>
+  );
+}
+
+/* ── Browser errors ─────────────────────────────────────────────────────── */
+
+/**
+ * What actually broke, in real customers' browsers.
+ *
+ * Reports arrive from `lib/errorReporter` and land in `client_errors`. Without
+ * this screen the pipe existed and nothing came out of it — errors nobody can
+ * look at are not monitoring, they are storage.
+ *
+ * NEWEST FIRST, AND GROUPED BY MESSAGE. Fifty rows of the same TypeError is one
+ * bug fifty people hit, not fifty bugs, and the count is the useful number: it
+ * separates "an edge case on one device" from "checkout is down for Safari".
+ * The stack of the most recent occurrence is kept, because the oldest one is
+ * the least likely to still be reproducible.
+ *
+ * An empty table is genuinely good news here, and is worded as such rather than
+ * as an absence of data.
+ */
+export function AdminErrorsView() {
+  const { rows, loading, failed, load, ready } = useAdminList<any>(adminAPI.getClientErrors);
+  const [open, setOpen] = useState<string | null>(null);
+
+  const grouped = useMemo(() => {
+    const byKey = new Map<string, { key: string; name: string; message: string; count: number; latest: any }>();
+    for (const r of rows) {
+      const key = `${r.name}:${r.message}`;
+      const hit = byKey.get(key);
+      if (hit) {
+        hit.count += 1;
+        // rows arrive newest-first, so the first seen is already the latest.
+      } else {
+        byKey.set(key, { key, name: r.name, message: r.message, count: 1, latest: r });
+      }
+    }
+    return [...byKey.values()].sort((a, b) => b.count - a.count);
+  }, [rows]);
+
+  if (!ready) return null;
+
+  return (
+    <AdminShell
+      title="Browser errors"
+      standfirst={
+        loading
+          ? undefined
+          : rows.length === 0
+            ? undefined
+            : `${grouped.length} distinct ${grouped.length === 1 ? 'problem' : 'problems'} across ${rows.length} ${rows.length === 1 ? 'report' : 'reports'}.`
+      }
+      actions={<ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Refresh</ActionButton>}
+    >
+      <Body
+        loading={loading}
+        failed={failed}
+        empty={rows.length === 0}
+        emptyCopy="No errors have been reported. That is the state you want this page in — it means no customer's browser has thrown since the last clear-out, not that reporting is switched off."
+        onRetry={load}
+      >
+        <Table
+          caption="Browser errors, most frequent first"
+          columns={[
+            { label: 'Count', align: 'right' },
+            { label: 'Error' },
+            { label: 'Where' },
+            { label: 'Last seen' },
+          ]}
+        >
+          {grouped.map((g) => (
+            <Fragment key={g.key}>
+              <tr className="border-b border-ink-edge/40 align-baseline">
+                <td className="py-4 pr-4 text-right tabular-nums text-brass-bright">{g.count}</td>
+                <th scope="row" className="py-4 pr-4 text-left font-normal">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(open === g.key ? null : g.key)}
+                    aria-expanded={open === g.key}
+                    className="text-left text-paper transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+                  >
+                    <span className="block">{g.name}</span>
+                    <span className="mt-1 block max-w-[46ch] text-paper-muted">{g.message || '—'}</span>
+                  </button>
+                </th>
+                <td className="py-4 pr-4 text-paper-muted">
+                  {/* Path only — the reporter strips query strings, because
+                      reset and rating tokens live there. */}
+                  {(g.latest.url || '').replace(/^https?:\/\/[^/]+/, '') || '—'}
+                </td>
+                <td className="py-4 tabular-nums text-paper-faint">{shortDate(g.latest.created_at)}</td>
+              </tr>
+              {open === g.key && (
+                <tr className="border-b border-ink-edge/40">
+                  <td colSpan={4} className="py-5">
+                    <dl className="grid gap-x-10 gap-y-3 sm:grid-cols-2">
+                      <div>
+                        <dt className="text-rule uppercase text-paper-faint">Browser</dt>
+                        <dd className="mt-1 text-paper-muted">{g.latest.user_agent || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-rule uppercase text-paper-faint">Viewport · source · digest</dt>
+                        <dd className="mt-1 tabular-nums text-paper-muted">
+                          {g.latest.viewport || '—'} · {g.latest.source || '—'} · {g.latest.digest || 'none'}
+                        </dd>
+                      </div>
+                    </dl>
+                    {g.latest.stack && (
+                      <pre className="mt-5 max-h-72 overflow-auto whitespace-pre-wrap border-t border-ink-edge/60 pt-4 font-mono text-xs leading-relaxed text-paper-muted">
+                        {g.latest.stack}
+                      </pre>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </Fragment>
+          ))}
+        </Table>
+      </Body>
     </AdminShell>
   );
 }

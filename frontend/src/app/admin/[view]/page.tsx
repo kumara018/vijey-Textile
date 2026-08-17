@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import AdminDashboard from '../AdminDashboard';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
-import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView } from '../AdminListViews';
+import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView, AdminErrorsView } from '../AdminListViews';
 import AdminProductsView from '../AdminProductsView';
 
 /**
@@ -25,6 +25,7 @@ const VIEWS = [
   'ratings',
   'cancellations',
   'admins',
+  'errors',
 ] as const;
 
 /** Pre-rendered as static shells; all data is fetched client-side. */
@@ -53,6 +54,7 @@ const TITLES: Record<string, string> = {
   ratings:       'Support Ratings',
   cancellations: 'Cancelled Orders',
   admins:        'Admin Accounts',
+  errors:        'Browser Errors',
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ view: string }> }) {
@@ -77,6 +79,7 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'cancellations') return <AdminCancellationsView />;
   if (view === 'products') return <AdminProductsView />;
   if (view === 'admins') return <AdminAdminsView />;
+  if (view === 'errors') return <AdminErrorsView />;
 
   return <AdminDashboard initialView={view} />;
 }

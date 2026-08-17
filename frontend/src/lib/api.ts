@@ -4,7 +4,7 @@ import axios from 'axios';
 // Determine backend URL based on where the app is running.
 // - localhost / 127.0.0.1  →  local FastAPI server
 // - anywhere else (Vercel) →  Render backend
-function getApiBase(): string {
+export function getApiBase(): string {
   if (typeof window === 'undefined') {
     // Server-side (Next.js SSR) — always use Render
     return 'https://vijey-textile.onrender.com';
@@ -173,6 +173,10 @@ export const adminAPI = {
   // primary-only and enforced server-side (routers/admin.py:459); the client
   // hides the control, it does not gate the action.
   getAdmins:               ()                           => api.get('/api/admin/admins'),
+  // Admin-only read. Writing a report needs no auth (a crashing page has no
+  // session to offer); reading one does, because a stack trace names
+  // internal paths and component names.
+  getClientErrors:         ()                           => api.get('/api/client-errors/recent'),
   revokeAdmin:             (id: number)                 => api.patch(`/api/admin/users/${id}/revoke-admin`),
   updateSettings:          (data: object)               => api.put('/api/admin/settings', data),
   getSupportRatings:       ()                           => api.get('/api/admin/support-ratings'),

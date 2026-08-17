@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { mediaUrl } from '@/lib/media';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { productDetailQuery, productReviewsQuery, qk } from '@/lib/query';
@@ -43,7 +44,7 @@ const money = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
 function imageUrl(src?: string): string | null {
   if (!src || src.includes('placeholder')) return null;
-  return src.startsWith('http') ? src : `${process.env.NEXT_PUBLIC_API_URL}${src}`;
+  return mediaUrl(src);
 }
 
 export default function ProductDetail({ id }: { id: number }) {

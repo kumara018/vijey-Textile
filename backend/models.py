@@ -317,3 +317,28 @@ class ReturnRequest(Base):
     user        = relationship("User")
     product     = relationship("Product", foreign_keys=[product_id])
     new_product = relationship("Product", foreign_keys=[new_product_id])
+
+
+class ClientError(Base):
+    """
+    One runtime error from a customer's browser.
+
+    Additive: nothing else reads or writes this table, so it cannot affect an
+    order, a payment or a session. Deliberately denormalised and unlinked to a
+    user — a crash on a public page has no session to attribute, and attaching
+    one would make this a place customer identity accumulates for no benefit.
+    """
+    __tablename__ = "client_errors"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    name            = Column(String(100))
+    message         = Column(String(500))
+    stack           = Column(Text)
+    source          = Column(String(40), index=True)
+    component_stack = Column(Text, nullable=True)
+    # Next's digest correlates a browser report to the server log line.
+    digest          = Column(String(100), nullable=True, index=True)
+    url             = Column(String(500), index=True)
+    user_agent      = Column(String(300))
+    viewport        = Column(String(40))
+    created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)

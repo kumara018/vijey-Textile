@@ -36,6 +36,7 @@ const VIEWS = [
   { href: '/admin/users', label: 'Customers', match: (p: string) => p === '/admin/users' },
   { href: '/admin/ratings', label: 'Ratings', match: (p: string) => p === '/admin/ratings' },
   { href: '/admin/admins', label: 'Admins', match: (p: string) => p === '/admin/admins' },
+  { href: '/admin/errors', label: 'Errors', match: (p: string) => p === '/admin/errors' },
 ];
 
 export default function AdminShell({

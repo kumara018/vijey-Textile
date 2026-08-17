@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { reportError } from '@/lib/errorReporter';
 
 /**
  * Last-resort boundary — a failure in the root layout itself.
@@ -28,6 +29,9 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error('[global error]', error);
+    // See the note in app/error.tsx: reporting here is safe because
+    // reportError cannot throw, cannot block, and cannot flood.
+    reportError(error, { source: 'boundary', digest: error.digest });
   }, [error]);
 
   return (

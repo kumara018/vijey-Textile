@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -93,7 +94,7 @@ export default function ProductCard({ product }: Props) {
   // ── Current slide content ────────────────────────────────────────────────────
   const isVideoSlide = hasVideo && imgIdx === images.length;
   const currentImg = !isVideoSlide && images[imgIdx]
-    ? (images[imgIdx].startsWith('http') ? images[imgIdx] : `${process.env.NEXT_PUBLIC_API_URL}${images[imgIdx]}`)
+    ? mediaUrl(images[imgIdx])
     : null;
 
   return (

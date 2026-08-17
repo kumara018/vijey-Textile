@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { mediaUrl } from '@/lib/media';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -172,9 +173,7 @@ function WishlistInner() {
           const image = p.images?.[0];
           const src =
             image && !image.includes('placeholder')
-              ? image.startsWith('http')
-                ? image
-                : `${process.env.NEXT_PUBLIC_API_URL}${image}`
+              ? mediaUrl(image)
               : null;
           const soldOut = p.stock === 0;
 

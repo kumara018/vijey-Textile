@@ -15,6 +15,7 @@ import ThreeProvider from '@/three/ThreeProvider';
 import Letterbox from '@/components/Letterbox';
 import SoundToggle from '@/components/SoundToggle';
 import CaptureMode from '@/components/CaptureMode';
+import ErrorReporting from '@/components/ErrorReporting';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
@@ -72,6 +73,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             navigation. Fixed at z-0; all real UI renders above it. */}
         {/* Offline-render only: strips the DOM so a captured frame contains
             the scene alone. Inert without ?capture=1. */}
+        {/* Notices what the React boundaries cannot: throws outside render —
+            rejected promises from handlers, failed dynamic imports, the scene
+            loader and the sequence decoder. */}
+        <ErrorReporting />
         <Suspense fallback={null}><CaptureMode /></Suspense>
         <ThreeProvider />
         {/* Outermost of the data providers: AuthContext, CartContext and

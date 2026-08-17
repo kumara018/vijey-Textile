@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { STORE } from '@/lib/config';
@@ -163,9 +164,7 @@ function CartInner() {
             const image = p.images?.[0];
             const src =
               image && !image.includes('placeholder')
-                ? image.startsWith('http')
-                  ? image
-                  : `${process.env.NEXT_PUBLIC_API_URL}${image}`
+                ? mediaUrl(image)
                 : null;
 
             return (

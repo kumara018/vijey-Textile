@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 /**
  * Capture mode — `?capture=1`.
@@ -21,15 +20,34 @@ import { useSearchParams } from 'next/navigation';
  * Only ever active with the query parameter present, so no visitor can reach
  * it — and the render script is the only thing that sets it.
  */
+/**
+ * READS `window.location.search`, NOT `useSearchParams()`.
+ *
+ * This is not a style preference — the hook silently does not work here. `/` is
+ * statically prerendered, and in a production build `useSearchParams()` inside a
+ * client component with no Suspense boundary above it returns an EMPTY
+ * ReadonlyURLSearchParams and never populates. So `params.get('capture')` was
+ * always null, the attribute was never set, and the renderer's preconditions
+ * refused with "capture attribute never applied".
+ *
+ * It worked in development for the whole life of this file because dev does not
+ * prerender the route the same way — which is exactly why it went unnoticed:
+ * every hero ever rendered was captured against the dev server. Rendering
+ * against a production build, which is the correct thing to do, is what exposed
+ * it. The frames were also carrying the dev overlay for the same reason.
+ *
+ * `window.location.search` has none of that conditionality. It is read inside an
+ * effect, so it only ever runs on the client, where the query string is simply
+ * a fact. `isCaptureRender()` in useDeliveryTier already reads it this way, so
+ * the two now agree by construction rather than by coincidence.
+ */
 export default function CaptureMode() {
-  const params = useSearchParams();
-
   useEffect(() => {
-    if (params.get('capture') !== '1') return;
+    if (new URLSearchParams(window.location.search).get('capture') !== '1') return;
     const root = document.documentElement;
     root.setAttribute('data-capture', '1');
     return () => root.removeAttribute('data-capture');
-  }, [params]);
+  }, []);
 
   return null;
 }
