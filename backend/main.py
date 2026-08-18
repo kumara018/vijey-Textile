@@ -15,6 +15,8 @@ _cfg_log(os.getenv("LOG_LEVEL", "INFO"))
 from database import engine, Base, SessionLocal
 import models
 import rate_limit
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import TimeoutError as SATimeoutError
 from logging_setup import configure_logging, RequestContextMiddleware, log
 from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
@@ -626,6 +628,32 @@ app = FastAPI(
 # anything else runs and still be present when the CORS layer writes headers on
 # the way out. Registered inside CORS, a preflight rejection would never get an
 # id and the failure would be invisible.
+
+@app.exception_handler(SATimeoutError)
+async def _db_pool_exhausted(request, exc):
+    """
+    A traffic spike must degrade politely, not error.
+
+    When every database connection is busy, SQLAlchemy raises TimeoutError and
+    FastAPI turns it into a 500. Measured with loadtest.py at 100 concurrent
+    visitors: 30 requests answered 500. A 500 tells the customer the shop is
+    broken and tells a crawler to drop the page; the truth is that the shop is
+    busy and the same request would succeed a second later.
+
+    503 with Retry-After is the honest answer. Browsers, crawlers and the
+    frontend's own retry all understand it, and it does not poison anything.
+
+    The real fix for sustained load is more capacity — this is what should
+    happen while that is being arranged, rather than the worst possible
+    response to being popular.
+    """
+    log("database pool exhausted", level="warning", path=request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "We are very busy right now. Please try again in a moment."},
+        headers={"Retry-After": "2"},
+    )
+
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     CORSMiddleware,
