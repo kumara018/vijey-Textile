@@ -132,8 +132,11 @@ export default function AccountMenu() {
           <Link href="/wishlist" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Kept pieces
           </Link>
-          <Link href="/account#addresses" role="menuitem" className={item} onClick={() => setOpen(false)}>
+          <Link href="/account/addresses" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Saved addresses
+          </Link>
+          <Link href="/account/security" role="menuitem" className={item} onClick={() => setOpen(false)}>
+            Sign-in &amp; security
           </Link>
           <Link href="/support" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Help &amp; returns

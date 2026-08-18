@@ -57,41 +57,60 @@ describe('isMoneyAtRisk — the question a customer is actually asking', () => {
   });
 });
 
-describe('sceneForPath — which bay of the facility a route sits in', () => {
-  it('maps the storefront', () => {
+/**
+ * THE RULE THESE TESTS ENCODE CHANGED, SO THE TESTS DID.
+ *
+ * They used to assert a scene per area — gallery for the shelf, chamber for a
+ * piece, vault for the bag, terminal for checkout, records for the archive.
+ * That was the design, and it was wrong in use: on a dark ground the drifting
+ * panels read as large brown rectangles sliding behind the merchandise, and
+ * the category rail and REFINE control sat on top of moving furniture.
+ *
+ * The scene is now the entrance and nothing else. These tests were not
+ * "fixed" to make a red build green — they failed because they were doing
+ * their job, and they now state the new rule instead of the old one.
+ *
+ * Deliberately asserted as a RULE rather than a list of routes: the old
+ * version had to be extended every time a route was added, and a route nobody
+ * remembered to list would have been silently fine. `everything that is not
+ * the homepage is plain` cannot rot that way.
+ */
+describe('sceneForPath — the scene is the entrance, and nowhere else', () => {
+  it('gives the homepage the entrance', () => {
     expect(sceneForPath('/')).toBe('entrance');
-    expect(sceneForPath('/products')).toBe('gallery');
-    expect(sceneForPath('/cart')).toBe('vault');
-    expect(sceneForPath('/wishlist')).toBe('vault');
+  });
+
+  it('gives every other route the quiet ground', () => {
+    const elsewhere = [
+      '/products',
+      '/products?sort=new',
+      '/products/42',
+      '/products/42/reviews',
+      '/cart',
+      '/wishlist',
+      '/checkout',
+      '/orders',
+      '/orders/1001',
+      '/account',
+      '/returns/7',
+      '/auth/login',
+      '/admin',
+      '/admin/orders',
+      '/some/page/nobody/built',
+    ];
+    for (const path of elsewhere) {
+      expect(sceneForPath(path)).toBe('plain');
+    }
   });
 
   /**
-   * Order matters here and the ordering is load-bearing: `/products/`
-   * (a single product) is tested BEFORE `/products` (the index) in the
-   * implementation, because the index prefix also matches a detail URL.
-   * Reversing those two lines would silently send every product page to the
-   * gallery scene and nobody would see a crash.
+   * The homepage match is exact, not a prefix. `/products` starts with `/`,
+   * so a `startsWith('/')` here would hand the entrance scene to the entire
+   * site — which is the failure mode this whole change exists to avoid.
    */
-  it('separates a product from the product index', () => {
-    expect(sceneForPath('/products/42')).toBe('chamber');
-    expect(sceneForPath('/products/42/reviews')).toBe('chamber');
-    expect(sceneForPath('/products')).toBe('gallery');
-    expect(sceneForPath('/products?sort=new')).toBe('gallery');
-  });
-
-  it('puts the transactional routes in their own scenes', () => {
-    expect(sceneForPath('/checkout')).toBe('terminal');
-    expect(sceneForPath('/orders')).toBe('records');
-    expect(sceneForPath('/orders/1001')).toBe('records');
-    expect(sceneForPath('/account')).toBe('records');
-    expect(sceneForPath('/returns/7')).toBe('records');
-    expect(sceneForPath('/auth/login')).toBe('gate');
-  });
-
-  it('falls back to the quietest ground for anything unknown', () => {
-    expect(sceneForPath('/admin')).toBe('plain');
-    expect(sceneForPath('/admin/orders')).toBe('plain');
-    expect(sceneForPath('/some/page/nobody/built')).toBe('plain');
+  it('matches the homepage exactly rather than by prefix', () => {
+    expect(sceneForPath('/')).toBe('entrance');
+    expect(sceneForPath('/anything')).toBe('plain');
   });
 });
 
