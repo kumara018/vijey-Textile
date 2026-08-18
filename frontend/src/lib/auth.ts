@@ -36,7 +36,15 @@ export async function performLogin(
   }
 }
 
-export function performLogout() {
+/**
+ * Sign out, and land wherever the caller needs to land.
+ *
+ * `to` exists for "Switch account", which is a sign-out with a different
+ * destination: the customer is not leaving, they are arriving as someone
+ * else, so dropping them on the homepage makes them find the way back in.
+ * Everything else still ends at the front door.
+ */
+export function performLogout(to: string = '/') {
   // Revoke the device session server-side (fire-and-forget).
   authAPI.logout().catch(() => {});
 
@@ -54,7 +62,7 @@ export function performLogout() {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   document.cookie = 'auth_token=; path=/; max-age=0';
-  window.location.href = '/';
+  window.location.href = to;
 }
 
 /** Hard-navigate to the correct page after login. */

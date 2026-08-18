@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { authAPI } from '@/lib/api';
+import { authAPI, addressAPI } from '@/lib/api';
+import { performLogout } from '@/lib/auth';
 import PageShell from '@/components/system/PageShell';
 import PageHeader from '@/components/system/PageHeader';
 import { Field } from '@/components/system/Field';
@@ -39,9 +40,30 @@ interface SessionRow extends DeviceSession {
 
 const SECTIONS = [
   { id: 'profile', label: 'Your details' },
+  { id: 'addresses', label: 'Saved addresses' },
   { id: 'password', label: 'Password' },
   { id: 'devices', label: 'Devices signed in' },
 ];
+
+/** Mirrors backend/models.py::Address. */
+interface Addr {
+  id: number;
+  label?: string;
+  full_name: string;
+  phone: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  is_default: boolean;
+}
+type AddrDraft = Omit<Addr, 'id' | 'is_default'>;
+
+const EMPTY_ADDR: AddrDraft = {
+  label: 'Home', full_name: '', phone: '',
+  address_line1: '', address_line2: '', city: '', state: '', pincode: '',
+};
 
 function AccountInner() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -61,6 +83,23 @@ function AccountInner() {
   const [confirmPw, setConfirmPw] = useState('');
   const [savingPw, setSavingPw] = useState(false);
   const [pwError, setPwError] = useState('');
+
+  /**
+   * ── Addresses ─────────────────────────────────────────────────────────
+   *
+   * `addressAPI` has had getAll / add / update / remove / setDefault since it
+   * was written, and no page in this shop has ever called one of them. A
+   * customer could save an address during checkout and then had no way to see
+   * it, change it or delete it — which also means no way to correct a wrong
+   * pincode on the address every future order defaults to.
+   */
+  const [addresses, setAddresses] = useState<Addr[]>([]);
+  const [addrLoading, setAddrLoading] = useState(true);
+  const [addrError, setAddrError] = useState(false);
+  const [addrBusy, setAddrBusy] = useState<number | null>(null);
+  const [addrOpen, setAddrOpen] = useState(false);
+  const [addrSaving, setAddrSaving] = useState(false);
+  const [draft, setDraft] = useState<AddrDraft>(EMPTY_ADDR);
 
   /* ── Devices ────────────────────────────────────────────────────────── */
   const [sessions, setSessions] = useState<SessionRow[]>([]);
@@ -99,6 +138,58 @@ function AccountInner() {
   useEffect(() => {
     if (user) loadSessions();
   }, [user, loadSessions]);
+
+  const loadAddresses = useCallback(async () => {
+    setAddrLoading(true);
+    setAddrError(false);
+    try {
+      const res = await addressAPI.getAll();
+      setAddresses(res.data ?? []);
+    } catch {
+      setAddrError(true);
+    } finally {
+      setAddrLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) loadAddresses();
+  }, [user, loadAddresses]);
+
+  const addAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const required: (keyof AddrDraft)[] = ['full_name', 'phone', 'address_line1', 'city', 'state', 'pincode'];
+    if (required.some((k) => !String(draft[k] ?? '').trim())) {
+      setAnnouncement('Every line except the second address line is needed.');
+      return;
+    }
+    setAddrSaving(true);
+    try {
+      await addressAPI.add({ ...draft, is_default: addresses.length === 0 });
+      setDraft(EMPTY_ADDR);
+      setAddrOpen(false);
+      await loadAddresses();
+      setAnnouncement('Address saved.');
+    } catch {
+      setAnnouncement('We could not save that address.');
+    } finally {
+      setAddrSaving(false);
+    }
+  };
+
+  const makeUsual = async (id: number) => {
+    setAddrBusy(id);
+    try { await addressAPI.setDefault(id); await loadAddresses(); setAnnouncement('Usual address changed.'); }
+    catch { setAnnouncement('We could not change that.'); }
+    finally { setAddrBusy(null); }
+  };
+
+  const removeAddress = async (id: number) => {
+    setAddrBusy(id);
+    try { await addressAPI.remove(id); setAddresses((p) => p.filter((a) => a.id !== id)); setAnnouncement('Address removed.'); }
+    catch { setAnnouncement('We could not remove that.'); }
+    finally { setAddrBusy(null); }
+  };
 
   useEffect(() => {
     if (!announcement) return;
@@ -218,9 +309,20 @@ function AccountInner() {
                 </li>
               ))}
             </ol>
-            <div className="mt-10 flex flex-col items-start gap-4">
+            {/**
+              * Everything that is not on this page, in one place.
+              *
+              * THE ADMIN DASHBOARD HAD NO LINK ANYWHERE ON THE SITE — not in
+              * the Index, not in the footer, not here. Whoever runs the shop
+              * had to know to type /admin. It is listed for admins now, and
+              * only for admins.
+              */}
+            <div className="mt-10 flex flex-col items-start gap-4 border-t border-ink-edge/60 pt-8">
+              <p className="text-rule uppercase text-paper-faint">Elsewhere</p>
               <ActionLink href="/orders" tone="quiet">Your orders</ActionLink>
               <ActionLink href="/wishlist" tone="quiet">Kept pieces</ActionLink>
+              <ActionLink href="/support" tone="quiet">Help &amp; policies</ActionLink>
+              {user.is_admin && <ActionLink href="/admin" tone="quiet">The workroom</ActionLink>}
             </div>
           </div>
         </nav>
@@ -262,9 +364,116 @@ function AccountInner() {
             </form>
           </section>
 
+          {/* ── Saved addresses ──────────────────────────────────────── */}
+          <section id="addresses" className="mt-[9vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
+            <h2 className="font-display text-band font-light text-paper">Saved addresses</h2>
+            <p className="mt-3 max-w-[38ch] text-paper-muted">
+              Somewhere to send a piece without writing it out again. The usual one is
+              filled in for you at checkout.
+            </p>
+
+            {addrError ? (
+              <div className="mt-8">
+                <ErrorState
+                  title="We could not load your addresses"
+                  body="Your account is fine — this is a problem reaching our server."
+                  onRetry={loadAddresses}
+                />
+              </div>
+            ) : addrLoading ? (
+              <div className="mt-8 space-y-3">
+                <SkeletonLine /><SkeletonLine /><SkeletonLine />
+              </div>
+            ) : (
+              <>
+                {addresses.length === 0 ? (
+                  <p className="mt-8 text-paper-muted">None saved yet.</p>
+                ) : (
+                  <ul className="mt-8">
+                    {addresses.map((a, i) => (
+                      <li
+                        key={a.id}
+                        className={`flex flex-wrap items-start gap-x-8 gap-y-3 py-6 ${i > 0 ? 'border-t border-ink-edge/60' : ''}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-paper">
+                            {a.full_name}
+                            {a.is_default && (
+                              <span className="ml-3 text-rule uppercase text-brass-bright">Usual</span>
+                            )}
+                          </p>
+                          <p className="mt-1.5 max-w-[46ch] text-sm leading-relaxed text-paper-muted">
+                            {a.address_line1}{a.address_line2 ? `, ${a.address_line2}` : ''}, {a.city}, {a.state} {a.pincode}
+                          </p>
+                          <p className="mt-1.5 text-rule uppercase text-paper-faint">{a.phone}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-6">
+                          {!a.is_default && (
+                            <ActionButton tone="quiet" arrow={false} disabled={addrBusy === a.id}
+                              onClick={() => makeUsual(a.id)}>
+                              Make usual
+                            </ActionButton>
+                          )}
+                          <ActionButton tone="quiet" arrow={false} disabled={addrBusy === a.id}
+                            onClick={() => removeAddress(a.id)}>
+                            {addrBusy === a.id ? 'Working…' : 'Remove'}
+                          </ActionButton>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {!addrOpen ? (
+                  <div className="mt-8">
+                    <ActionButton tone="quiet" onClick={() => setAddrOpen(true)}>Add an address</ActionButton>
+                  </div>
+                ) : (
+                  <form onSubmit={addAddress} noValidate className="mt-8 max-w-[26rem] space-y-7 border-t border-ink-edge/60 pt-8">
+                    {([
+                      ['full_name', 'Full name', 'name'],
+                      ['phone', 'Mobile number', 'tel'],
+                      ['address_line1', 'Address', 'address-line1'],
+                      ['address_line2', 'Address, second line (optional)', 'address-line2'],
+                      ['city', 'City', 'address-level2'],
+                      ['state', 'State', 'address-level1'],
+                      ['pincode', 'Pincode', 'postal-code'],
+                    ] as [keyof AddrDraft, string, string][]).map(([key, label, ac]) => (
+                      <Field
+                        key={key}
+                        label={label}
+                        name={key}
+                        autoComplete={ac}
+                        value={draft[key] ?? ''}
+                        onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
+                      />
+                    ))}
+                    <div className="flex items-center gap-8 pt-2">
+                      <ActionButton type="submit" disabled={addrSaving}>
+                        {addrSaving ? 'Saving…' : 'Save address'}
+                      </ActionButton>
+                      <ActionButton tone="quiet" arrow={false} type="button"
+                        onClick={() => { setAddrOpen(false); setDraft(EMPTY_ADDR); }}>
+                        Cancel
+                      </ActionButton>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+          </section>
+
           {/* ── Password ─────────────────────────────────────────────── */}
           <section id="password" className="mt-[9vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
             <h2 className="font-display text-band font-light text-paper">Password</h2>
+            {/* Asked directly: "why password change is showing". Because this is
+                the only way to change it while you still know it — the reset
+                flow is for when you do not, and it costs an email round trip.
+                Saying so is cheaper than being asked a second time. */}
+            <p className="mt-3 max-w-[38ch] text-paper-muted">
+              Change it whenever you like — you will need the current one. If you have
+              forgotten it, sign out and use &ldquo;Forgotten password&rdquo; instead.
+            </p>
             <form onSubmit={savePassword} noValidate className="mt-8 max-w-[26rem] space-y-7">
               <Field
                 label="Current password"
@@ -428,13 +637,34 @@ function AccountInner() {
               </ul>
             )}
 
-            {/* Sign out everywhere is deliberately absent — see AUTH-SPEC R5.
-                Doing it as N client-side DELETEs is not atomic, and a partial
-                failure would leave someone believing they are safe when they
-                are not. It waits for a real endpoint. */}
+            {/* "Sign out everywhere" is above, and it is a single atomic
+                call. This note used to say the feature was deliberately absent
+                while it waited for a real endpoint — AUTH-SPEC R5 shipped that
+                endpoint and the button was wired to it, but the note was never
+                removed, so the file contradicted itself a hundred lines apart.
+                Doing it as N client-side DELETEs remains wrong for the original
+                reason: not atomic, and a partial failure leaves somebody
+                believing they are safe when they are not. */}
           </section>
 
-          <div className="mt-[9vh] border-t border-ink-edge/60 pt-10">
+          {/**
+            * Leaving, in order of how permanent it is.
+            *
+            * "Switch account" is a sign-out that lands on the sign-in page
+            * rather than the homepage, so somebody handing the phone over
+            * arrives where they need to be. It is deliberately NOT the
+            * multi-account switch: keeping two accounts signed in at once
+            * fights a backend that caps a customer at four devices and emails
+            * them about every new sign-in.
+            */}
+          <div className="mt-[9vh] flex flex-col items-start gap-6 border-t border-ink-edge/60 pt-10">
+            <p className="text-rule uppercase text-paper-faint">Leaving</p>
+            <ActionButton tone="quiet" arrow={false} onClick={() => performLogout('/auth/login')}>
+              Switch account
+            </ActionButton>
+            <ActionButton tone="quiet" arrow={false} onClick={() => performLogout()}>
+              Sign out
+            </ActionButton>
             <ActionLink href="/account/delete" tone="quiet" arrow={false}>
               Close your account
             </ActionLink>
