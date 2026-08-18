@@ -46,7 +46,30 @@ export default function PageShell({
         className={[
           'relative z-10 w-full',
           width === 'measure' ? 'mx-auto max-w-[112rem] px-6 sm:px-10' : '',
-          rhythm === 'open' ? 'py-[12vh]' : 'py-[7vh]',
+          /**
+           * THE TOP HAS TO CLEAR A FIXED HEADER, AND A PERCENTAGE CANNOT
+           * PROMISE THAT.
+           *
+           * The rhythm was `py-[7vh]` / `py-[12vh]` on both edges. The header
+           * (components/nav/OverlayNav.tsx) is `fixed`, and roughly 5.5rem
+           * tall regardless of viewport — so on any screen where 7vh is less
+           * than that, the first element on the page renders UNDERNEATH it.
+           *
+           * That is not hypothetical: it is why the back control on a product
+           * page appeared jammed into the wordmark, with the category name
+           * sitting level with the second line of the logo. It reads as a
+           * misaligned control, and the control is fine — it was being
+           * overlapped. Anything whose first child is not a PageHeader (which
+           * carries its own space) hits this, and short viewports hit it
+           * worst: a phone in landscape at 380px tall gets 27px of 7vh.
+           *
+           * `max()` keeps the airy rhythm on a tall screen and guarantees the
+           * clearance on a short one. The bottom keeps the plain percentage —
+           * nothing is fixed down there.
+           */
+          rhythm === 'open'
+            ? 'pt-[max(12vh,7.5rem)] pb-[12vh]'
+            : 'pt-[max(7vh,6.5rem)] pb-[7vh]',
         ].join(' ')}
       >
         {children}
