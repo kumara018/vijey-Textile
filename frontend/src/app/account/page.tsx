@@ -68,6 +68,8 @@ function AccountInner() {
   const [sessionsError, setSessionsError] = useState(false);
   const [revokingId, setRevokingId] = useState<number | null>(null);
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const [revokingAll, setRevokingAll] = useState(false);
+  const [confirmingAll, setConfirmingAll] = useState(false);
 
   const devicesHeading = useRef<HTMLHeadingElement>(null);
 
@@ -154,6 +156,35 @@ function AccountInner() {
       setAnnouncement('We could not sign that device out. Please try again.');
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  /**
+   * Sign out every other device, atomically.  (AUTH-SPEC R5)
+   *
+   * Two-step, because this is destructive and irreversible from the customer's
+   * side: the first press arms it and the second commits, the same pattern the
+   * per-device control already uses. Nobody should be able to log their family
+   * out of a shared tablet with one stray tap.
+   */
+  const revokeAll = async () => {
+    if (!confirmingAll) { setConfirmingAll(true); return; }
+    setRevokingAll(true);
+    setConfirmingAll(false);
+    try {
+      const res = await authAPI.revokeAllSessions(true);
+      const n = res.data?.revoked ?? 0;
+      await loadSessions();
+      setAnnouncement(
+        n === 0
+          ? 'No other devices were signed in.'
+          : `${n} other ${n === 1 ? 'device was' : 'devices were'} signed out. This one is still signed in.`,
+      );
+      devicesHeading.current?.focus();
+    } catch {
+      setAnnouncement('We could not sign the other devices out. Please try again.');
+    } finally {
+      setRevokingAll(false);
     }
   };
 
@@ -282,6 +313,38 @@ function AccountInner() {
               You can be signed in on up to four devices at once. If you see one you do not
               recognise, sign it out and change your password.
             </p>
+
+            {/**
+              * Sign out everywhere. One server-side transaction, not a loop over
+              * the list — see authAPI.revokeAllSessions for why that distinction
+              * is the whole point of this control existing.
+              *
+              * Only shown when there is something to do. A button that reports
+              * "no other devices were signed in" is a button that should not
+              * have been offered.
+              */}
+            {!sessionsLoading && !sessionsError && sessions.filter((s) => !s.is_current).length > 0 && (
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <button
+                  type="button"
+                  onClick={revokeAll}
+                  onBlur={() => setConfirmingAll(false)}
+                  disabled={revokingAll}
+                  className="text-caption uppercase text-paper-faint underline decoration-brass/50 underline-offset-4 transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright disabled:opacity-50"
+                >
+                  {revokingAll
+                    ? 'Signing out…'
+                    : confirmingAll
+                      ? 'Tap again to confirm'
+                      : 'Sign out all other devices'}
+                </button>
+                {confirmingAll && (
+                  <span className="text-caption text-paper-faint">
+                    This one stays signed in.
+                  </span>
+                )}
+              </div>
+            )}
 
             {sessionsLoading && (
               <Skeleton label="Loading your devices">

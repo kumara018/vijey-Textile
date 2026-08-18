@@ -115,6 +115,17 @@ export const authAPI = {
   confirmDeactivateAccount:(data: object) => api.post('/api/auth/confirm-deactivate-account', data),
   getSessions:         ()             => api.get('/api/auth/sessions'),
   revokeSession:       (id: number)   => api.delete(`/api/auth/sessions/${id}`),
+  /**
+   * Sign out everywhere, in ONE transaction on the server.  (AUTH-SPEC R5)
+   *
+   * Not a loop over revokeSession. The loop is fine for tidying up an old
+   * tablet and wrong for the case this exists to serve — a customer who thinks
+   * their account is compromised: it is not atomic, it races the sliding-session
+   * refresh below, and a partial failure leaves them believing they are safe
+   * when an attacker still holds a live token.
+   */
+  revokeAllSessions:   (exceptCurrent = true) =>
+    api.post('/api/auth/sessions/revoke-all', { except_current: exceptCurrent }),
 };
 
 export const productsAPI = {

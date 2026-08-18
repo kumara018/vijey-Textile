@@ -223,6 +223,59 @@ class DeviceEvictLogin(BaseModel):
     session_id:    int
 
 
+class AuthBeginIn(BaseModel):
+    """One field: a mobile number or an email address."""
+    identifier: str
+
+
+class AuthBeginOut(BaseModel):
+    """
+    The reply to /auth/begin, which must not depend on whether the account
+    exists. Every field here is derived from the submitted identifier — see
+    `_identifier_hint` in routers/auth.py for why the hint in particular can
+    never be built from a stored record.
+    """
+    sent: bool
+    channel: str          # "sms" | "email"
+    hint: str             # masked echo of what was typed, e.g. "94***53"
+
+
+class AuthContinueIn(BaseModel):
+    identifier: str
+    otp: str
+
+
+class AuthContinueOut(BaseModel):
+    """
+    The branch, returned only after the caller proved control of the identifier.
+
+    `next` is "password" for an existing account and "register" for a new one.
+    Exactly one of `user_hint` / `registration_token` is populated to match.
+    """
+    next: str
+    user_hint: Optional[dict] = None
+    registration_token: Optional[str] = None
+
+
+class RevokeAllIn(BaseModel):
+    """
+    Sign out everywhere.  (AUTH-SPEC.md §3.3)
+
+    Defaults to keeping the caller signed in, because that is what the button
+    in the devices dashboard means and it is the safer default: a customer who
+    taps it and is immediately thrown out cannot tell whether it worked.
+    Passing false signs out this device too.
+    """
+    except_current: bool = True
+
+
+class RevokeAllOut(BaseModel):
+    revoked: int
+    # Tells the frontend whether the token it just used is still good, so it
+    # knows whether to redirect to sign-in or simply refresh the device list.
+    current_session_kept: bool
+
+
 class UserUpdate(BaseModel):
     full_name:     Optional[str] = None
     phone:         Optional[str] = None

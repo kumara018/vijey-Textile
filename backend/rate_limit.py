@@ -38,15 +38,44 @@ is the one that matters for enumeration. Stated here rather than left implicit,
 because a limiter whose weaknesses are not written down gets trusted for things
 it does not do.
 
-IN-PROCESS STORAGE. This resets when Render restarts or scales out, so the true
-ceiling is per-worker. Adequate for slowing enumeration to uselessness; not a
-distributed guarantee. A shared Redis store is the upgrade, and slowapi takes a
-`storage_uri` when you want it — nothing else here changes.
+THE STORAGE, AND WHY IT CHANGED.
+
+This used slowapi with its default in-process storage, and the file said so:
+"resets when Render restarts or scales out... adequate for slowing enumeration
+to uselessness". That was too generous by half, and the deployment is the reason.
+
+Render's free tier sleeps the instance after fifteen minutes without traffic and
+starts a fresh process on the next request. Every deploy restarts it as well. So
+the counters do not merely reset "on restart" as an occasional event — on a shop
+that is quiet overnight they reset continuously, and an attacker does not have
+to defeat the limit at all. They wait for the shop to be idle, spend the budget,
+wait again. The limit becomes a rate of five per visit rather than five per
+hour, and enumeration goes back to being a weekend job.
+
+slowapi cannot fix this here: its storage backends are memory, Redis, Memcached,
+MongoDB and etcd — there is no SQL backend, and this deployment has Postgres and
+nothing else. Rather than add a paid dependency for a counter, the limiter is
+now roughly eighty lines against a table (`models.RateLimitHit`). It survives
+restarts, it is shared by every worker, and it removes a dependency instead of
+adding one.
+
+The budgets, their keys and their wording are unchanged. Only where the count
+is kept has changed.
 """
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from __future__ import annotations
+
+import time as _time
+from datetime import datetime, timedelta, timezone
+
+from fastapi import HTTPException
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 from starlette.requests import Request
 
+import models
+
+
+# ── Keys ─────────────────────────────────────────────────────────────────────
 
 def client_ip(request: Request) -> str:
     """The real client address, as far as it can be known behind Render."""
@@ -56,46 +85,9 @@ def client_ip(request: Request) -> str:
         first = forwarded.split(",")[0].strip()
         if first:
             return first
-    return get_remote_address(request)
+    client = getattr(request, "client", None)
+    return (client.host if client else None) or "unknown"
 
-
-def identifier_key(request: Request) -> str:
-    """
-    Key on the account being probed, not the address probing it.
-
-    slowapi resolves the key before the endpoint runs, so the request body is
-    not parsed yet and cannot be read here without consuming the stream. The
-    routes that need this therefore set `request.state.rl_identifier` from their
-    already-validated payload and call the limiter explicitly.
-
-    Falls back to the address, so a missing identifier degrades to the per-IP
-    limit rather than to no limit at all.
-    """
-    ident = getattr(request.state, "rl_identifier", None)
-    if ident:
-        return f"id:{str(ident).strip().lower()}"
-    return f"ip:{client_ip(request)}"
-
-
-#
-# `headers_enabled` is OFF, and that is a correctness fix rather than a
-# preference. With it on, slowapi attaches X-RateLimit-* headers to every
-# response — which requires each decorated endpoint to hand it a real
-# `starlette.responses.Response`. These endpoints return plain dicts and let
-# FastAPI serialise them, so every SUCCESSFUL request raised
-# "parameter `response` must be an instance of starlette.responses.Response"
-# and turned into a 500.
-#
-# It was invisible at first because the failure only shows on the happy path:
-# the 429s looked perfect (slowapi builds a real Response for those) while
-# requests 1-5 were quietly 500ing. A limiter that breaks the endpoint it
-# protects is worse than no limiter — it converts "someone is probing us" into
-# "nobody can sign in".
-#
-# Turning it on later means adding `response: Response` to eight signatures.
-# The headers are a convenience for well-behaved clients; the limit is the
-# security control, and it works without them.
-limiter = Limiter(key_func=client_ip)
 
 # ── Budgets ──────────────────────────────────────────────────────────────────
 #
@@ -113,32 +105,131 @@ SESSION_SWAP = "10/minute"          # evict-and-login
 # Per-identifier ceiling for the enumeration-sensitive endpoints. Deliberately
 # per-hour: the point is to make walking a number space take years.
 PER_IDENTIFIER = "5/hour"
+# Progressive sign-in (AUTH-SPEC R6) sends a real SMS on every attempt whether
+# or not the account exists — that is the whole point of the blind branch, and
+# it means the spend ceiling has to be tighter than anywhere else. The spec's
+# own suggestion: 3 per identifier per hour, 10 per IP per hour.
+BEGIN_PER_IP = "10/hour"
+BEGIN_PER_IDENTIFIER = "3/hour"
+
+_UNITS = {
+    "second": 1,
+    "minute": 60,
+    "hour": 3600,
+    "day": 86400,
+}
 
 
-# ── Per-identifier ceiling ───────────────────────────────────────────────────
-#
-# Written explicitly rather than by reusing slowapi's decorator.
-#
-# The decorator is built to wrap an endpoint: with `headers_enabled` it expects
-# a real Response back so it can attach X-RateLimit-* headers, and calling it on
-# a throwaway lambda raised "parameter `response` must be an instance of
-# starlette.responses.Response" — a 500 on every forgot-password request. That
-# was me bending a tool to a shape it does not have. Fifteen lines of counter is
-# clearer than a clever call into somebody else's decorator internals, and it
-# cannot break when slowapi changes them.
-#
-# Same in-process caveat as everything else here: per-worker, resets on deploy.
-from collections import defaultdict, deque
-import time as _time
+def parse_budget(budget: str) -> list[tuple[int, int]]:
+    """
+    "5/minute;30/hour" -> [(5, 60), (30, 3600)]
 
-from fastapi import HTTPException
-
-_ID_WINDOW_SECONDS = 3600
-_ID_MAX_PER_WINDOW = 5
-_id_hits: dict[str, deque] = defaultdict(deque)
+    Kept as the same strings the old decorators took, so the numbers in this
+    file are still the numbers that apply and a reviewer comparing against the
+    spec does not have to translate anything.
+    """
+    out: list[tuple[int, int]] = []
+    for part in budget.split(";"):
+        part = part.strip()
+        if not part:
+            continue
+        count, _, unit = part.partition("/")
+        seconds = _UNITS.get(unit.strip().rstrip("s"))
+        if seconds is None:
+            raise ValueError(f"unknown rate-limit period: {part!r}")
+        out.append((int(count), seconds))
+    return out
 
 
-def enforce_identifier_limit(identifier: str) -> None:
+# ── The limiter ──────────────────────────────────────────────────────────────
+
+def enforce(db: Session, scope: str, key: str, budget: str) -> None:
+    """
+    Record one attempt against `scope|key` and raise 429 if it breaks `budget`.
+
+    Called explicitly at the top of an endpoint rather than through a decorator.
+    That is the same judgement already made for the per-identifier ceiling, and
+    for the same reason: a decorator has to guess which of the endpoint's
+    arguments is the request and which is the session, and slowapi's version of
+    that guess is what turned every successful request into a 500 once
+    `headers_enabled` was on. An explicit call at the top of the function is one
+    line, and what it does is visible at the call site.
+
+    Fails OPEN on a database error, deliberately. This is a control on abuse,
+    not on correctness, and the alternative — every customer locked out of
+    sign-in because the counter table is unreachable — is a worse outcome than
+    an unthrottled hour. Anything that reaches this state is already paging
+    someone about the database.
+    """
+    limits = parse_budget(budget)
+    if not limits:
+        return
+
+    bucket = f"{scope}|{key}"
+    now = datetime.now(timezone.utc)
+    longest = max(seconds for _, seconds in limits)
+
+    try:
+        # Prune this bucket's expired rows before counting. Doing it here rather
+        # than on a schedule keeps the table self-maintaining: a bucket that is
+        # never touched again holds at most one window of rows, and a bucket
+        # under attack is pruned on every attempt.
+        db.execute(
+            delete(models.RateLimitHit).where(
+                models.RateLimitHit.bucket == bucket,
+                models.RateLimitHit.at < now - timedelta(seconds=longest),
+            )
+        )
+
+        for count, seconds in limits:
+            since = now - timedelta(seconds=seconds)
+            used = db.execute(
+                select(func.count())
+                .select_from(models.RateLimitHit)
+                .where(
+                    models.RateLimitHit.bucket == bucket,
+                    models.RateLimitHit.at >= since,
+                )
+            ).scalar_one()
+
+            if used >= count:
+                # The oldest hit still inside the window is when a slot frees.
+                oldest = db.execute(
+                    select(func.min(models.RateLimitHit.at)).where(
+                        models.RateLimitHit.bucket == bucket,
+                        models.RateLimitHit.at >= since,
+                    )
+                ).scalar_one_or_none()
+                retry = seconds
+                if oldest is not None:
+                    if oldest.tzinfo is None:
+                        oldest = oldest.replace(tzinfo=timezone.utc)
+                    retry = max(1, int(seconds - (now - oldest).total_seconds()))
+                db.commit()
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many attempts. Please wait a moment and try again.",
+                    headers={"Retry-After": str(retry)},
+                )
+
+        db.add(models.RateLimitHit(bucket=bucket, at=now))
+        db.commit()
+    except HTTPException:
+        raise
+    except Exception:
+        # See the docstring: abuse control must not become an outage.
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+def enforce_ip_limit(db: Session, request: Request, scope: str, budget: str) -> None:
+    """Per-address budget for one endpoint."""
+    enforce(db, scope, f"ip:{client_ip(request)}", budget)
+
+
+def enforce_identifier_limit(db: Session, identifier: str, budget: str = PER_IDENTIFIER) -> None:
     """
     Raise 429 when one identifier has been probed too often, from anywhere.
 
@@ -154,17 +245,21 @@ def enforce_identifier_limit(identifier: str) -> None:
     key = (identifier or "").strip().lower()
     if not key:
         return
+    enforce(db, "identifier", f"id:{key}", budget)
 
-    now = _time.monotonic()
-    q = _id_hits[key]
-    while q and now - q[0] > _ID_WINDOW_SECONDS:
-        q.popleft()
 
-    if len(q) >= _ID_MAX_PER_WINDOW:
-        # Same wording whether or not the account exists — this endpoint must
-        # not become the enumeration oracle the limit exists to prevent.
-        raise HTTPException(
-            status_code=429,
-            detail="Too many requests for this account. Please try again later.",
-        )
-    q.append(now)
+def sweep(db: Session, older_than_seconds: int = 86400) -> int:
+    """
+    Drop rows no live window can reference any more.
+
+    `enforce` prunes the bucket it touches, which is enough for buckets that
+    keep being used. This catches the long tail — an address that probed once
+    and never returned would otherwise leave its row behind forever. Called from
+    the existing scheduled job; returns how many rows went.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=older_than_seconds)
+    result = db.execute(
+        delete(models.RateLimitHit).where(models.RateLimitHit.at < cutoff)
+    )
+    db.commit()
+    return result.rowcount or 0

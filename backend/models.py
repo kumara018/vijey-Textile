@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
+    Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -342,3 +342,40 @@ class ClientError(Base):
     user_agent      = Column(String(300))
     viewport        = Column(String(40))
     created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class RateLimitHit(Base):
+    """
+    One recorded request against one rate-limit bucket.
+
+    WHY THIS IS IN THE DATABASE. The limits were held in process memory, and on
+    this deployment that is close to holding them nowhere. Render's free tier
+    sleeps the instance after fifteen minutes of inactivity and restarts it on
+    the next request, and every deploy restarts it too — so an attacker walking
+    a number space did not need to defeat the limit, only to wait for the shop
+    to go quiet. The budget reset itself. The same applies the moment the
+    service runs more than one worker: each one keeps its own counters, so the
+    real ceiling is the configured limit multiplied by the number of processes.
+
+    A limit that resets on its own is not a limit; it is a delay. This table is
+    the one place the counter can live that survives a restart and is shared by
+    every worker, and it costs one small insert and one count per attempt on
+    endpoints that are already doing bcrypt.
+
+    Deliberately a hit log rather than a counter row: a log needs no upsert, so
+    there is no dialect-specific `ON CONFLICT` to get right across SQLite and
+    Postgres, and no read-modify-write race between workers. Rows are pruned as
+    they expire, and the volume is tiny — the budgets are tens per hour.
+    """
+    __tablename__ = "rate_limit_hits"
+
+    id     = Column(Integer, primary_key=True, index=True)
+    # "<scope>|<key>" — e.g. "send-login-otp|ip:203.0.113.7" or
+    # "identifier|id:9443947853". One namespace per endpoint per key kind.
+    bucket = Column(String(200), nullable=False, index=True)
+    at     = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # The query is always "how many hits for THIS bucket since T", so the
+    # composite is what actually serves it — either single-column index alone
+    # leaves the database filtering the other half by hand.
+    __table_args__ = (Index("ix_rate_limit_bucket_at", "bucket", "at"),)

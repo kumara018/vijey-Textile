@@ -10,9 +10,7 @@ load_dotenv()
 
 from database import engine, Base, SessionLocal
 import models
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from rate_limit import limiter
+import rate_limit
 from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
 
@@ -492,6 +490,27 @@ def _sync_delhivery_statuses():
         db.close()
 
 
+def _sweep_rate_limits():
+    """
+    Drop rate-limit rows no live window can reference.
+
+    `rate_limit.enforce` prunes the bucket it touches, which keeps active
+    buckets bounded on their own. This is for the long tail: an address that
+    probed once and never came back would otherwise leave its row in the table
+    forever. Six-hourly against a one-day cutoff is far more slack than any
+    budget here needs.
+    """
+    db = SessionLocal()
+    try:
+        removed = rate_limit.sweep(db)
+        if removed:
+            print(f"[RateLimit] swept {removed} expired row(s)")
+    except Exception as e:
+        print(f"[RateLimit] sweep failed: {e}")
+    finally:
+        db.close()
+
+
 _scheduler = BackgroundScheduler()
 
 
@@ -508,6 +527,7 @@ async def lifespan(app: FastAPI):
     _ensure_products()
 
     _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
+    _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
     _scheduler.start()
     yield
     _scheduler.shutdown(wait=False)
@@ -544,11 +564,12 @@ app = FastAPI(
 )
 
 
-# AUTH-SPEC R1. Registered on app.state because slowapi's decorator looks
-# it up there at request time; the handler turns a breach into a 429 with
-# Retry-After rather than an unhandled exception and a 500.
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# AUTH-SPEC R1 is enforced inside the endpoints now, not by middleware. There
+# is nothing to register here: `rate_limit.enforce_ip_limit` raises an ordinary
+# HTTPException(429) with a Retry-After header, which FastAPI already handles.
+# slowapi is gone — its storage backends are memory, Redis, Memcached, MongoDB
+# and etcd, and this deployment has Postgres and nothing else, so its counters
+# lived in a process that Render restarts whenever the shop goes quiet.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
