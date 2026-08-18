@@ -680,6 +680,27 @@ async def lifespan(app: FastAPI):
     if _try_take_scheduler_lease():
         _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
         _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
+        # ── Erasure, on a timer rather than on a reboot ──────────────────
+        #
+        # THE BUG THIS FIXES. `_cleanup_deleted_accounts()` was called exactly
+        # once, in the line above, at process start — and never registered
+        # here. So the promise the account page makes ("after 7 days the
+        # account is permanently deleted") was kept only when the service
+        # happened to restart after the window closed.
+        #
+        # On a host that keeps a process alive for weeks, a customer who asked
+        # to be erased on the 1st was still in the database on the 20th. That
+        # is not a cosmetic bug: an erasure request that the system accepts,
+        # schedules, emails about and then does not perform is a data
+        # protection failure under the DPDP Act, and under GDPR for any
+        # customer in the EU.
+        #
+        # Daily is the right interval. Hourly would wake the database 24 times
+        # to find nothing; a few hours of latency on a seven-day window is
+        # immaterial, and the job is idempotent — it selects only rows whose
+        # deadline has already passed, so running it twice deletes nothing
+        # twice.
+        _scheduler.add_job(_cleanup_deleted_accounts, "interval", hours=24, id="account_erasure", replace_existing=True)
         _scheduler.add_job(_renew_scheduler_lease, "interval", seconds=60, id="scheduler_lease", replace_existing=True)
         _scheduler.start()
         print(f"[Scheduler] background jobs owned by {_SCHEDULER_OWNER}")
