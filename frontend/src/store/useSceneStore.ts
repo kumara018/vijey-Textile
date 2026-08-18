@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import type { Capabilities, QualityTier, TierBudget } from '@/three/core/capabilities';
 import { TIER_BUDGETS, withoutEffects, forReducedMotion } from '@/three/core/capabilities';
+import { isAuthRoute } from '@/lib/routes';
 
 /**
  * Which 3D environment the persistent canvas is currently showing.
@@ -147,7 +148,7 @@ export function sceneForPath(pathname: string): SceneId {
     pathname.startsWith('/account') ||
     pathname.startsWith('/returns')
   ) return 'records';
-  if (pathname.startsWith('/auth')) return 'gate';
+  if (isAuthRoute(pathname)) return 'gate';
   return 'plain';
 }
 

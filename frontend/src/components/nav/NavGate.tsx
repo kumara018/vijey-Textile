@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import OverlayNav from './OverlayNav';
+import { isAuthRoute } from '@/lib/routes';
 
 /**
  * Decides whether the site navigation appears at all.
@@ -19,7 +20,7 @@ import OverlayNav from './OverlayNav';
  */
 export default function NavGate() {
   const pathname = usePathname();
-  if (pathname.startsWith('/auth')) return null;
+  if (isAuthRoute(pathname)) return null;
   return <OverlayNav />;
 }
 
@@ -34,6 +35,6 @@ export default function NavGate() {
  */
 export function ChromeGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  if (pathname.startsWith('/auth')) return null;
+  if (isAuthRoute(pathname)) return null;
   return <>{children}</>;
 }
