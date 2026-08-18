@@ -29,22 +29,60 @@ os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
 # ── Auto-setup on every startup ───────────────────────────────────────────────
 
 def _ensure_admin():
-    """Create (or re-hash) the admin user so login always works after a redeploy."""
+    """
+    Make sure an admin account exists — WITHOUT silently resetting its password.
+
+    WHAT THIS USED TO DO, AND WHY IT WAS DANGEROUS. On every single startup it
+    re-hashed `ADMIN_PASSWORD` and wrote it over the existing admin's password.
+    The intent was good: never be locked out of your own shop after a redeploy.
+    The consequence was not. If the shopkeeper ever changed their password from
+    inside the account page — which is the correct thing to do with the default
+    password that ships in this file — the very next deploy, or any Render
+    restart, or a crash-loop recovery, silently put the old one back.
+
+    That is bad in three separate ways. The change the user made did not stick
+    and nothing told them. A password they had deliberately retired kept
+    working. And the value it reverts to is the DEFAULT WRITTEN IN THIS SOURCE
+    FILE, which is public in the repository — so on any deploy where
+    ADMIN_PASSWORD was not set on the host, the admin account quietly went back
+    to a credential anyone reading the code can see.
+
+    WHAT IT DOES NOW. Creates the admin if there is none. Otherwise it repairs
+    only the FLAGS that must never be wrong — an admin locked out by the signup
+    OTP gate or a deactivation is a shop nobody can run — and leaves the
+    password exactly as the owner set it.
+
+    THE RECOVERY HATCH IS STILL THERE, BUT IT IS DELIBERATE. Set
+    ADMIN_PASSWORD_RESET=true on the host and the next boot re-syncs the
+    password once, loudly. Unset it afterwards. A recovery path you have to ask
+    for is a recovery path; one that runs on every boot is a rollback.
+    """
     from auth import hash_password
     db = SessionLocal()
     try:
         admin_email    = os.getenv("ADMIN_EMAIL",    "admin@vijeytextile.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "VijeyTextile@2026")
         admin_phone    = os.getenv("ADMIN_PHONE",    "9443947853")
+        force_reset    = os.getenv("ADMIN_PASSWORD_RESET", "").strip().lower() in ("1", "true", "yes")
 
         existing = db.query(models.User).filter(models.User.email == admin_email).first()
         if existing:
-            existing.password_hash = hash_password(admin_password)
+            # Flags only. These are the ones that lock a shopkeeper out of their
+            # own shop, and none of them is something the owner sets on purpose.
             existing.is_admin    = True
             existing.is_active   = True
-            existing.is_verified = True  # admin must never be locked out by the signup-OTP gate
+            existing.is_verified = True   # never locked out by the signup-OTP gate
+            existing.is_deactivated   = False
+            existing.scheduled_delete_at = None
+
+            if force_reset:
+                existing.password_hash = hash_password(admin_password)
+                print(
+                    f"[Startup] ADMIN_PASSWORD_RESET was set — admin password re-synced "
+                    f"for {admin_email}. UNSET IT NOW so the next deploy does not repeat this."
+                )
             db.commit()
-            print(f"[Startup] Admin password re-synced: {admin_email}")
+            print(f"[Startup] Admin account verified: {admin_email}")
         else:
             admin = models.User(
                 full_name     = "Vijey Textile Admin",
