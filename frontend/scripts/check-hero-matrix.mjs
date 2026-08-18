@@ -240,10 +240,23 @@ async function runConfig(cdp, cfg, failures, notes) {
         failures.push(`${label}: GARMENT CROPPED — outside the frame at ${out.join(', ')}`);
       }
     } else if (v.liveScene) {
-      // The scene is drawing but did not publish its framing. Either the
-      // measure hook regressed or the subject never mounted; both are worth
-      // knowing about, neither is a crop.
-      notes.push(`${label}: live scene but no __heroFrame published`);
+      /**
+       * The scene is drawing but staged NO GARMENT. That is a failure, not a
+       * note, and it was a note until it caught something real.
+       *
+       * Clearing the seeded products' dead image paths left twenty-four real
+       * products with an empty images array. The homepage picked the first
+       * product whatever it was, found no photograph on it, and rendered a lit
+       * empty room on all six configurations — while every other assertion here
+       * passed, because an empty room is neither blank nor cropped and the
+       * headline was perfectly legible.
+       *
+       * A hero with no subject is the thing this gate exists to prevent.
+       */
+      failures.push(
+        `${label}: SCENE HAS NO SUBJECT — the canvas is drawing but no garment ` +
+        `is staged (no __heroFrame published)`,
+      );
     }
 
     // ── The copy must survive whatever the scene does ────────────────────

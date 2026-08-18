@@ -49,12 +49,28 @@ export default function HomePage() {
   const featuredItems = useMemo(() => unwrap(featured.data), [featured.data]);
   const recentItems = useMemo(() => unwrap(recent.data), [recent.data]);
 
-  // The lead piece: a featured item if one exists, otherwise the newest. If
-  // neither resolves the scene stages the material alone, which is a composed
-  // state rather than a broken one.
-  // A live product always wins. The fixture only fills in when the catalogue
-  // returns nothing, so the hero is never an empty state.
-  const hero = featuredItems[0] ?? recentItems[0] ?? (HERO_FIXTURE as unknown as Product);
+  /**
+   * The lead piece: the first product that actually HAS a photograph.
+   *
+   * It used to be `featuredItems[0] ?? recentItems[0] ?? HERO_FIXTURE` — the
+   * first product, whatever it was, with the fixture only as a last resort when
+   * the catalogue returned nothing at all. That has a gap in the middle, and I
+   * walked straight into it: clearing the seeded products' dead image paths
+   * left twenty-four real products with `images: []`, so `featuredItems[0]`
+   * resolved, `hero.images?.[0]` was undefined, and the scene staged an empty
+   * lit room on every single device. A product existed, so the fixture never
+   * ran; the product had no picture, so there was nothing to show.
+   *
+   * `check:hero-matrix` caught it — "live scene but no __heroFrame published"
+   * on all six configurations — which is exactly what that gate is for.
+   *
+   * A product with no photograph cannot be the hero of a shop that sells
+   * clothes. Pick one that can.
+   */
+  const hero = useMemo(() => {
+    const withPhoto = [...featuredItems, ...recentItems].find((p) => p.images?.[0]);
+    return withPhoto ?? (HERO_FIXTURE as unknown as Product);
+  }, [featuredItems, recentItems]);
 
   /**
    * The heirloom plate must never be the piece already staged in the hero.
