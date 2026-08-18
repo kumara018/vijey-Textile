@@ -37,6 +37,23 @@
 import { getApiBase } from './api';
 
 const ENDPOINT = '/api/client-errors';
+
+/**
+ * The id of the most recent API response, successful or not.
+ *
+ * A crash is almost never reported by the same code that made the call — an
+ * error boundary catches a render that failed because of data a request
+ * returned three frames ago. Threading the id through every component that
+ * might throw is not realistic; remembering the last one the API answered with
+ * is, and in practice it is the request the reader wants.
+ */
+let _lastRequestId: string | null = null;
+export function noteRequestId(id: string | null | undefined): void {
+  if (id) _lastRequestId = id;
+}
+function lastRequestId(): string | undefined {
+  return _lastRequestId ?? undefined;
+}
 const MAX_PER_SESSION = 8;
 
 let sent = 0;
@@ -49,6 +66,16 @@ export interface ReportContext {
   componentStack?: string;
   /** Next's error digest, which correlates to the server log line. */
   digest?: string;
+  /**
+   * The backend's own id for the request that failed, read off `X-Request-ID`.
+   *
+   * The digest correlates a browser crash to Next's SERVER log. This correlates
+   * it to the API's — which is the half that matters when the failure is a
+   * checkout that did not complete, because the interesting record is the one
+   * written by the endpoint, not by the renderer. Set automatically by the
+   * response interceptor in lib/api.ts; nothing has to remember to pass it.
+   */
+  requestId?: string;
 }
 
 /** Query strings on this site carry reset and rating tokens. Never send them. */
@@ -81,6 +108,7 @@ export function reportError(error: unknown, context: ReportContext): void {
       source: context.source,
       component_stack: context.componentStack?.slice(0, 2000),
       digest: context.digest,
+      request_id: context.requestId ?? lastRequestId(),
       url: safeUrl(),
       user_agent: navigator.userAgent.slice(0, 300),
       viewport: `${window.innerWidth}x${window.innerHeight}`,

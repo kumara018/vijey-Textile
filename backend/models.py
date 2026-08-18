@@ -481,6 +481,11 @@ class ClientError(Base):
     component_stack = Column(Text, nullable=True)
     # Next's digest correlates a browser report to the server log line.
     digest          = Column(String(100), nullable=True, index=True)
+    # The API's own id for the request that failed, read off X-Request-ID by
+    # the response interceptor. The digest joins a crash to Next's server log;
+    # this joins it to the API's, which is the record that matters when the
+    # failure was a checkout rather than a render.
+    request_id      = Column(String(64), nullable=True, index=True)
     url             = Column(String(500), index=True)
     user_agent      = Column(String(300))
     viewport        = Column(String(40))

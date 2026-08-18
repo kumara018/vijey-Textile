@@ -85,6 +85,7 @@ class ClientErrorIn(BaseModel):
     source: str = Field(default="unknown", max_length=40)
     component_stack: str | None = Field(default=None, max_length=2000)
     digest: str | None = Field(default=None, max_length=100)
+    request_id: str | None = Field(default=None, max_length=64)
     url: str = Field(default="", max_length=500)
     user_agent: str = Field(default="", max_length=300)
     viewport: str = Field(default="", max_length=40)
@@ -117,6 +118,7 @@ def receive_client_error(
         source=payload.source,
         component_stack=payload.component_stack,
         digest=payload.digest,
+        request_id=payload.request_id,
         url=payload.url,
         user_agent=payload.user_agent,
         viewport=payload.viewport,
@@ -155,6 +157,7 @@ def recent_client_errors(
             "user_agent": r.user_agent,
             "viewport": r.viewport,
             "digest": r.digest,
+            "request_id": r.request_id,
             "stack": r.stack,
             "component_stack": r.component_stack,
             "created_at": str(r.created_at),

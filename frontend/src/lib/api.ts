@@ -1,5 +1,6 @@
 import * as C from './contracts';
 import axios from 'axios';
+import { noteRequestId } from './errorReporter';
 
 // Determine backend URL based on where the app is running.
 // - localhost / 127.0.0.1  →  local FastAPI server
@@ -58,11 +59,17 @@ function _applyNewTokenHeader(res: any) {
 api.interceptors.response.use(
   (res) => {
     _applyNewTokenHeader(res);
+    // Remember the backend's id for this request, so a crash reported later can
+    // name the exact server-side record. See errorReporter.noteRequestId.
+    noteRequestId(res.headers?.['x-request-id']);
     return res;
   },
   async (err) => {
     const url    = err.config?.url || '';
     const status = err.response?.status;
+    // A FAILED request is the one most worth correlating, so capture the id
+    // here too — this is the path that ends in an error boundary.
+    noteRequestId(err.response?.headers?.['x-request-id']);
 
     const isAuthEndpoint =
       url.includes('/api/auth/login')             ||

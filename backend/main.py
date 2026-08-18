@@ -8,9 +8,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Before any import can emit a line, so everything lands in one JSON stream.
+from logging_setup import configure_logging as _cfg_log  # noqa: E402
+_cfg_log(os.getenv("LOG_LEVEL", "INFO"))
+
 from database import engine, Base, SessionLocal
 import models
 import rate_limit
+from logging_setup import configure_logging, RequestContextMiddleware, log
 from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
 
@@ -131,6 +136,16 @@ def _migrate_db():
                 print("[Startup] Migrated: added is_verified to users")
         except Exception as e:
             print(f"[Startup] User migration note: {e}")
+
+        # ── client_errors columns ──────────────────────────────────────────
+        try:
+            ce_cols = [c["name"] for c in inspector.get_columns("client_errors")]
+            if "request_id" not in ce_cols:
+                conn.execute(text("ALTER TABLE client_errors ADD COLUMN request_id VARCHAR(64)"))
+                conn.commit()
+                print("[Startup] Migrated: added request_id to client_errors")
+        except Exception as e:
+            print(f"[Startup] client_errors migration note: {e}")
 
         # ── orders columns ─────────────────────────────────────────────────
         try:
@@ -606,6 +621,12 @@ app = FastAPI(
 # slowapi is gone — its storage backends are memory, Redis, Memcached, MongoDB
 # and etcd, and this deployment has Postgres and nothing else, so its counters
 # lived in a process that Render restarts whenever the shop goes quiet.
+# Added AFTER CORS so it sits OUTSIDE it: Starlette applies middleware in
+# reverse order of registration, and the request id has to be assigned before
+# anything else runs and still be present when the CORS layer writes headers on
+# the way out. Registered inside CORS, a preflight rejection would never get an
+# id and the failure would be invisible.
+app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -627,7 +648,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-New-Token"],
+    expose_headers=["X-New-Token", "X-Request-ID"],
 )
 
 upload_dir = os.getenv("UPLOAD_DIR", "uploads/products")
