@@ -71,14 +71,24 @@ function SignInInner() {
   const passwordRef = useRef<HTMLInputElement>(null);
   const codeRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Two ways to be on this page while already signed in.
+   *
+   * `switch=1` is the one that matters: Switch account used to sign you out
+   * first and land you here, so changing your mind cost you the session you
+   * arrived with. You now stay signed in for the whole visit — signing in as
+   * somebody else replaces the session, cancelling leaves it untouched.
+   */
   const isAddMode = params.get('add') === '1';
+  const isSwitchMode = params.get('switch') === '1';
+  const staysSignedIn = isAddMode || isSwitchMode;
 
   // Already signed in, and not deliberately adding another account.
   useEffect(() => {
-    if (authLoading || !user || isAddMode) return;
+    if (authLoading || !user || staysSignedIn) return;
     if (stage !== 'identifier' || identifier) return;
     router.replace(user.is_admin ? '/admin' : '/');
-  }, [user, authLoading, isAddMode, router, stage, identifier]);
+  }, [user, authLoading, staysSignedIn, router, stage, identifier]);
 
   // Focus follows the step. Without this a keyboard user has to tab back into
   // the form after every advance, which makes a three-step flow feel like

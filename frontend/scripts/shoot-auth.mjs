@@ -146,7 +146,10 @@ async function main() {
 
     const where = await send('Runtime.evaluate', { returnByValue: true, expression: 'location.pathname' });
     console.log(`  landed on ${where.result.value}`);
-    if (where.result.value.startsWith('/auth')) {
+    /* Only a WARNING if we did not ask to be here. Navigating to a sign-in
+       page on purpose — /auth/login?switch=1, say — is not a bounce, and
+       flagging it as one teaches you to ignore the warning. */
+    if (where.result.value.startsWith('/auth') && !new URL(URL_TARGET).pathname.startsWith('/auth')) {
       console.log('  WARNING: bounced to sign-in — the token did not take.');
     }
 

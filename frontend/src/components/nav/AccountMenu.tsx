@@ -107,14 +107,11 @@ export default function AccountMenu() {
           <Link href="/account" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Your account
           </Link>
-          <button
-            type="button"
-            role="menuitem"
-            className={item}
-            onClick={() => { setOpen(false); performLogout('/auth/login'); }}
-          >
+          {/* A navigation, not a sign-out — you stay signed in until someone
+              else actually signs in. */}
+          <Link href="/auth/login?switch=1" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Switch account
-          </button>
+          </Link>
           <button
             type="button"
             role="menuitem"

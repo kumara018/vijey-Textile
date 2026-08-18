@@ -90,11 +90,6 @@ function AccountInner() {
   const [profileError, setProfileError] = useState('');
 
   /* ── Password ───────────────────────────────────────────────────────── */
-  const [currentPw, setCurrentPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [savingPw, setSavingPw] = useState(false);
-  const [pwError, setPwError] = useState('');
 
   /**
    * ── Addresses ─────────────────────────────────────────────────────────
@@ -224,24 +219,6 @@ function AccountInner() {
     }
   };
 
-  const savePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPwError('');
-    if (!currentPw) { setPwError('Enter your current password.'); return; }
-    if (newPw.length < 8) { setPwError('Your new password needs at least 8 characters.'); return; }
-    if (newPw !== confirmPw) { setPwError('The two new passwords do not match.'); return; }
-    setSavingPw(true);
-    try {
-      await authAPI.updateProfile({ current_password: currentPw, new_password: newPw });
-      setCurrentPw(''); setNewPw(''); setConfirmPw('');
-      setAnnouncement('Your password has been changed.');
-    } catch (err: any) {
-      setPwError(err?.response?.data?.detail || 'We could not change your password. Check your current one.');
-    } finally {
-      setSavingPw(false);
-    }
-  };
-
   const revoke = async (s: SessionRow) => {
     setRevokingId(s.id);
     setConfirmingId(null);
@@ -364,47 +341,40 @@ function AccountInner() {
           {/* ── Password ─────────────────────────────────────────────── */}
           <section id="password" className="mt-[9vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
             <h2 className="font-display text-band font-light text-paper">Password</h2>
-            {/* Asked directly: "why password change is showing". Because this is
-                the only way to change it while you still know it — the reset
-                flow is for when you do not, and it costs an email round trip.
-                Saying so is cheaper than being asked a second time. */}
-            <p className="mt-3 max-w-[38ch] text-paper-muted">
-              Change it whenever you like — you will need the current one. If you have
-              forgotten it, sign out and use &ldquo;Forgotten password&rdquo; instead.
+            {/**
+              * CHANGING A PASSWORD GOES THROUGH THE EMAIL, NOT THROUGH THIS PAGE.
+              *
+              * A three-field form stood here — current, new, confirm — and it
+              * was removed on instruction: a change should go through the
+              * forgotten-password flow, with a code sent to the address on the
+              * account.
+              *
+              * That is the more secure instinct and it is worth writing down
+              * why. An in-page form proves only that the person knows the
+              * current password. Somebody who picks up an unlocked, already
+              * signed-in phone knows nothing and could still change it — and
+              * cannot, once the change needs a code sent to the mailbox the
+              * account is anchored to.
+              *
+              * It also collapses two code paths into one. The reset flow
+              * already existed for people who had forgotten theirs; keeping a
+              * second, weaker route for people who had not meant the weaker
+              * one was the route offered first.
+              */}
+            <p className="mt-4 max-w-[46ch] leading-relaxed text-paper-muted">
+              For your safety a password is changed by email rather than here. We send
+              a six-digit code to <span className="text-paper">{user.email}</span>;
+              enter it with your new password and it is done.
             </p>
-            <form onSubmit={savePassword} noValidate className="mt-8 max-w-[26rem] space-y-7">
-              <Field
-                label="Current password"
-                name="current_password"
-                type="password"
-                autoComplete="current-password"
-                value={currentPw}
-                onChange={(e) => { setCurrentPw(e.target.value); setPwError(''); }}
-              />
-              <Field
-                label="New password"
-                name="new_password"
-                type="password"
-                autoComplete="new-password"
-                value={newPw}
-                onChange={(e) => { setNewPw(e.target.value); setPwError(''); }}
-                hint="At least 8 characters, with an uppercase, a lowercase, a number and a symbol."
-              />
-              <Field
-                label="Confirm new password"
-                name="confirm_password"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPw}
-                onChange={(e) => { setConfirmPw(e.target.value); setPwError(''); }}
-                error={pwError || undefined}
-              />
-              <div className="pt-2">
-                <ActionButton type="submit" disabled={savingPw}>
-                  {savingPw ? 'Changing…' : 'Change password'}
-                </ActionButton>
-              </div>
-            </form>
+            <p className="mt-4 max-w-[52ch] text-sm text-paper-faint">
+              This way somebody who finds your phone already signed in still cannot
+              change your password — they would need your mailbox too.
+            </p>
+            <div className="mt-7">
+              <ActionLink href={`/auth/forgot-password?identifier=${encodeURIComponent(user.email)}`}>
+                Send me a code
+              </ActionLink>
+            </div>
           </section>
 
           {/* ── Devices ──────────────────────────────────────────────── */}

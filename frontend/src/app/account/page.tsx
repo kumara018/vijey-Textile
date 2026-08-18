@@ -106,11 +106,14 @@ function AccountInner() {
       <div className="mt-[9vh] flex flex-col items-start gap-6 border-t border-ink-edge/60 pt-10">
         <p className="text-rule uppercase text-paper-faint">Leaving</p>
 
-        <ActionButton tone="quiet" arrow={false} onClick={() => performLogout('/auth/login')}>
+        {/* A navigation, not a sign-out. Signing out first cost you the
+            session you arrived with the moment you changed your mind. */}
+        <ActionLink href="/auth/login?switch=1" tone="quiet" arrow={false}>
           Switch account
-        </ActionButton>
+        </ActionLink>
         <p className="-mt-3 max-w-[46ch] text-sm text-paper-faint">
-          Signs you out of this account and opens the sign-in page, so someone else can use their own.
+          Opens the sign-in page so someone else can use their own account. You stay
+          signed in here until they do — change your mind and nothing is lost.
         </p>
 
         <ActionButton tone="quiet" arrow={false} onClick={() => performLogout()}>
