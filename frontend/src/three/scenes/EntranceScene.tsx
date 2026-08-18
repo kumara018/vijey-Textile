@@ -300,6 +300,22 @@ function GarmentPlate({
   useEffect(() => () => { material.dispose(); haloMat.dispose(); halo.dispose(); },
     [material, haloMat, halo]);
 
+  /**
+   * Measurement hook, opt-in via `?measure=1` — the same convention CanvasHost
+   * uses to publish the renderer.
+   *
+   * "Is the garment fully in frame?" is the invariant this scene exists to
+   * guarantee, and it is the one thing a screenshot cannot answer honestly: the
+   * backdrop fills the frame, so pixel analysis cannot tell a subject touching
+   * the edge from a room that reaches it. Publishing the computed extents lets
+   * `check:hero-matrix` assert the geometry itself, at every viewport, instead
+   * of inferring it. Never present on a customer's page.
+   */
+  const measuring = useRef(false);
+  if (typeof window !== 'undefined' && !measuring.current) {
+    measuring.current = new URLSearchParams(window.location.search).get('measure') === '1';
+  }
+
   // Scratch vectors, allocated once. Anything created inside useFrame is
   // allocated sixty times a second and collected in bursts, which is a
   // stutter with a completely different cause and an identical symptom.
@@ -343,8 +359,8 @@ function GarmentPlate({
     const visH = 2 * SUBJECT_DEPTH * Math.tan((cam.fov * Math.PI) / 360);
     const visW = visH * cam.aspect;
 
-    const fill = 0.62 + 0.35 * p;
-    let h = visH * fill;
+    const wantedFill = 0.62 + 0.35 * p;
+    let h = visH * wantedFill;
     let plateW = h * aspect;
 
     // Width can bind before height on a narrow window, and the garment must
@@ -355,14 +371,20 @@ function GarmentPlate({
       h = plateW / aspect;
     }
 
+    // Half-extents in NDC, measured AFTER the width clamp. Reading the
+    // half-height back off `wantedFill` would be wrong on any viewport narrow
+    // enough for width to bind — the plate is shorter than asked for there, and
+    // the vertical clamp below would reserve margin that no longer exists.
+    const halfW = plateW / visW;
+    const halfH = h / visH;
+
     /**
      * Lateral placement. The copy column owns the left of a wide frame, so the
      * subject is staged right of centre and drifts in toward the middle as it
      * grows. On a frame too narrow to hold both — a phone — it centres, and the
      * copy scrim above it does the separating instead.
      */
-    const halfNdc = plateW / visW;                       // half-width, in NDC
-    const room = Math.max(0, 1 - halfNdc - 0.03);        // how far it may sit off-centre
+    const room = Math.max(0, 1 - halfW - 0.03);          // how far it may sit off-centre
     /**
      * Staged right, and it stays right.
      *
@@ -378,7 +400,10 @@ function GarmentPlate({
      * it collapses to almost zero and the subject centres itself.
      */
     const ndcX = Math.min(0.40 - 0.03 * p, room);
-    const ndcY = Math.min((0.015 - 0.03 * p), Math.max(0, 1 - fill - 0.015));
+    // Vertical headroom, from the real half-height. Both edges stay inside the
+    // frame with a margin at every viewport this can be asked to render at.
+    const headroom = Math.max(0, 1 - halfH - 0.015);
+    const ndcY = Math.max(-headroom, Math.min(0.015 - 0.03 * p, headroom));
 
     // Camera basis, so the subject is placed in the frame the camera is
     // currently pointing at rather than in world axes it has rotated away from.
@@ -403,6 +428,21 @@ function GarmentPlate({
 
     m.scale.set(plateW, h, 1);
     if (haloMesh.current) haloMesh.current.scale.set(plateW * 2.05, h * 1.5, 1);
+
+    if (measuring.current) {
+      // Normalised device coordinates: the frame is -1..1 on both axes, so
+      // anything outside that range is off screen and anything at exactly ±1
+      // is touching the edge. `fill` is the half-height because the plate is
+      // sized as a fraction of the visible height.
+      (window as unknown as { __heroFrame?: unknown }).__heroFrame = {
+        left: +(ndcX - halfW).toFixed(4),
+        right: +(ndcX + halfW).toFixed(4),
+        top: +(ndcY + halfH).toFixed(4),
+        bottom: +(ndcY - halfH).toFixed(4),
+        fill: +halfH.toFixed(3),
+        aspect: +cam.aspect.toFixed(3),
+      };
+    }
   });
 
   return (

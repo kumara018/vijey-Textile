@@ -554,6 +554,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # Port 3100 is where the production build is served for local
+        # verification (`next start -p 3100`), which is the only place the real
+        # security headers, the real CSP and the real bundle are exercised
+        # before a deploy. Without it every browser-driven gate ran against an
+        # app whose API calls were all failing, and reported the resulting
+        # empty pages as passes.
+        "http://localhost:3100",
+        "http://127.0.0.1:3100",
         "https://vijeytextile.com",
         "https://www.vijeytextile.com",
         "https://vijey-textile.vercel.app",

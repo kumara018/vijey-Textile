@@ -30,6 +30,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromePath } from './chrome-path.mjs';
+import { publicRoutes, assertRoutesExist } from './routes.mjs';
 
 const CHROME = chromePath();
 const arg = (n, d) => {
@@ -37,14 +38,27 @@ const arg = (n, d) => {
   return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : d;
 };
 const BASE = arg('url', 'http://localhost:3000');
-const ROUTES = (arg('routes', [
-  '/', '/products', '/about', '/support', '/contact',
-  '/shipping-policy', '/return-policy', '/privacy-policy', '/terms',
-  '/auth/login', '/auth/register', '/auth/forgot-password',
-  '/cart', '/wishlist',
-].join(','))).split(',').map((r) => (r.startsWith('/') ? r : '/' + r.replace(/^.*?[\/]Git[\/]?/, '')));
+const ROUTES = arg('routes', null)
+  ? arg('routes').split(',').map((r) => (r.startsWith('/') ? r : '/' + r))
+  : publicRoutes(new URL('../src/app', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 const MAX_TABS = Number(arg('max', 80));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * The route list is derived from the App Router, and the server is asked to
+ * confirm it before anything is measured. Both halves matter: a hand-written
+ * list drifts, and Next answers an unknown path with a soft 404 that has a
+ * heading, links and focus rings — so a gate reading the DOM cannot tell it
+ * from a real page. Five entries in the old hardcoded list were doing exactly
+ * that. See scripts/routes.mjs.
+ */
+const missingRoutes = await assertRoutesExist(BASE, ROUTES);
+if (missingRoutes.length) {
+  console.error('routes the server does not serve — refusing to measure them:');
+  for (const m of missingRoutes) console.error(`  ! ${m}`);
+  process.exit(1);
+}
+
 
 let port = 9900;
 function launch(flags = []) {

@@ -27,6 +27,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { chromePath } from './chrome-path.mjs';
+import { publicRoutes, assertRoutesExist } from './routes.mjs';
 
 const CHROME = chromePath();
 const arg = (n, d) => {
@@ -46,14 +47,27 @@ const GPU = arg('gpu', 'high-performance'); // or 'low-power'
  * would be a false row — those are covered by the keyboard/reduced-motion pass
  * against a signed-in session instead.
  */
-const ROUTES = (arg('routes', [
-  '/', '/products', '/about', '/support', '/contact',
-  '/shipping-policy', '/return-policy', '/privacy-policy', '/terms',
-  '/auth/login', '/auth/register', '/auth/forgot-password',
-  '/cart', '/wishlist',
-].join(','))).split(',');
+const ROUTES = arg('routes', null)
+  ? arg('routes').split(',').map((r) => (r.startsWith('/') ? r : '/' + r))
+  : publicRoutes(new URL('../src/app', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * The route list is derived from the App Router, and the server is asked to
+ * confirm it before anything is measured. Both halves matter: a hand-written
+ * list drifts, and Next answers an unknown path with a soft 404 that has a
+ * heading, links and focus rings — so a gate reading the DOM cannot tell it
+ * from a real page. Five entries in the old hardcoded list were doing exactly
+ * that. See scripts/routes.mjs.
+ */
+const missingRoutes = await assertRoutesExist(BASE, ROUTES);
+if (missingRoutes.length) {
+  console.error('routes the server does not serve — refusing to measure them:');
+  for (const m of missingRoutes) console.error(`  ! ${m}`);
+  process.exit(1);
+}
+
 
 const profile = mkdtempSync(join(tmpdir(), 'measure-'));
 const chrome = spawn(CHROME, [
@@ -135,9 +149,19 @@ try {
   for (const route of ROUTES) {
     errors = [];
     await cdp.send('Page.navigate', { url: `${BASE}${route}?measure=1` });
-    // Let the tier resolve, the scene mount and the first frames settle before
-    // counting anything — the governor can still be moving in the first second.
-    await sleep(5000);
+    /**
+     * Settle before counting.
+     *
+     * Five seconds was enough when the homepage had no canvas. It is not now:
+     * the route has to resolve a tier, dynamically import the canvas, fetch and
+     * decode the hero texture, and clear the frame governor's six-second
+     * warm-up. Measured at 5s the homepage reported "inherits · 12fps" — no
+     * scene mounted and a frame rate taken mid-startup — which reads as a
+     * catastrophic regression and is entirely an artefact of asking too early.
+     * Twelve seconds puts every route in steady state, which is the only state
+     * worth reporting.
+     */
+    await sleep(12000);
 
     // Count presented frames over the window using rAF, which only fires on a
     // compositing frame. This measures what the user sees, not what a timer

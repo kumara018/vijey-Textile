@@ -173,10 +173,29 @@ export default function CanvasHost({ children }: { children?: React.ReactNode })
       let t: number;
       if (section) {
         const rect = section.getBoundingClientRect();
-        const span = Math.max(1, rect.height - window.innerHeight);
-        const p = Math.min(1, Math.max(0, -rect.top / span));
-        // Hold, then release over the last fifth of the pin.
-        t = Math.min(1, Math.max(0, (p - 0.8) / 0.2));
+        const vh = window.innerHeight || 1;
+        /**
+         * THE FADE STARTS WHERE THE HERO ENDS, NOT BEFORE IT.
+         *
+         * The previous version released over the last fifth of the pin, and
+         * `check:hero-matrix` caught what that actually does: at the end of the
+         * pin the scene is at opacity 0, the poster is hidden because the scene
+         * had taken over, and the sticky frame — still filling the entire
+         * viewport, because the section has not released yet — is EMPTY. On
+         * four of six configurations the last stretch of the opening was a
+         * blank dark screen. That is the same "gap" complaint arriving by a
+         * different route, and no screenshot at the top of the page would ever
+         * have shown it.
+         *
+         * The sections below are opaque and sit above this canvas, so they hide
+         * it as they scroll up — the scene does not need to get out of their
+         * way. It only needs to stop costing frames once it is genuinely off
+         * screen. So: full strength for the whole pin, then fade across the
+         * next two thirds of a viewport, by which point the next movement has
+         * covered the frame anyway.
+         */
+        const past = vh - rect.bottom;   // < 0 while the pin is still running
+        t = Math.min(1, Math.max(0, past / (vh * 0.66)));
       } else {
         // Routes without a pinned hero keep the original behaviour: the scene
         // is an opening, and everything past it is type and photography.
