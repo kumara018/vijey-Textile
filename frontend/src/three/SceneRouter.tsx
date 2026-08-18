@@ -74,12 +74,32 @@ export default function SceneRouter() {
     outWeight.current = 1;
   }, [scene]);
 
+  // 'plain' is every route that is not the entrance. Declared here rather
+  // than further down because the dissolve rate below reads it.
+  const idle = scene === 'plain';
+
+  /**
+   * LEAVING IS FAST. ARRIVING IS SLOW.
+   *
+   * One rate served both directions — 0.055 per frame, roughly 80 frames to
+   * fall under 1%, so about a second and a third. That was right while this
+   * router cross-faded one scene into another: you want to watch the old room
+   * give way.
+   *
+   * It stopped being right when the scene became the entrance and nothing
+   * else. Every navigation is now "scene → nothing", and that second and a
+   * third is spent laying a ghost of the entrance over the page somebody just
+   * asked for. Arriving keeps the slow reveal, because the entrance is the one
+   * place the scene is the point; leaving clears in about a fifth of a second.
+   */
   useFrame((_, delta) => {
     // Same frame-rate normalisation as the camera rig: a fixed lerp factor
     // makes the crossfade twice as fast on a 120Hz display.
-    const k = 1 - Math.pow(1 - 0.055, Math.min(delta, 0.1) * 60);
+    const step = Math.min(delta, 0.1) * 60;
+    const k = 1 - Math.pow(1 - 0.055, step);
+    const kOut = 1 - Math.pow(1 - (idle ? 0.34 : 0.055), step);
     inWeight.current += (1 - inWeight.current) * k;
-    outWeight.current += (0 - outWeight.current) * k;
+    outWeight.current += (0 - outWeight.current) * kOut;
   });
 
   // Drop the outgoing scene once it is genuinely invisible, releasing its
@@ -107,7 +127,6 @@ export default function SceneRouter() {
   // tool someone has open all day — must reach genuinely zero draw calls, not
   // "a cheap scene". The substrate stays mounted only long enough to fade the
   // previous scene out, then stops entirely.
-  const idle = scene === 'plain';
   /**
    * The dust field is off on the ENTRANCE, and dimming it was not enough.
    *
