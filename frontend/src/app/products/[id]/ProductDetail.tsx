@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { mediaUrl } from '@/lib/media';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
@@ -49,6 +50,7 @@ function imageUrl(src?: string): string | null {
 
 export default function ProductDetail({ id }: { id: number }) {
   const { user } = useAuth();
+  const router = useRouter();
   const { addItem } = useCart();
   const { wishlistIds, toggle } = useWishlist();
   const queryClient = useQueryClient();
@@ -103,22 +105,45 @@ export default function ProductDetail({ id }: { id: number }) {
     if (!product) return;
     if (product.size_options?.length > 0 && !size) {
       setFormError('Choose a size first.');
-      return;
+      return false;
     }
     if (product.colors?.length > 0 && !colour) {
       setFormError('Choose a colour first.');
-      return;
+      return false;
     }
     setFormError('');
     setAdding(true);
     try {
       await addItem(product.id, quantity, size, colour);
       setAnnouncement(`${product.name} added to your bag.`);
+      return true;
     } catch (err: any) {
       setFormError(err?.response?.data?.detail || 'We could not add that to your bag. Please try again.');
+      return false;
     } finally {
       setAdding(false);
     }
+  };
+
+  /**
+   * BUY IT NOW — the step that was missing between choosing a piece and paying
+   * for one.
+   *
+   * "Add to bag" was the only thing this page could do. A customer who has
+   * decided had to add, notice the bag count change somewhere in the header,
+   * find the bag, open it, and then find checkout — four navigations after the
+   * decision was already made. On a phone that is where orders are lost, and
+   * it is why every shop worth copying puts a second, quieter button beside
+   * the first.
+   *
+   * It reuses `add` rather than a separate path: the same validation, the same
+   * stock error, the same cart. The only difference is where you end up. That
+   * matters — a buy button that skipped the cart would need its own copy of
+   * every rule, and the two would drift.
+   */
+  const buyNow = async () => {
+    const ok = await add();
+    if (ok) router.push('/checkout');
   };
 
   const keep = async () => {
@@ -184,16 +209,37 @@ export default function ProductDetail({ id }: { id: number }) {
       <Announce message={announcement} />
 
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
+        {/**
+          * THE WAY BACK, DRAWN AS A CONTROL.
+          *
+          * This was a breadcrumb — two rule-sized grey links separated by a
+          * dot — and it still drew the question "how can we go back". That is
+          * the answer: it read as a label, not as something you press. A back
+          * control has to look pressable before anyone discovers that it is.
+          *
+          * A ring holding an arrow, at the size of a thumb. On approach the
+          * ring fills with brass and the arrow steps left. The category name
+          * stays beside it, so it says where back goes rather than only that
+          * back exists.
+          */}
         <nav aria-label="Breadcrumb" className="mb-10">
-          <ol className="flex flex-wrap items-baseline gap-x-3 text-rule uppercase text-paper-faint">
-            <li><Link href="/products" className="transition-colors duration-500 hover:text-paper motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">Every piece</Link></li>
-            <li aria-hidden="true">·</li>
-            <li>
-              <Link href={`/products?category=${encodeURIComponent(product.category)}`} className="transition-colors duration-500 hover:text-paper motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
-                {product.category}
-              </Link>
-            </li>
-          </ol>
+          <Link
+            href={`/products?category=${encodeURIComponent(product.category)}`}
+            aria-label={`Back to ${product.category}`}
+            className="group inline-flex items-center gap-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+          >
+            <span
+              aria-hidden="true"
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-ink-edge text-paper-muted transition-colors duration-500 group-hover:border-brass-bright group-hover:text-brass-bright motion-reduce:transition-none"
+            >
+              <span className="text-lg leading-none transition-transform duration-500 group-hover:-translate-x-0.5 motion-reduce:transition-none">
+                &larr;
+              </span>
+            </span>
+            <span className="text-rule uppercase text-paper-faint transition-colors duration-500 group-hover:text-paper motion-reduce:transition-none">
+              {product.category}
+            </span>
+          </Link>
         </nav>
       </div>
 
@@ -388,6 +434,11 @@ export default function ProductDetail({ id }: { id: number }) {
               <ActionButton onClick={add} disabled={adding || soldOut}>
                 {soldOut ? 'Sold out' : adding ? 'Adding…' : 'Add to bag'}
               </ActionButton>
+              {!soldOut && (
+                <ActionButton tone="lead" onClick={buyNow} disabled={adding}>
+                  Buy it now
+                </ActionButton>
+              )}
               <ActionButton tone="quiet" arrow={false} onClick={keep}>
                 {kept ? 'Kept' : 'Keep for later'}
               </ActionButton>

@@ -138,17 +138,27 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 
 /** Route → scene. Kept beside the store so both stay in sync. */
 export function sceneForPath(pathname: string): SceneId {
+  /**
+   * THE SCENE IS THE ENTRANCE, AND NOWHERE ELSE.
+   *
+   * Every route used to get its own scene, and on a dark ground the drifting
+   * panels read as large brown rectangles sliding behind the merchandise. On
+   * the shelf that is a second grid competing with the photographs — the
+   * category rail and the REFINE control were sitting on top of moving brown
+   * blocks, and a customer comparing two lehengas was reading them through
+   * animated furniture.
+   *
+   * The instinct behind "make it cinematic" is right about the entrance and
+   * wrong about everywhere else. A film has one title sequence, not one per
+   * scene. The entrance still carries the full stack; the moment somebody is
+   * choosing, paying, or reading their own records, the background stops
+   * asking for attention.
+   *
+   * `plain` is in RESTRAINED below, so this also takes the effects budget off
+   * every page that is not the homepage — which is most of the time a phone
+   * spends on this site.
+   */
   if (pathname === '/') return 'entrance';
-  if (pathname.startsWith('/products/')) return 'chamber';
-  if (pathname.startsWith('/products')) return 'gallery';
-  if (pathname.startsWith('/cart') || pathname.startsWith('/wishlist')) return 'vault';
-  if (pathname.startsWith('/checkout')) return 'terminal';
-  if (
-    pathname.startsWith('/orders') ||
-    pathname.startsWith('/account') ||
-    pathname.startsWith('/returns')
-  ) return 'records';
-  if (isAuthRoute(pathname)) return 'gate';
   return 'plain';
 }
 

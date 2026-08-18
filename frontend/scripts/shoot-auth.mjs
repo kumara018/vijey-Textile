@@ -36,6 +36,11 @@ const WIDTH = Number(arg('width', 1440));
 const HEIGHT = Number(arg('height', 900));
 const Y = Number(arg('y', 0));
 const NAME = arg('name', 'auth');
+/* Optional: a JS expression run after load and before the shot, for states
+   that only exist behind an interaction — an overlay, a menu, a dialog. The
+   Browser pane cannot composite in this environment, so a headless click is
+   the only way to photograph one. */
+const CLICK = arg('click', '');
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -125,6 +130,11 @@ async function main() {
 
     await send('Page.navigate', { url: URL_TARGET });
     await sleep(9000);
+
+    if (CLICK) {
+      await send('Runtime.evaluate', { expression: CLICK });
+      await sleep(1600);
+    }
 
     if (Y > 0) {
       await send('Input.dispatchMouseEvent', {

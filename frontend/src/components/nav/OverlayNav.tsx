@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, User } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import AccountMenu from '@/components/nav/AccountMenu';
 import { STORE } from '@/lib/config';
 
 /**
@@ -148,13 +149,9 @@ export default function OverlayNav() {
           </Link>
 
           <div className="pointer-events-auto flex items-center gap-1 sm:gap-3">
-            <Link
-              href={user ? '/account' : '/auth/login'}
-              aria-label={user ? 'Account' : 'Sign in'}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
-            >
-              <User size={18} />
-            </Link>
+            {/* The icon was a plain link to /account. It opens a menu now —
+                see components/nav/AccountMenu.tsx. */}
+            <AccountMenu />
 
             <Link
               href="/cart"
@@ -217,27 +214,68 @@ export default function OverlayNav() {
             </button>
           </div>
 
+          {/**
+            * THE INDEX IS A CONTENTS PAGE, NOT A SHOUT.
+            *
+            * Each category was set in `text-chapter` — clamp(2.4rem, 7.5vw,
+            * 6.5rem), so up to 104px. Six of those stacked fill the screen
+            * edge to edge with nothing but names, and size on its own is not
+            * impact: at that scale the six rows are indistinguishable from one
+            * another, the eye has nowhere to rest, and the note explaining
+            * what each category is for is a grey whisper 90px away from the
+            * word it belongs to. Big is not the same as considered.
+            *
+            * Halved, and the room that frees is spent on craft instead:
+            *
+            *   A BRASS RULE DRAWS ACROSS THE ROW on approach — scaleX from the
+            *   left, 620ms, compositor-only. That is the one moment of motion,
+            *   and it points the way the link goes.
+            *
+            *   THE NUMERAL LIGHTS. It is the quietest element on the row and
+            *   the one that says this is an ordered list of a shop's whole
+            *   stock, so it earns the accent rather than the name does.
+            *
+            *   THE NOTE SITS UNDER THE NAME, not across the row, so "First
+            *   celebrations" reads as a description of Baby Frocks rather than
+            *   as a second column of unrelated text.
+            *
+            * The staggered arrival is unchanged — it is this brand's motion
+            * signature and it was the part that was already right.
+            */}
           <nav className="flex flex-1 flex-col justify-center py-10" aria-label="Categories">
             <ul className="mx-auto w-full max-w-[92rem]">
               {CATEGORIES.map((c, i) => (
                 <li key={c.name} className="border-t border-white/10 last:border-b">
                   <Link
                     href={`/products?category=${encodeURIComponent(c.name)}`}
-                    className="group flex items-baseline gap-5 py-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-9 sm:py-6"
+                    className="group relative flex items-baseline gap-5 py-5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-9"
                     style={{
                       // Staggered arrival, bottom-up — the motion signature for
                       // this brand. Skipped entirely under reduced motion.
                       transitionDelay: open ? `${90 + i * 45}ms` : '0ms',
                     }}
                   >
-                    <span className="w-8 shrink-0 font-display text-[0.8rem] tabular-nums text-white/30">
+                    {/* The rule that draws itself across the row. */}
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-brass-bright transition-transform duration-[620ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] group-hover:scale-x-100 motion-reduce:transition-none"
+                    />
+                    <span className="w-8 shrink-0 font-display text-[0.8rem] tabular-nums text-white/30 transition-colors duration-500 group-hover:text-brass-bright motion-reduce:transition-none">
                       {String(i + 1).padStart(2, '0')}
                     </span>
-                    <span className="font-display text-chapter font-light text-white/85 transition-colors duration-500 group-hover:text-white">
-                      {c.name}
+                    <span className="min-w-0">
+                      <span className="block font-display text-[clamp(1.6rem,3.4vw,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-white/85 transition-colors duration-500 group-hover:text-white motion-reduce:transition-none">
+                        {c.name}
+                      </span>
+                      <span className="mt-1.5 block text-caption uppercase text-white/30 transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
+                        {c.note}
+                      </span>
                     </span>
-                    <span className="ml-auto hidden text-caption uppercase text-white/30 transition-colors duration-500 group-hover:text-maroon-300 md:block">
-                      {c.note}
+                    <span
+                      aria-hidden="true"
+                      className="ml-auto self-center text-lg leading-none text-white/0 transition-all duration-500 group-hover:translate-x-1 group-hover:text-brass-bright motion-reduce:transition-none"
+                    >
+                      &rarr;
                     </span>
                   </Link>
                 </li>
