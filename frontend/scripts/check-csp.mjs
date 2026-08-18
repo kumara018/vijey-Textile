@@ -147,28 +147,56 @@ try {
    * permits it. Independent of whether the catalogue happens to contain a row
    * or a page happens to render a card.
    */
-  const MEDIA_PROBE =
-    'https://res.cloudinary.com/dovkyontt/image/upload/v1786526535/vijeytextile/products/t6jrzmdfyp8pms3hjdw2.jpg';
+  /**
+   * THE POLICY MUST ALLOW THE HOST THE MEDIA ACTUALLY COMES FROM.
+   *
+   * Walking the routes proves the policy does not break the pages. It does not
+   * prove the policy serves the SHOP — and it did not: `img-src` was written
+   * from what the frontend code references, and every image path there is
+   * backend-relative, so the policy allowed the API origin and nothing else
+   * while the backend stores absolute res.cloudinary.com URLs. Every product
+   * picture on the live site would have been refused, and no policy page has a
+   * product on it, so nothing else here could catch it.
+   *
+   * A CSP VIOLATION AND A 404 ARE DIFFERENT ANSWERS, and the first version of
+   * this check could not tell them apart — it asserted the image DECODED, so a
+   * probe URL that rotted looked exactly like a blocked host. That is not
+   * hypothetical: porting this file to the sister shop rewrote the URL's path
+   * and the gate reported "res.cloudinary.com is not permitted by img-src"
+   * while the header plainly permitted it.
+   *
+   * The question is whether the browser was ALLOWED to make the request. So the
+   * verdict is "no CSP violation was logged"; whether the bytes came back is
+   * reported alongside as information. Cloudinary's own permanently-available
+   * demo asset is used rather than one of the shop's, because the host is what
+   * `img-src` governs and a shop asset can be deleted.
+   */
+  const MEDIA_PROBE = 'https://res.cloudinary.com/demo/image/upload/sample.jpg';
   seen = [];
   const probe = await cdp.send('Runtime.evaluate', {
     awaitPromise: true, returnByValue: true,
     expression: `new Promise((done) => {
       const i = new Image();
-      i.onload = () => done({ ok: true, w: i.naturalWidth });
-      i.onerror = () => done({ ok: false });
+      i.onload = () => done({ decoded: true, w: i.naturalWidth });
+      i.onerror = () => done({ decoded: false });
       i.src = ${JSON.stringify(MEDIA_PROBE)};
-      setTimeout(() => done({ ok: false, timeout: true }), 12000);
+      setTimeout(() => done({ decoded: false, timeout: true }), 12000);
     })`,
   });
   await sleep(500);
   const media = probe.result?.value ?? {};
   const mediaBlocked = [...new Set(seen)];
-  if (!media.ok || mediaBlocked.length) {
-    violationCount += Math.max(1, mediaBlocked.length);
-    console.log(`BLOCKED  product media — res.cloudinary.com is not permitted by img-src`);
+  if (mediaBlocked.length) {
+    violationCount += mediaBlocked.length;
+    console.log('BLOCKED  product media   res.cloudinary.com is refused by img-src');
     for (const m of mediaBlocked.slice(0, 2)) console.log(`      ! ${m}`);
+  } else if (media.decoded) {
+    console.log(`clean    product media   host permitted, image decoded (${media.w}px wide)`);
   } else {
-    console.log(`clean    product media    real Cloudinary image loaded (${media.w}px wide)`);
+    // Permitted but not delivered. Worth saying out loud — it is not a policy
+    // failure and must not fail this gate, but a reader should know the bytes
+    // did not arrive.
+    console.log('clean    product media   host permitted by img-src (probe asset did not load)');
   }
 
   console.log('-'.repeat(66));
