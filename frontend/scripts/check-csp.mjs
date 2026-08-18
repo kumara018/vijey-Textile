@@ -130,6 +130,47 @@ try {
     for (const u of uniq.slice(0, 4)) console.log(`      ! ${u}`);
   }
 
+  /**
+   * THE POLICY MUST ALLOW THE HOST THE MEDIA ACTUALLY COMES FROM.
+   *
+   * Walking the routes proves the policy does not break the pages. It does not
+   * prove the policy serves the SHOP — and it did not: `img-src` was written
+   * from what the frontend code references, and every image path in the
+   * frontend is backend-relative, so the policy allowed the API origin and
+   * nothing else. The backend uploads product photographs and videos to
+   * Cloudinary and stores absolute res.cloudinary.com URLs, which meant every
+   * product picture on the live site would have been refused.
+   *
+   * Nothing above catches that, because a policy page has no product on it.
+   * So this asks the browser directly, from inside a real document under the
+   * real header: load a genuine Cloudinary image and see whether the policy
+   * permits it. Independent of whether the catalogue happens to contain a row
+   * or a page happens to render a card.
+   */
+  const MEDIA_PROBE =
+    'https://res.cloudinary.com/dovkyontt/image/upload/v1786526535/vijeytextile/products/t6jrzmdfyp8pms3hjdw2.jpg';
+  seen = [];
+  const probe = await cdp.send('Runtime.evaluate', {
+    awaitPromise: true, returnByValue: true,
+    expression: `new Promise((done) => {
+      const i = new Image();
+      i.onload = () => done({ ok: true, w: i.naturalWidth });
+      i.onerror = () => done({ ok: false });
+      i.src = ${JSON.stringify(MEDIA_PROBE)};
+      setTimeout(() => done({ ok: false, timeout: true }), 12000);
+    })`,
+  });
+  await sleep(500);
+  const media = probe.result?.value ?? {};
+  const mediaBlocked = [...new Set(seen)];
+  if (!media.ok || mediaBlocked.length) {
+    violationCount += Math.max(1, mediaBlocked.length);
+    console.log(`BLOCKED  product media — res.cloudinary.com is not permitted by img-src`);
+    for (const m of mediaBlocked.slice(0, 2)) console.log(`      ! ${m}`);
+  } else {
+    console.log(`clean    product media    real Cloudinary image loaded (${media.w}px wide)`);
+  }
+
   console.log('-'.repeat(66));
   console.log(violationCount
     ? `${violationCount} CSP violation(s) — the policy is breaking the site.`

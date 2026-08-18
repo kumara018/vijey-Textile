@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "check:bundle": "node scripts/check-bundle-budget.mjs",
     "check:csp": "node scripts/check-csp.mjs",
-    "check:hero-matrix": "node scripts/check-hero-matrix.mjs"
+    "check:hero-matrix": "node scripts/check-hero-matrix.mjs",
+    "check:api-base": "node scripts/check-api-base.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.8.0",
