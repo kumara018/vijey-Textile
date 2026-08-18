@@ -97,6 +97,30 @@ def place_order(
             detail="Your cart is empty. Please add items before placing an order.",
         )
 
+    # ── VERIFY FIRST. NOTHING ELSE HAPPENS BEFORE THIS. ─────────────────
+    #
+    # This call used to sit AFTER the stock check, and the comment above it
+    # read "Payment must be verified BEFORE any order/stock mutation". That
+    # was true of the order and of the stock, and it missed the mutation that
+    # matters most: the stock-error branch below calls
+    # `_refund_uncredited_payment()` with whatever `razorpay_payment_id` the
+    # request supplied — using the shop's own Razorpay key — before anything
+    # has checked that the caller owns that payment.
+    #
+    # The attack is two lines of work. Put an out-of-stock item in a cart,
+    # POST an order carrying a REAL payment id belonging to somebody else and
+    # a garbage signature. The stock check fails, and the shop issues a
+    # genuine refund against that payment before the forged signature is ever
+    # examined. The money returns to the real payer, not the attacker — so it
+    # is not theft — but any payment id that can be observed or guessed can be
+    # reversed on demand, draining the merchant balance and corrupting the
+    # order-to-payment record. No proof of ownership is required at any point.
+    #
+    # Verification is a pure HMAC comparison against the Razorpay secret: no
+    # database reads, no network, nothing to lose by doing it first. It runs
+    # before the cart is even inspected.
+    _verify_razorpay_payment(payload.payment)
+
     items_snapshot = []
     subtotal = 0.0
     stock_error = None
@@ -125,9 +149,14 @@ def place_order(
         })
 
     if stock_error:
-        # The frontend only calls this endpoint after Razorpay's widget has
-        # already captured payment — so if we can't fulfill the order, that
-        # money needs to come back rather than vanish into a failed request.
+        # Safe to refund here, and only here: the signature above has already
+        # proved this payment belongs to this request. The frontend only calls
+        # this endpoint after Razorpay's widget has captured the money, so if
+        # the order cannot be fulfilled it has to come back rather than vanish
+        # into a failed request.
+        #
+        # Do not move this above `_verify_razorpay_payment`. That ordering is
+        # the bug this file was changed to fix.
         pay_id = payload.payment.razorpay_payment_id if payload.payment else None
         if pay_id:
             refund_id = _refund_uncredited_payment(pay_id, stock_error)
@@ -137,10 +166,6 @@ def place_order(
                 " Your payment will be refunded — our team has been notified."
             )
         raise HTTPException(status_code=400, detail=stock_error)
-
-    # Payment must be verified BEFORE any order/stock mutation — no order is
-    # ever created on an unverified or missing payment.
-    _verify_razorpay_payment(payload.payment)
 
     shipping_fee = 49.0
     total = subtotal + shipping_fee
