@@ -1,9 +1,11 @@
+import * as C from './contracts';
 import axios from 'axios';
+import { noteRequestId } from './errorReporter';
 
 // Determine backend URL based on where the app is running.
 // - localhost / 127.0.0.1  →  local FastAPI server
 // - anywhere else (Vercel) →  Render backend
-function getApiBase(): string {
+export function getApiBase(): string {
   if (typeof window === 'undefined') {
     // Server-side (Next.js SSR) — always use Render
     return 'https://vijey-textile.onrender.com';
@@ -57,11 +59,17 @@ function _applyNewTokenHeader(res: any) {
 api.interceptors.response.use(
   (res) => {
     _applyNewTokenHeader(res);
+    // Remember the backend's id for this request, so a crash reported later can
+    // name the exact server-side record. See errorReporter.noteRequestId.
+    noteRequestId(res.headers?.['x-request-id']);
     return res;
   },
   async (err) => {
     const url    = err.config?.url || '';
     const status = err.response?.status;
+    // A FAILED request is the one most worth correlating, so capture the id
+    // here too — this is the path that ends in an error boundary.
+    noteRequestId(err.response?.headers?.['x-request-id']);
 
     const isAuthEndpoint =
       url.includes('/api/auth/login')             ||
@@ -93,20 +101,20 @@ api.interceptors.response.use(
 );
 
 export const authAPI = {
-  register:            (data: object) => api.post('/api/auth/register', data),
-  verifyRegisterOtp:   (data: object) => api.post('/api/auth/verify-register-otp', data),
-  resendRegisterOtp:   (data: object) => api.post('/api/auth/resend-register-otp', data),
+  register:            (data: C.UserRegisterPayload) => api.post('/api/auth/register', data),
+  verifyRegisterOtp:   (data: { identifier: string; otp_code: string }) => api.post('/api/auth/verify-register-otp', data),
+  resendRegisterOtp:   (data: C.OtpRequestPayload) => api.post('/api/auth/resend-register-otp', data),
   login:               (data: object) => api.post('/api/auth/login', data),
-  sendLoginOtp:        (data: object) => api.post('/api/auth/send-login-otp', data),
-  verifyLoginOtp:      (data: object) => api.post('/api/auth/verify-login-otp', data),
-  evictAndLogin:       (data: object) => api.post('/api/auth/sessions/evict-and-login', data),
+  sendLoginOtp:        (data: C.UserLoginPayload) => api.post('/api/auth/send-login-otp', data),
+  verifyLoginOtp:      (data: C.LoginOtpVerifyPayload) => api.post('/api/auth/verify-login-otp', data),
+  evictAndLogin:       (data: C.DeviceEvictLoginPayload) => api.post('/api/auth/sessions/evict-and-login', data),
   // token: pass the account's own token explicitly when signing it out while
   // switching to another saved account — see the request interceptor above.
   logout:              (token?: string) => api.post('/api/auth/logout', {}, token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
   getMe:               ()             => api.get('/api/auth/me'),
   updateProfile:       (data: object) => api.put('/api/auth/me', data),
-  forgotPassword:      (data: object) => api.post('/api/auth/forgot-password', data),
-  resetPassword:       (data: object) => api.post('/api/auth/reset-password', data),
+  forgotPassword:      (data: C.OtpRequestPayload) => api.post('/api/auth/forgot-password', data),
+  resetPassword:       (data: C.ResetPasswordPayload) => api.post('/api/auth/reset-password', data),
   requestDeleteAccount:    ()             => api.post('/api/auth/request-delete-account'),
   confirmDeleteAccount:    (data: object) => api.post('/api/auth/confirm-delete-account', data),
   cancelDeleteAccount:     ()             => api.post('/api/auth/cancel-delete-account'),
@@ -114,6 +122,17 @@ export const authAPI = {
   confirmDeactivateAccount:(data: object) => api.post('/api/auth/confirm-deactivate-account', data),
   getSessions:         ()             => api.get('/api/auth/sessions'),
   revokeSession:       (id: number)   => api.delete(`/api/auth/sessions/${id}`),
+  /**
+   * Sign out everywhere, in ONE transaction on the server.  (AUTH-SPEC R5)
+   *
+   * Not a loop over revokeSession. The loop is fine for tidying up an old
+   * tablet and wrong for the case this exists to serve — a customer who thinks
+   * their account is compromised: it is not atomic, it races the sliding-session
+   * refresh below, and a partial failure leaves them believing they are safe
+   * when an attacker still holds a live token.
+   */
+  revokeAllSessions:   (exceptCurrent = true) =>
+    api.post('/api/auth/sessions/revoke-all', { except_current: exceptCurrent }),
 };
 
 export const productsAPI = {
@@ -135,7 +154,7 @@ export const cartAPI = {
 };
 
 export const ordersAPI = {
-  place:       (data: object)                => api.post('/api/orders/', data),
+  place:       (data: C.OrderCreatePayload)  => api.post('/api/orders/', data),
   getAll:      ()                            => api.get('/api/orders/'),
   getOne:      (id: number)                  => api.get(`/api/orders/${id}`),
   track:       (id: number)                  => api.get(`/api/orders/${id}/track`),
@@ -168,6 +187,15 @@ export const adminAPI = {
   markRefunded:            (id: number)                 => api.post(`/api/payments/admin/orders/${id}/mark-refunded`),
   resetToRefundInitiated:  (id: number)                 => api.post(`/api/payments/admin/orders/${id}/reset-to-refund-initiated`),
   getUsers:                ()                           => api.get('/api/admin/users'),
+  // GET /api/admin/admins — any admin may list. The revoke below is
+  // primary-only and enforced server-side (routers/admin.py:459); the client
+  // hides the control, it does not gate the action.
+  getAdmins:               ()                           => api.get('/api/admin/admins'),
+  // Admin-only read. Writing a report needs no auth (a crashing page has no
+  // session to offer); reading one does, because a stack trace names
+  // internal paths and component names.
+  getClientErrors:         ()                           => api.get('/api/client-errors/recent'),
+  revokeAdmin:             (id: number)                 => api.patch(`/api/admin/users/${id}/revoke-admin`),
   updateSettings:          (data: object)               => api.put('/api/admin/settings', data),
   getSupportRatings:       ()                           => api.get('/api/admin/support-ratings'),
 };
@@ -179,7 +207,7 @@ export const supportAPI = {
   createInteraction: (data: object) => api.post('/api/support/interactions', data),
   listInteractions:  ()             => api.get('/api/support/interactions'),
   getRatingPage:     (token: string) => api.get(`/api/support/rate/${token}`),
-  submitTokenRating: (token: string, data: object) => api.post(`/api/support/rate/${token}`, data),
+  submitTokenRating: (token: string, data: C.SupportRatingSubmitPayload) => api.post(`/api/support/rate/${token}`, data),
 };
 
 export const returnsAPI = {

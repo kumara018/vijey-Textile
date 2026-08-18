@@ -1,0 +1,5 @@
+{
+  "from": 0,
+  "to": 0.45,
+  "why": "Document-scroll fraction the hero camera move occupies. Read by BOTH scripts/render-sequence.mjs (which steps the page to these positions to produce the frames) and components/hero/SequenceHero.tsx (which scrubs them back). These must be the same numbers or the sequence plays over the wrong span."
+}

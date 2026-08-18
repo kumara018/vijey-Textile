@@ -1,0 +1,176 @@
+# The gates, enforced on every push and pull request.
+#
+# WHY THIS EXISTS.
+#
+# Until now every check ran in exactly two places: on my machine when I chose to
+# run it, and inside `npm run build` on Vercel. That is enough to catch a
+# mistake and not enough to prevent one, because a check nobody is obliged to
+# run is a suggestion. This session found three gates that were reporting green
+# on genuinely broken output — a hero a third blank, a frame swapped for a
+# different frame, an assertion measuring a two-pixel statistic. Fixing them is
+# worth little if the next commit can simply not run them.
+#
+# WHAT IT DOES NOT DO, DELIBERATELY.
+#
+# It does not render the hero. That needs a real GPU, a compositing browser and
+# roughly forty minutes; it is authoring work, not verification, and pretending
+# otherwise would produce a job that times out and gets disabled. The rendered
+# frames are committed artefacts, and what CI checks is that the COMMITTED ones
+# are present, alive and unchanged from the reviewed baseline.
+#
+# It does not run the browser drills or the accessibility passes either — both
+# need GPU Chrome against a live server. Those stay local and their results are
+# recorded in AUDIT.md. A gate that cannot honestly run where it is wired is
+# worse than no gate, which is the lesson the frame-content heuristic already
+# taught once.
+
+name: gates
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A second push to the same branch makes the first run irrelevant.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Stated inline rather than via node-version-file: this repo has no
+          # .nvmrc, and pointing at one that does not exist fails the job on
+          # its first step. 22 satisfies package.json engines (>=22 <25).
+          # A different major silently changes sharp's prebuilt binary and the
+          # AVIF decoder, so it must track engines if that ever moves.
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `ci` not `install`: it fails loudly when package.json and the lockfile
+      # disagree, which is the exact failure that took two Vercel builds down
+      # earlier in this project.
+      - name: install
+        run: npm ci
+
+      - name: types
+        run: npx tsc --noEmit
+
+      - name: tailwind config
+        run: npm run check:tailwind
+
+      # Every tier present, no truncated posters. This one was right all along
+      # and was reporting the posters as truncated while other checks said fine.
+      - name: hero assets present
+        run: npm run check:hero
+
+      # Every committed frame contains a rendered scene. Runs across all 540,
+      # not a sample — sampling is how eleven dead frames per tier shipped.
+      - name: hero frames alive
+        run: npm run check:frames
+
+      # Shipped imagery matches the reviewed baseline, by content hash.
+      - name: hero imagery unchanged
+        run: npm run check:visual
+
+      # Pure-logic tests: the payment state machine and the route->scene map.
+      # No browser, no GPU — anything needing those runs locally, on purpose.
+      - name: tests
+        run: npm test
+
+      # Last, because it is the slowest and the cheap checks should fail first.
+      - name: build
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+
+      # A CSP is the one security header that can take a shop down: too tight
+      # and the browser silently refuses to open the Razorpay modal, so checkout
+      # appears to simply do nothing. Neither that nor a too-loose policy shows
+      # up in a build, so this drives a real browser and reads the console.
+      # It already caught one break — connect-src built from the build-time API
+      # URL while getApiBase() resolves at runtime.
+      - name: csp breaks nothing
+        run: |
+          npx next start -p 3100 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3100/ || true)
+            [ "$code" = "200" ] && break
+            sleep 1
+          done
+          npm run check:csp -- --url http://localhost:3100
+
+      # Only meaningful AFTER a build, since it reads .next's own output.
+      # The fps/draw-call half of the performance budget cannot run here — it
+      # needs a real GPU and a live server — so this enforces the half that can:
+      # shipped JavaScript weight, which is what actually decides whether a
+      # customer on a mid-range Android can use the shop at all.
+      - name: bundle budget
+        run: npm run check:bundle
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # backend/runtime.txt is Heroku/Render format ("python-3.11.9"), which
+          # setup-python's python-version-file does not parse. Stated directly,
+          # and it must track that file.
+          python-version: '3.11'
+
+      - name: install
+        run: pip install -r requirements.txt
+
+      # Import-compile every module. Cheap, and it catches the class of error
+      # that otherwise only appears when Render boots the app and the first
+      # request 500s.
+      - name: compile
+        run: python -m compileall -q .
+
+      # The test suite. Chosen by consequence rather than coverage: an
+      # arithmetic slip in an order total, a cancellation that fails to restore
+      # stock, an endpoint that answers another customer's order, a forged
+      # payment signature that buys goods. None of those raise an exception,
+      # none appear in a log, and every one of them is found by a customer
+      # rather than by the shop.
+      #
+      # Also asserts the security properties AUTH-SPEC.md asks for, which are
+      # each one careless `if` away from regressing while every other test
+      # keeps passing.
+      - name: tests
+        run: python -m pytest tests/ -q
+
+      # Schema, referential integrity, money arithmetic and the auth boundary,
+      # against a throwaway database this job creates from the models.
+      #
+      # It cannot see production data — and should not — but it DOES catch the
+      # things that break structurally: a model column with no matching table,
+      # an order whose totals cannot reconcile, and any protected route that
+      # stops refusing anonymous callers. That last one is the check worth
+      # having on every commit: an auth regression is silent until it is
+      # catastrophic.
+      - name: database + api integrity
+        run: |
+          python -m uvicorn main:app --port 8000 &
+          for i in $(seq 1 40); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/products/ || true)
+            [ "$code" = "200" ] && break
+            sleep 1
+          done
+          python healthcheck.py --api http://localhost:8000

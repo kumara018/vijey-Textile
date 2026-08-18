@@ -1,0 +1,11 @@
+{
+  "tier": "rich",
+  "frames": 72,
+  "width": 2048,
+  "quality": 72,
+  "bytes": {
+    "avif": 2943830,
+    "webp": 3132662,
+    "posterAvif": 85574
+  }
+}

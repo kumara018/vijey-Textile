@@ -1,7 +1,7 @@
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
-import { authAPI } from '@/lib/api';
+import { authAPI, getApiBase } from '@/lib/api';
 
 export interface SavedSession {
   token: string;
@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       document.cookie = `auth_token=${storedToken}; path=/; max-age=7776000; SameSite=Lax`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
 
       // Always fetch fresh user data from server to pick up role changes (e.g. is_admin)
-      const API = process.env.NEXT_PUBLIC_API_URL || 'https://vijey-textile.onrender.com';
+      const API = getApiBase();
       fetch(`${API}/api/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       })
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Keep Render backend awake ─────────────────────────────────────────────
   useEffect(() => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'https://vijey-textile.onrender.com';
+    const API = getApiBase();
     const ping = () => fetch(`${API}/health`, { method: 'GET' }).catch(() => {});
     ping();
     const iv = setInterval(ping, 14 * 60 * 1000);
@@ -146,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Fetch fresh user data (picks up is_admin changes made after last login)
     let freshUser: User = session.user;
     try {
-      const API = process.env.NEXT_PUBLIC_API_URL || 'https://vijey-textile.onrender.com';
+      const API = getApiBase();
       const res = await fetch(`${API}/api/auth/me`, {
         headers: { Authorization: `Bearer ${session.token}` },
       });

@@ -1,0 +1,22 @@
+#!/bin/sh
+#
+# Verification gate. Runs BEFORE the commit is created, so a failure prevents
+# the commit rather than reporting alongside it.
+#
+# This exists because a type error was pushed after running `tsc` in the SAME
+# shell command as `git commit` — the error printed after the push had already
+# happened. A check that reports concurrently with the action it is meant to
+# gate is not a gate.
+#
+# Bypass with --no-verify only when you know exactly why.
+set -e
+
+cd "$(dirname "$0")/../frontend" || exit 0
+
+echo "pre-commit: verifying…"
+npm run --silent check:tailwind
+npm run --silent check:hero
+npm run --silent check:frames
+npx --no-install tsc --noEmit
+
+echo "pre-commit: ok"

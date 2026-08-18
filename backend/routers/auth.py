@@ -8,8 +8,32 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from database import get_db
 import models, schemas, auth as auth_utils
+from rate_limit import (
+    enforce_ip_limit, enforce_identifier_limit,
+    SEND_CODE, VERIFY_CODE, REGISTER, SESSION_SWAP,
+    BEGIN_PER_IP, BEGIN_PER_IDENTIFIER,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+
+
+# AUTH-SPEC R3 — a constant to verify against when there is no user.
+#
+# Computed once at import, never compared for truth. Its only purpose is to
+# give `verify_password` something real to chew on so an absent account costs
+# the same as a present one. bcrypt is slow BY DESIGN — that is the whole point
+# of it — and the previous code let Python's `or` short-circuit past it:
+#
+#     if not user or not verify_password(payload.password, user.password_hash)
+#
+# When `user` was None the hash never ran, so a missing account answered in
+# microseconds and a real account with a wrong password took ~100ms. The bodies
+# were identical; the TIMES differed by three orders of magnitude. That gap is
+# stable, measurable from anywhere, needs no credentials, and is the actual
+# enumeration vector on these endpoints.
+_DUMMY_HASH = auth_utils.hash_password("not-a-real-password-only-for-timing")
+
+
 
 MAX_DEVICES = 4
 
@@ -205,10 +229,13 @@ def _create_session_or_409(db: Session, user: models.User, request: Request) -> 
 # ── REGISTER ──────────────────────────────────────────────────────────────────
 
 @router.post("/register", status_code=201)
-def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
+def register(request: Request, payload: schemas.UserRegister, db: Session = Depends(get_db)):
     """Step 1 of signup: create the (unverified) account and send a 6-digit
     OTP to both email and mobile. The account only becomes usable once
     /verify-register-otp confirms it — see that endpoint for the token."""
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "register", REGISTER)
     existing_email = db.query(models.User).filter(models.User.email == payload.email.lower()).first()
     if existing_email and existing_email.is_verified:
         raise HTTPException(409, "An account with this email already exists. Please login.")
@@ -247,7 +274,10 @@ def register(payload: schemas.UserRegister, db: Session = Depends(get_db)):
 # ── VERIFY REGISTRATION OTP (Step 2) ──────────────────────────────────────────
 
 @router.post("/verify-register-otp", response_model=schemas.Token)
-def verify_register_otp(payload: schemas.LoginOTPVerify, request: Request, db: Session = Depends(get_db)):
+def verify_register_otp(request: Request, payload: schemas.LoginOTPVerify, db: Session = Depends(get_db)):
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "verify-register-otp", VERIFY_CODE)
     user = _find_user(db, payload.identifier)
     if not user:
         raise HTTPException(404, "Account not found.")
@@ -271,7 +301,10 @@ def verify_register_otp(payload: schemas.LoginOTPVerify, request: Request, db: S
 # ── RESEND REGISTRATION OTP ───────────────────────────────────────────────────
 
 @router.post("/resend-register-otp")
-def resend_register_otp(payload: schemas.OTPRequest, db: Session = Depends(get_db)):
+def resend_register_otp(request: Request, payload: schemas.OTPRequest, db: Session = Depends(get_db)):
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "resend-register-otp", SEND_CODE)
     user = _find_user(db, payload.identifier)
     if not user or user.is_verified:
         return {"message": "If a pending signup exists for this account, a new OTP has been sent."}
@@ -286,9 +319,26 @@ def resend_register_otp(payload: schemas.OTPRequest, db: Session = Depends(get_d
 
 @router.post("/login", response_model=schemas.Token)
 def login(payload: schemas.UserLogin, request: Request, db: Session = Depends(get_db)):
+    """
+    Password sign-in, kept alive alongside the OTP flow.
+
+    It had NO rate limit — the eight decorated endpoints all did, and this one
+    was missed because it is the older path the frontend no longer leads with.
+    An unthrottled endpoint that takes an identifier and a password and answers
+    differently for each is the most valuable target on the router, whether or
+    not the shop's own UI still uses it.
+    """
+    enforce_ip_limit(db, request, "login", VERIFY_CODE)
+    enforce_identifier_limit(db, payload.identifier)
     user = _find_user(db, payload.identifier)
 
-    if not user or not auth_utils.verify_password(payload.password, user.password_hash):
+    # AUTH-SPEC R3: always pay the hash, so presence and absence cost the same.
+    # `password_ok` is computed BEFORE the branch precisely so that no `or`
+    # can skip it.
+    password_ok = auth_utils.verify_password(
+        payload.password, user.password_hash if user else _DUMMY_HASH
+    )
+    if not user or not password_ok:
         raise HTTPException(
             status_code=401,
             detail="Incorrect email/phone or password. Please check and try again.",
@@ -346,27 +396,43 @@ def update_profile(
 # ── FORGOT PASSWORD — send OTP ────────────────────────────────────────────────
 
 @router.post("/forgot-password")
-def forgot_password(payload: schemas.OTPRequest, db: Session = Depends(get_db)):
+def forgot_password(request: Request, payload: schemas.OTPRequest, db: Session = Depends(get_db)):
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "forgot-password", SEND_CODE)
+    # AUTH-SPEC R1: per-identifier ceiling, on top of the per-IP one.
+    enforce_identifier_limit(db, payload.identifier)
     identifier = payload.identifier.strip()
     user = _find_user(db, identifier)
-    if not user:
-        # Don't reveal if user exists — just return success
-        return {"message": "If this account exists, an OTP has been sent."}
 
-    # Use email as identifier for OTP
-    otp = _create_otp(db, user.email, otp_type="reset")
-    notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
+    # AUTH-SPEC R2. The old code carried a comment saying "Don't reveal if user
+    # exists" directly above a branch that revealed it: a missing account got
+    # "If this account exists, an OTP has been sent" while a real one got
+    # "OTP sent to your registered email (abc***)" PLUS an `email_hint` field.
+    # Two different shapes, one of them with an extra key. A single request
+    # answered "is this phone number a customer of yours".
+    #
+    # One response now, on both paths, with no branch and no hint. The comment
+    # and the code finally agree.
+    if user:
+        otp = _create_otp(db, user.email, otp_type="reset")
+        notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
 
     return {
-        "message": f"OTP sent to your registered email ({user.email[:3]}***). Valid for 10 minutes.",
-        "email_hint": user.email[:3] + "***@" + user.email.split("@")[-1],
+        "message": (
+            "If an account exists for that phone or email, we have sent a code "
+            "to its registered email address. It is valid for 10 minutes."
+        )
     }
 
 
 # ── VERIFY OTP & RESET PASSWORD ───────────────────────────────────────────────
 
 @router.post("/reset-password")
-def reset_password(payload: schemas.OTPVerify, db: Session = Depends(get_db)):
+def reset_password(request: Request, payload: schemas.OTPVerify, db: Session = Depends(get_db)):
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "reset-password", VERIFY_CODE)
     identifier = payload.identifier.strip()
     user = _find_user(db, identifier)
     if not user:
@@ -384,10 +450,21 @@ def reset_password(payload: schemas.OTPVerify, db: Session = Depends(get_db)):
 # ── SEND LOGIN OTP (Step 1) ───────────────────────────────────────────────────
 
 @router.post("/send-login-otp")
-def send_login_otp(payload: schemas.UserLogin, db: Session = Depends(get_db)):
+def send_login_otp(request: Request, payload: schemas.UserLogin, db: Session = Depends(get_db)):
     """Verify credentials then send a 6-digit OTP to the user's email."""
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "send-login-otp", SEND_CODE)
+    # AUTH-SPEC R1: per-identifier ceiling, on top of the per-IP one.
+    enforce_identifier_limit(db, payload.identifier)
     user = _find_user(db, payload.identifier)
-    if not user or not auth_utils.verify_password(payload.password, user.password_hash):
+    # AUTH-SPEC R3: always pay the hash, so presence and absence cost the same.
+    # `password_ok` is computed BEFORE the branch precisely so that no `or`
+    # can skip it.
+    password_ok = auth_utils.verify_password(
+        payload.password, user.password_hash if user else _DUMMY_HASH
+    )
+    if not user or not password_ok:
         raise HTTPException(
             status_code=401,
             detail="Incorrect email/phone or password. Please check and try again.",
@@ -414,8 +491,11 @@ def send_login_otp(payload: schemas.UserLogin, db: Session = Depends(get_db)):
 # ── VERIFY LOGIN OTP (Step 2) ─────────────────────────────────────────────────
 
 @router.post("/verify-login-otp", response_model=schemas.Token)
-def verify_login_otp(payload: schemas.LoginOTPVerify, request: Request, db: Session = Depends(get_db)):
+def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Session = Depends(get_db)):
     """Verify the 6-digit OTP and return a JWT if correct."""
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "verify-login-otp", VERIFY_CODE)
     user = _find_user(db, payload.identifier)
     if not user:
         raise HTTPException(404, "Account not found.")
@@ -560,6 +640,138 @@ def confirm_deactivate_account(
     }
 
 
+# ── PROGRESSIVE SIGN-IN (AUTH-SPEC R6, Option B) ──────────────────────────────
+#
+# One field. Type a phone number or an email, get a code, and only after you
+# have proved you control it does the site say anything about whether an account
+# exists. The existing `identifier + password -> OTP -> token` flow stays live
+# and untouched; this sits beside it so the frontend can migrate last.
+#
+# WHY OPTION B AND NOT OPTION A. Option A ("does this exist?" then mitigate) is
+# what Amazon does and it is additive, which is its main argument. It is also an
+# enumeration oracle by construction, and every mitigation for it is a race
+# between the rate limiter and a proxy pool. Option B never answers the
+# question: the reply to /begin is assembled entirely from what the CALLER sent,
+# so there is no branch for a timing or content difference to leak through.
+#
+# This also settles R4. R4 only mattered for Option A's /identify endpoint —
+# under B there is no existence-answering endpoint, so there is nothing to time.
+# The spec says exactly this: "R4 only if Option A is chosen."
+#
+# THE COST, STATED PLAINLY. Every probe sends a real SMS. That is the trade: the
+# oracle is gone and the spend is real, so the budgets here are the tightest on
+# the router — three per identifier per hour, ten per address per hour, which
+# are the spec's own numbers. Without them this endpoint is an SMS-bombing tool
+# pointed at any number an attacker likes.
+
+
+def _identifier_hint(identifier: str) -> str:
+    """
+    A masked echo of what the caller typed. Never of what is stored.
+
+    This is the part that has to be got right for the whole design to hold. A
+    hint built from a found user's record would differ — in length, in masking,
+    in the domain — between an account that exists and one that does not, and
+    the endpoint would be right back to answering the question it exists to
+    refuse. Everything here is derived from the submitted string.
+    """
+    value = (identifier or "").strip()
+    if _is_email(value):
+        local, _, domain = value.partition("@")
+        head = local[:2] if len(local) > 2 else local[:1]
+        return f"{head}***@{domain}" if domain else f"{head}***"
+    digits = re.sub(r"\D", "", value)
+    if len(digits) >= 4:
+        return f"{digits[:2]}***{digits[-2:]}"
+    return "***"
+
+
+@router.post("/begin", response_model=schemas.AuthBeginOut)
+def auth_begin(request: Request, payload: schemas.AuthBeginIn, db: Session = Depends(get_db)):
+    """
+    Step one: send a code to whatever was typed. Answer the same way every time.
+
+    THERE IS DELIBERATELY NO USER LOOKUP IN THIS FUNCTION. Not a lookup whose
+    result is ignored, not a lookup behind a constant-time compare — none at
+    all. A lookup that does not happen cannot leak through timing, through an
+    error path, through a log line, or through a future edit by someone who does
+    not know why the branch was written the way it was. The response is built
+    from the submitted identifier and nothing else, so "byte-identical whether
+    or not the account exists" is a property of the code's shape rather than
+    something maintained by care.
+    """
+    enforce_ip_limit(db, request, "auth-begin", BEGIN_PER_IP)
+    enforce_identifier_limit(db, payload.identifier, BEGIN_PER_IDENTIFIER)
+
+    raw = (payload.identifier or "").strip()
+    if not raw:
+        raise HTTPException(400, "Enter your mobile number or email address.")
+
+    if _is_email(raw):
+        key, channel = raw.lower(), "email"
+    else:
+        key, channel = _normalize_phone(raw), "sms"
+        if not key:
+            raise HTTPException(400, "That does not look like a mobile number or an email address.")
+
+    otp = _create_otp(db, key, otp_type="begin")
+
+    # Best-effort delivery, exactly like every other send on this router: a
+    # failed SMS gateway must not turn into a 500 that tells the caller
+    # something about this particular identifier.
+    try:
+        if channel == "email":
+            _send_otp_email(key, otp, purpose="Sign in")
+        else:
+            notifications.send_otp_sms(key, otp, "Sign in")
+    except Exception:
+        pass
+
+    return {"sent": True, "channel": channel, "hint": _identifier_hint(raw)}
+
+
+@router.post("/continue", response_model=schemas.AuthContinueOut)
+def auth_continue(request: Request, payload: schemas.AuthContinueIn, db: Session = Depends(get_db)):
+    """
+    Step two: the branch, taken only after control of the identifier is proven.
+
+    By the time this returns anything about an account, the caller has entered a
+    code that was sent to that address or number. Telling them at that point
+    whether it is registered is not a leak — they own it.
+
+    A wrong or expired code gets one 401 with one wording, whether the account
+    exists or not. That matters: an attacker who could distinguish "bad code for
+    a real account" from "bad code for no account" would have the oracle back
+    one step later.
+    """
+    enforce_ip_limit(db, request, "auth-continue", VERIFY_CODE)
+
+    raw = (payload.identifier or "").strip()
+    key = raw.lower() if _is_email(raw) else _normalize_phone(raw)
+    if not key or not _verify_otp(db, key, payload.otp, otp_type="begin"):
+        raise HTTPException(401, "That code is not right or has expired.")
+
+    user = _find_user(db, raw)
+
+    if user:
+        return {
+            "next": "password",
+            "user_hint": {"full_name": user.full_name, "hint": _identifier_hint(raw)},
+            "registration_token": None,
+        }
+
+    # No account. Hand back a short-lived, purpose-scoped token so the
+    # create-account form does not make them prove the same number twice —
+    # the same pattern as the `device_evict` token issued at the 4-device cap.
+    return {
+        "next": "register",
+        "user_hint": None,
+        "registration_token": auth_utils.create_action_token(
+            "registration", identifier=key, channel="email" if _is_email(raw) else "sms",
+        ),
+    }
+
+
 # ── LINKED DEVICES ─────────────────────────────────────────────────────────────
 
 def _current_session_token(request: Request) -> str | None:
@@ -629,6 +841,57 @@ def revoke_session(
     return {"message": "Device signed out."}
 
 
+@router.post("/sessions/revoke-all", response_model=schemas.RevokeAllOut)
+def revoke_all_sessions(
+    request: Request,
+    payload: schemas.RevokeAllIn,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth_utils.get_current_user),
+):
+    """
+    Sign out everywhere.  (AUTH-SPEC.md R5, §3.3)
+
+    WHY THIS IS NOT N DELETE CALLS FROM THE BROWSER. The devices dashboard could
+    loop over the list and revoke each id, and for the ordinary case — tidying
+    up an old tablet — that would be fine. It is wrong for the one case this
+    exists to serve: a customer who believes their account is compromised.
+
+    Three reasons, all of which only bite in exactly that case. It is not
+    atomic, so a session created between the list and the last DELETE survives.
+    It races the sliding-session refresh in the frontend's api.ts, which can
+    extend a session's expiry while the loop is walking past it. And a partial
+    failure — the fourth call times out on a phone with two bars — leaves the
+    customer looking at a UI that says they are safe when an attacker still
+    holds a live token.
+
+    One statement, one transaction. Either every session named here is revoked
+    or none is.
+
+    `except_current` defaults to true, which is what the button in the dashboard
+    means: get everyone else out, leave me signed in. Passing false must also
+    invalidate the caller's own token, so the response is the last thing that
+    token is good for.
+    """
+    now = datetime.now(timezone.utc)
+    current_token = _current_session_token(request)
+
+    q = db.query(models.UserSession).filter(
+        models.UserSession.user_id == current_user.id,
+        models.UserSession.revoked_at.is_(None),
+    )
+    # Only exclude the current session when we can actually identify it. A token
+    # with no `sid` claim (issued before device tracking) would otherwise make
+    # `except_current` silently mean "revoke everything", which is the opposite
+    # of what the caller asked for on the safer of the two options.
+    if payload.except_current and current_token:
+        q = q.filter(models.UserSession.session_token != current_token)
+
+    revoked = q.update({models.UserSession.revoked_at: now}, synchronize_session=False)
+    db.commit()
+
+    return {"revoked": int(revoked or 0), "current_session_kept": bool(payload.except_current and current_token)}
+
+
 @router.post("/logout")
 def logout(
     request: Request,
@@ -649,9 +912,12 @@ def logout(
 
 
 @router.post("/sessions/evict-and-login", response_model=schemas.Token)
-def evict_and_login(payload: schemas.DeviceEvictLogin, request: Request, db: Session = Depends(get_db)):
+def evict_and_login(request: Request, payload: schemas.DeviceEvictLogin, db: Session = Depends(get_db)):
     """Complete a login that hit the device cap: revoke the chosen device,
     then create the new session — no need to re-enter a password/OTP."""
+    # AUTH-SPEC R1: per-address budget, counted in the database so it
+    # survives the restarts this instance does constantly.
+    enforce_ip_limit(db, request, "evict-and-login", SESSION_SWAP)
     claims = auth_utils.decode_action_token(payload.pending_token, "device_evict")
     user = db.query(models.User).filter(models.User.id == claims.get("uid")).first()
     if not user:

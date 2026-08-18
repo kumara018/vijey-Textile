@@ -16,6 +16,9 @@
   animation: pageFadeIn 0.25s ease-out both;
   min-height: 100%;
 }
+@media (prefers-reduced-motion: reduce) {
+  .page-transition { animation: none; }
+}
 
 :root {
   --primary: #c58059;
@@ -30,7 +33,19 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+/* NO CSS SMOOTH SCROLL.
+   `scroll-behavior: smooth` animates every programmatic scroll and anchor
+   jump, which is a second interpolation layer on top of the browser's own
+   scrolling. Against a `position: sticky` hero whose transform is driven by
+   scroll offset, the sticky element is placed at the real offset while the
+   animation reads the interpolated one — the two disagree on every frame and
+   the result is judder.
+   Measured: with this rule active, window.scrollTo(0, 900) left scrollY at 0
+   after 150ms; with it removed, it lands on 900 immediately.
+   Anchors now jump. Every anchor target on the site already carries
+   scroll-mt-32 to clear the fixed nav, so a jump lands correctly and
+   predictably. */
+html { scroll-behavior: auto; }
 
 /* Smooth transitions on all interactive elements */
 a, button { transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, color 0.15s ease; }
@@ -107,3 +122,139 @@ body {
 ::-webkit-scrollbar-track { background: #eee0e4; }
 ::-webkit-scrollbar-thumb { background: #c58059; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #845033; }
+
+/* ── Capture mode ─────────────────────────────────────────────────────
+   Set by CaptureMode when ?capture=1, used only by the offline sequence
+   renderer. Hides every DOM layer so a screenshot records the 3D scene
+   alone.
+
+   Without this the renderer baked the navigation, the headline and the
+   footer into every frame, and scrubbing those frames drew a photograph
+   of the page inside the page — the headline rendered twice, once live
+   and once printed underneath. The sequence is a backdrop; it must
+   contain the scene and nothing else.
+
+   The scene canvas host is the ONE exempt subtree, and it identifies itself
+   with data-capture-keep rather than being detected.
+
+   The previous version exempted `:not(:has(canvas))` — anything containing a
+   canvas. That read as a reasonable heuristic and was wrong in a way that
+   silently produced correct-looking CSS: the sequence hero's own scrub canvas
+   lives inside the page content wrapper, so `:has(canvas)` matched that
+   wrapper and spared the navigation, the headline and the entire readable
+   page. The capture attribute was set, the rule fired, and nothing was
+   hidden. An explicit marker cannot drift like that. */
+html[data-capture='1'] body > *:not([data-capture-keep]) {
+  visibility: hidden !important;
+}
+html[data-capture='1'] [data-capture-keep],
+html[data-capture='1'] [data-capture-keep] canvas {
+  visibility: visible !important;
+}
+/* The sequence hero must never appear in its own source frames — that is the
+   recursion where the hero photographs itself. */
+html[data-capture='1'] [data-sequence-hero] {
+  display: none !important;
+}
+/* Next's dev-mode indicator mounts in its own portal element, so
+   `body > *:not([data-capture-keep])` never reached it and the badge was
+   baked into the bottom-left of every rendered frame. Named explicitly.
+   The real fix is to render against a production build, which has no
+   overlay at all — this is the belt to that braces. */
+html[data-capture='1'] nextjs-portal,
+html[data-capture='1'] [data-nextjs-toast],
+html[data-capture='1'] #__next-build-watcher,
+html[data-capture='1'] [data-nextjs-dev-tools-button] {
+  display: none !important;
+}
+
+/* ── Reduced motion: the loading animations, guaranteed ───────────────
+   The shared Skeleton carries `motion-reduce:animate-none` and always has.
+   The inline skeletons that grew up beside it — the products grid, the
+   heirloom plate, the legacy admin tables — did not, and the reduced-motion
+   pass caught them still pulsing: ten running animations on the homepage and
+   three on /products with `prefers-reduced-motion: reduce` set.
+
+   Patching those call sites would fix today and not tomorrow, because the
+   guarantee would still depend on whoever writes the next skeleton
+   remembering a utility class. Stating it once, here, means a spinner or a
+   pulse cannot escape the preference no matter where it is written.
+
+   Scoped to the decorative loading animations on purpose. A blanket
+   `* { animation: none }` also kills animations whose `animationend` fires
+   application logic, which trades a motion bug for a stuck interface. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
+}
+
+/* ── Auth step transition ─────────────────────────────────────────────
+   The only motion on the auth screens: a 480ms fade with a small rise
+   as the flow moves between identifier, password and code. Inside the
+   400–600ms band, eased out with no spring and no overshoot — a form
+   that bounces reads as unserious.
+
+   It animates a step that is ALREADY rendered and interactive, so it
+   never gates the action: someone who types straight through does not
+   wait for it. */
+.auth-step {
+  animation: auth-step-in 480ms cubic-bezier(0.22, 0.61, 0.24, 1) both;
+}
+@keyframes auth-step-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-step { animation: none; }
+}
+
+/* ── Invoice: the one place the palette inverts ───────────────────────
+   On screen the invoice belongs to the site — off-white on warm
+   near-black. On paper it must not: printing #1C1917 across A4 floods
+   a page with toner, bleeds through cheap stock, and prints grey text
+   on grey. This is a document people print for their records and for
+   GST filing.
+
+   So the ground follows the medium and the TYPOGRAPHY carries the
+   brand across both. Same Fraunces wordmark, same tabular figures,
+   same brass rules — brass prints as a real colour, the ground does
+   not need to. One document, one set of numbers, no second template
+   to drift out of sync. */
+@media print {
+  /* The scene, the scrim and every control are screen-only. */
+  canvas,
+  [data-capture-keep],
+  .print\:hidden { display: none !important; }
+
+  html, body {
+    background: #fff !important;
+    color: #1C1917 !important;
+  }
+
+  .invoice {
+    border: none !important;
+    padding: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Re-point the palette tokens at ink-on-paper. Utilities keep working;
+     only what they resolve to changes. */
+  .invoice .text-paper        { color: #1C1917 !important; }
+  .invoice .text-paper-muted  { color: #44403C !important; }
+  .invoice .text-paper-faint  { color: #78716C !important; }
+  .invoice .text-brass-bright { color: #A16207 !important; }
+  .invoice .border-ink-edge,
+  .invoice .border-ink-edge\/60,
+  .invoice .border-ink-edge\/40 { border-color: #D6D3D1 !important; }
+  .invoice .border-brass\/60    { border-color: #A16207 !important; }
+
+  /* A row split across a page break is unreadable on a printed invoice. */
+  .invoice tr,
+  .invoice dl { break-inside: avoid; }
+
+  @page { margin: 16mm; }
+}

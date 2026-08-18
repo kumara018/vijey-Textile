@@ -3,7 +3,7 @@ from typing import Optional
 import jwt as pyjwt
 from jwt.exceptions import InvalidTokenError
 import bcrypt
-from fastapi import Depends, HTTPException, Response, status
+from fastapi import Depends, HTTPException, Response, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
@@ -46,10 +46,20 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 
 def get_current_user(
+    request: Request = None,
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
     response: Response = None,
 ) -> models.User:
+    """
+    Resolve the caller, and record WHO on the request so the access log can
+    name them.
+
+    The id, never the email or the phone. A log line is a copy of whatever it
+    contains, held somewhere with weaker access control than the database — an
+    integer is enough to find the customer when someone is investigating an
+    incident, and useless to anyone who should not have the log.
+    """
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials. Please log in again.",
@@ -66,6 +76,8 @@ def get_current_user(
         raise credentials_exc
 
     user = db.query(models.User).filter(models.User.id == user_id).first()
+    if request is not None and user is not None:
+        request.state.user_id = user.id
     if user is None or not user.is_active:
         raise credentials_exc
 

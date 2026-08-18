@@ -1,13 +1,21 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { LoginPromptProvider } from '@/context/LoginPromptContext';
 import { WishlistProvider } from '@/context/WishlistContext';
-import NavbarWrapper from '@/components/NavbarWrapper';
+import NavGate, { ChromeGate } from '@/components/nav/NavGate';
 import FooterWrapper from '@/components/FooterWrapper';
+import { fontVariables } from '@/lib/fonts';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
+import QueryProvider from '@/components/QueryProvider';
+import ThreeProvider from '@/three/ThreeProvider';
+import Letterbox from '@/components/Letterbox';
+import SoundToggle from '@/components/SoundToggle';
+import CaptureMode from '@/components/CaptureMode';
+import ErrorReporting from '@/components/ErrorReporting';
 import { Toaster } from 'react-hot-toast';
 import { STORE } from '@/lib/config';
 
@@ -50,20 +58,51 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <head>
         <link rel="icon" type="image/jpeg" href="/icon-mark.jpg?v=4" />
         <link rel="shortcut icon" href="/icon-mark.jpg?v=4" />
         <link rel="apple-touch-icon" href="/icon-mark.jpg?v=4" />
       </head>
-      <body className="bg-maroon-100 min-h-screen flex flex-col">
+      {/* Cinematic ground. Never pure black — print black is lifted and cool,
+          and the film LUT grades toward that same toe. */}
+      <body className="bg-night min-h-screen flex flex-col font-sans antialiased">
+        {/* The single persistent 3D canvas. Sits outside the providers and
+            outside PageTransition so it is never remounted by a route change
+            — the GL context, compiled shaders and uploaded textures survive
+            navigation. Fixed at z-0; all real UI renders above it. */}
+        {/* Offline-render only: strips the DOM so a captured frame contains
+            the scene alone. Inert without ?capture=1. */}
+        {/* Notices what the React boundaries cannot: throws outside render —
+            rejected promises from handlers, failed dynamic imports, the scene
+            loader and the sequence decoder. */}
+        <ErrorReporting />
+        <Suspense fallback={null}><CaptureMode /></Suspense>
+        <ThreeProvider />
+        {/* Outermost of the data providers: AuthContext, CartContext and
+            WishlistContext all issue queries, so the client has to exist
+            above them. */}
+        <QueryProvider>
         <AuthProvider>
           <CartProvider>
             <WishlistProvider>
             <LoginPromptProvider>
-              <NavbarWrapper />
-              <main className="flex-1"><PageTransition>{children}</PageTransition></main>
-              <FooterWrapper />
+              {/* relative z-10: the canvas is position:fixed, which creates a
+                  stacking context and would otherwise paint over static page
+                  content. Everything the customer actually reads or clicks
+                  stays real HTML, above the canvas. */}
+              <div className="relative z-10 flex flex-col flex-1">
+                <NavGate />
+                <main id="main" className="flex-1"><PageTransition>{children}</PageTransition></main>
+                <FooterWrapper />
+              </div>
+              {/* Cinematic overlays. Both sit above the canvas and below the
+                  modals, and neither takes pointer events — the path to
+                  checkout is never behind them. */}
+              <ChromeGate>
+                <Letterbox />
+                <SoundToggle />
+              </ChromeGate>
               <LoginPromptModal />
               <Toaster
                 position="top-right"
@@ -85,6 +124,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </WishlistProvider>
           </CartProvider>
         </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

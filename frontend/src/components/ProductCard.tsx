@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { mediaUrl } from '@/lib/media';
 import Link from 'next/link';
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,20 @@ export default function ProductCard({ product }: Props) {
 
   const [imgIdx, setImgIdx] = useState(0);
   const [hovering, setHovering] = useState(false);
+  /**
+   * URLs that have already failed, so a dead image degrades to the composed
+   * placeholder instead of a broken-image glyph.
+   *
+   * The card had a placeholder branch, but it only covered a product with NO
+   * image — not a product whose image URL is present and unreachable. That is
+   * the common case, and it is live: the seeded catalogue stores
+   * `/images/placeholder-frock.jpg`, a path neither the backend nor the
+   * frontend has ever served, so all 24 seeded products render a broken glyph
+   * in the grid. A dead CDN link or a revoked Cloudinary asset would look the
+   * same. On a shop selling heirloom clothing, a broken-image icon is the worst
+   * possible thing to put where the garment should be.
+   */
+  const [failedImages, setFailedImages] = useState<string[]>([]);
   const touchStartX = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -92,9 +107,10 @@ export default function ProductCard({ product }: Props) {
 
   // ── Current slide content ────────────────────────────────────────────────────
   const isVideoSlide = hasVideo && imgIdx === images.length;
-  const currentImg = !isVideoSlide && images[imgIdx]
-    ? (images[imgIdx].startsWith('http') ? images[imgIdx] : `${process.env.NEXT_PUBLIC_API_URL}${images[imgIdx]}`)
-    : null;
+  const resolvedImg = !isVideoSlide && images[imgIdx] ? mediaUrl(images[imgIdx]) : null;
+  // A URL that has already failed is treated exactly like no URL at all, which
+  // routes it into the placeholder branch below.
+  const currentImg = resolvedImg && !failedImages.includes(resolvedImg) ? resolvedImg : null;
 
   return (
     <motion.div
@@ -141,6 +157,9 @@ export default function ProductCard({ product }: Props) {
                 key={currentImg}
                 src={currentImg}
                 alt={product.name}
+                onError={() =>
+                  setFailedImages((prev) => (prev.includes(currentImg) ? prev : [...prev, currentImg]))
+                }
                 initial={{ opacity: 0, rotateY: -14, scale: 0.94 }}
                 animate={{ opacity: 1, rotateY: 0, scale: 1 }}
                 exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}

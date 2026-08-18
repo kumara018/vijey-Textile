@@ -4,13 +4,23 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+import uuid
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
 
+# Before any import can emit a line, so everything lands in one JSON stream.
+from logging_setup import configure_logging as _cfg_log  # noqa: E402
+_cfg_log(os.getenv("LOG_LEVEL", "INFO"))
+
 from database import engine, Base, SessionLocal
 import models
-from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks
+import rate_limit
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import TimeoutError as SATimeoutError
+from logging_setup import configure_logging, RequestContextMiddleware, log
+from routers import auth, products, cart, orders, admin, payments, addresses, support, returns, wishlist, webhooks, client_errors
 
 
 os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
@@ -19,22 +29,60 @@ os.makedirs(os.getenv("UPLOAD_DIR", "uploads/products"), exist_ok=True)
 # ── Auto-setup on every startup ───────────────────────────────────────────────
 
 def _ensure_admin():
-    """Create (or re-hash) the admin user so login always works after a redeploy."""
+    """
+    Make sure an admin account exists — WITHOUT silently resetting its password.
+
+    WHAT THIS USED TO DO, AND WHY IT WAS DANGEROUS. On every single startup it
+    re-hashed `ADMIN_PASSWORD` and wrote it over the existing admin's password.
+    The intent was good: never be locked out of your own shop after a redeploy.
+    The consequence was not. If the shopkeeper ever changed their password from
+    inside the account page — which is the correct thing to do with the default
+    password that ships in this file — the very next deploy, or any Render
+    restart, or a crash-loop recovery, silently put the old one back.
+
+    That is bad in three separate ways. The change the user made did not stick
+    and nothing told them. A password they had deliberately retired kept
+    working. And the value it reverts to is the DEFAULT WRITTEN IN THIS SOURCE
+    FILE, which is public in the repository — so on any deploy where
+    ADMIN_PASSWORD was not set on the host, the admin account quietly went back
+    to a credential anyone reading the code can see.
+
+    WHAT IT DOES NOW. Creates the admin if there is none. Otherwise it repairs
+    only the FLAGS that must never be wrong — an admin locked out by the signup
+    OTP gate or a deactivation is a shop nobody can run — and leaves the
+    password exactly as the owner set it.
+
+    THE RECOVERY HATCH IS STILL THERE, BUT IT IS DELIBERATE. Set
+    ADMIN_PASSWORD_RESET=true on the host and the next boot re-syncs the
+    password once, loudly. Unset it afterwards. A recovery path you have to ask
+    for is a recovery path; one that runs on every boot is a rollback.
+    """
     from auth import hash_password
     db = SessionLocal()
     try:
         admin_email    = os.getenv("ADMIN_EMAIL",    "admin@vijeytextile.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "VijeyTextile@2026")
         admin_phone    = os.getenv("ADMIN_PHONE",    "9443947853")
+        force_reset    = os.getenv("ADMIN_PASSWORD_RESET", "").strip().lower() in ("1", "true", "yes")
 
         existing = db.query(models.User).filter(models.User.email == admin_email).first()
         if existing:
-            existing.password_hash = hash_password(admin_password)
+            # Flags only. These are the ones that lock a shopkeeper out of their
+            # own shop, and none of them is something the owner sets on purpose.
             existing.is_admin    = True
             existing.is_active   = True
-            existing.is_verified = True  # admin must never be locked out by the signup-OTP gate
+            existing.is_verified = True   # never locked out by the signup-OTP gate
+            existing.is_deactivated   = False
+            existing.scheduled_delete_at = None
+
+            if force_reset:
+                existing.password_hash = hash_password(admin_password)
+                print(
+                    f"[Startup] ADMIN_PASSWORD_RESET was set — admin password re-synced "
+                    f"for {admin_email}. UNSET IT NOW so the next deploy does not repeat this."
+                )
             db.commit()
-            print(f"[Startup] Admin password re-synced: {admin_email}")
+            print(f"[Startup] Admin account verified: {admin_email}")
         else:
             admin = models.User(
                 full_name     = "Vijey Textile Admin",
@@ -67,6 +115,75 @@ def _ensure_products():
         db.close()
 
 
+def _clear_dead_image_paths():
+    """
+    Remove image references that point at files no service has ever served.
+
+    seed_data.py used to give every demo product `/images/placeholder-frock.jpg`
+    and four siblings. The backend mounts `/uploads/products` and nothing else,
+    so those paths 404 in every environment — twenty-four products rendering a
+    broken-image glyph on a shop selling heirloom clothing. The seed file no
+    longer writes them, but any database seeded before now still holds them, and
+    a fix that only helps fresh installs does not help this shop.
+
+    An empty list is the honest value: the product genuinely has no photograph
+    until someone uploads one, and the card draws a composed placeholder for
+    that case. Only touches rows whose ONLY images are these known-dead paths —
+    a product with a real Cloudinary URL alongside is left alone.
+    """
+    DEAD = "/images/placeholder-"
+    db = SessionLocal()
+    try:
+        fixed = 0
+        for p in db.query(models.Product).all():
+            images = p.images or []
+            live = [i for i in images if not str(i).startswith(DEAD)]
+            if len(live) != len(images):
+                p.images = live
+                fixed += 1
+        if fixed:
+            db.commit()
+            print(f"[Startup] Cleared dead image paths on {fixed} product(s)")
+    except Exception as e:
+        print(f"[Startup] Image path cleanup note: {e}")
+    finally:
+        db.close()
+
+
+def _ensure_indexes():
+    """
+    Create any index a model declares that the live database does not have.
+
+    `create_all` only builds indexes for tables it CREATES. Every table here
+    already exists in production, so an index added to models.py later would
+    never appear — which is how the situation this fixes arose: the application
+    filters orders by user, products by active flag, returns by status and
+    sessions by revoked_at, and not one of those columns had an index. Measured
+    with EXPLAIN, eight of the ten hot query shapes were full table scans, most
+    of them with a temporary B-tree sort on top.
+
+    Driven off `Base.metadata` rather than a hand-written list of CREATE INDEX
+    statements, so it cannot drift from the declarations the way the gate route
+    lists drifted from the app. `checkfirst=True` makes it idempotent on both
+    SQLite and Postgres.
+
+    Additive and safe to run on every boot: creating an index does not touch a
+    row. On Postgres it takes a brief lock on tables this size; at this scale
+    that is milliseconds.
+    """
+    created = []
+    for table in Base.metadata.sorted_tables:
+        for index in table.indexes:
+            try:
+                index.create(bind=engine, checkfirst=True)
+                created.append(index.name)
+            except Exception as e:
+                # One index failing must not stop the app from booting.
+                print(f"[Startup] Index {index.name} note: {e}")
+    if created:
+        print(f"[Startup] Indexes verified: {len(created)}")
+
+
 def _migrate_db():
     """Add new columns/tables without dropping data. Each step is independently safe."""
     from sqlalchemy import text, inspect as sa_inspect
@@ -96,6 +213,16 @@ def _migrate_db():
                 print("[Startup] Migrated: added is_verified to users")
         except Exception as e:
             print(f"[Startup] User migration note: {e}")
+
+        # ── client_errors columns ──────────────────────────────────────────
+        try:
+            ce_cols = [c["name"] for c in inspector.get_columns("client_errors")]
+            if "request_id" not in ce_cols:
+                conn.execute(text("ALTER TABLE client_errors ADD COLUMN request_id VARCHAR(64)"))
+                conn.commit()
+                print("[Startup] Migrated: added request_id to client_errors")
+        except Exception as e:
+            print(f"[Startup] client_errors migration note: {e}")
 
         # ── orders columns ─────────────────────────────────────────────────
         try:
@@ -489,6 +616,86 @@ def _sync_delhivery_statuses():
         db.close()
 
 
+# ── Background jobs run in exactly ONE process ───────────────────────────────
+#
+# See models.SchedulerLease for why. Short version: the pollers live on an
+# in-process scheduler, and a second uvicorn worker would silently double every
+# courier poll and every customer notification.
+_SCHEDULER_OWNER = f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
+_LEASE_SECONDS = 120
+
+
+def _try_take_scheduler_lease() -> bool:
+    """
+    Take or renew the lease. True if this process owns the jobs.
+
+    Renewal is what makes a crash survivable: the holder pushes the expiry
+    forward every minute, so if it dies the lease lapses within two and another
+    worker picks the jobs up. Without renewal a crashed holder would keep the
+    jobs parked forever.
+    """
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        row = db.query(models.SchedulerLease).filter(models.SchedulerLease.id == 1).first()
+        if row is None:
+            db.add(models.SchedulerLease(
+                id=1, owner=_SCHEDULER_OWNER, expires_at=now + timedelta(seconds=_LEASE_SECONDS)))
+            db.commit()
+            return True
+
+        expires = row.expires_at
+        if expires is not None and expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+
+        if row.owner == _SCHEDULER_OWNER or expires is None or expires <= now:
+            row.owner = _SCHEDULER_OWNER
+            row.expires_at = now + timedelta(seconds=_LEASE_SECONDS)
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        # If the lease cannot be read, run the jobs. A shop that stops syncing
+        # couriers is a worse failure than one that syncs twice, and this path
+        # only happens when the database is already in trouble.
+        print(f"[Scheduler] lease check failed, running jobs anyway: {e}")
+        return True
+    finally:
+        db.close()
+
+
+def _renew_scheduler_lease():
+    """Heartbeat, so the lease does not lapse under an alive holder."""
+    if not _try_take_scheduler_lease():
+        print("[Scheduler] lease lost — pausing background jobs in this process")
+        for job in ("delhivery_sync", "rate_limit_sweep"):
+            try:
+                _scheduler.pause_job(job)
+            except Exception:
+                pass
+
+
+def _sweep_rate_limits():
+    """
+    Drop rate-limit rows no live window can reference.
+
+    `rate_limit.enforce` prunes the bucket it touches, which keeps active
+    buckets bounded on their own. This is for the long tail: an address that
+    probed once and never came back would otherwise leave its row in the table
+    forever. Six-hourly against a one-day cutoff is far more slack than any
+    budget here needs.
+    """
+    db = SessionLocal()
+    try:
+        removed = rate_limit.sweep(db)
+        if removed:
+            print(f"[RateLimit] swept {removed} expired row(s)")
+    except Exception as e:
+        print(f"[RateLimit] sweep failed: {e}")
+    finally:
+        db.close()
+
+
 _scheduler = BackgroundScheduler()
 
 
@@ -498,32 +705,132 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # Migrate new columns without data loss
     _migrate_db()
+    # Bring indexes on EXISTING tables up to what the models declare
+    _ensure_indexes()
     # Delete accounts whose 4-hour deletion window expired + send goodbye email
     _cleanup_deleted_accounts()
     # Always ensure admin + products exist
     _ensure_admin()
     _ensure_products()
+    # Strip image paths that have never resolved in any environment
+    _clear_dead_image_paths()
 
-    _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
-    _scheduler.start()
+    if _try_take_scheduler_lease():
+        _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
+        _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
+        # ── Erasure, on a timer rather than on a reboot ──────────────────
+        #
+        # THE BUG THIS FIXES. `_cleanup_deleted_accounts()` was called exactly
+        # once, in the line above, at process start — and never registered
+        # here. So the promise the account page makes ("after 7 days the
+        # account is permanently deleted") was kept only when the service
+        # happened to restart after the window closed.
+        #
+        # On a host that keeps a process alive for weeks, a customer who asked
+        # to be erased on the 1st was still in the database on the 20th. That
+        # is not a cosmetic bug: an erasure request that the system accepts,
+        # schedules, emails about and then does not perform is a data
+        # protection failure under the DPDP Act, and under GDPR for any
+        # customer in the EU.
+        #
+        # Daily is the right interval. Hourly would wake the database 24 times
+        # to find nothing; a few hours of latency on a seven-day window is
+        # immaterial, and the job is idempotent — it selects only rows whose
+        # deadline has already passed, so running it twice deletes nothing
+        # twice.
+        _scheduler.add_job(_cleanup_deleted_accounts, "interval", hours=24, id="account_erasure", replace_existing=True)
+        _scheduler.add_job(_renew_scheduler_lease, "interval", seconds=60, id="scheduler_lease", replace_existing=True)
+        _scheduler.start()
+        print(f"[Scheduler] background jobs owned by {_SCHEDULER_OWNER}")
+    else:
+        print("[Scheduler] another process holds the lease — no background jobs here")
     yield
-    _scheduler.shutdown(wait=False)
+    if _scheduler.running:
+        _scheduler.shutdown(wait=False)
 
 
 # ── App ───────────────────────────────────────────────────────────────────────
+
+# ── Interactive docs: off unless explicitly asked for ────────────────────────
+#
+# /docs and /openapi.json were publicly reachable. That is a free, complete map
+# of the API: every route, every request and response schema, every field name,
+# handed to anyone who asks. It is not a vulnerability by itself — the auth
+# boundary still holds, and the healthcheck confirms every protected route
+# answers 401 to an anonymous caller — but it removes all the guesswork from
+# finding one, and it advertises endpoints like /api/auth/send-login-otp and
+# /api/admin/* that no customer ever needs to know exist.
+#
+# Reconnaissance is cheap to deny and expensive to allow, so the default flips:
+# closed in production, opened with ENABLE_API_DOCS=true when you actually want
+# to read them. Setting that on Render takes a moment and can be turned off
+# again; leaving the map on the doormat cannot be undone once it has been read.
+_DOCS_ENABLED = os.getenv("ENABLE_API_DOCS", "").lower() in ("1", "true", "yes")
 
 app = FastAPI(
     title       = "Vijey Textile API",
     description = "Premium Textile Shopping — Texvalley Gangapuram",
     version     = "3.0.0",
     lifespan    = lifespan,
+    docs_url    = "/docs" if _DOCS_ENABLED else None,
+    redoc_url   = "/redoc" if _DOCS_ENABLED else None,
+    # The schema itself, not just the viewer — leaving this on would defeat
+    # the whole point, since it is the machine-readable version of the map.
+    openapi_url = "/openapi.json" if _DOCS_ENABLED else None,
 )
 
+
+# AUTH-SPEC R1 is enforced inside the endpoints now, not by middleware. There
+# is nothing to register here: `rate_limit.enforce_ip_limit` raises an ordinary
+# HTTPException(429) with a Retry-After header, which FastAPI already handles.
+# slowapi is gone — its storage backends are memory, Redis, Memcached, MongoDB
+# and etcd, and this deployment has Postgres and nothing else, so its counters
+# lived in a process that Render restarts whenever the shop goes quiet.
+# Added AFTER CORS so it sits OUTSIDE it: Starlette applies middleware in
+# reverse order of registration, and the request id has to be assigned before
+# anything else runs and still be present when the CORS layer writes headers on
+# the way out. Registered inside CORS, a preflight rejection would never get an
+# id and the failure would be invisible.
+
+@app.exception_handler(SATimeoutError)
+async def _db_pool_exhausted(request, exc):
+    """
+    A traffic spike must degrade politely, not error.
+
+    When every database connection is busy, SQLAlchemy raises TimeoutError and
+    FastAPI turns it into a 500. Measured with loadtest.py at 100 concurrent
+    visitors: 30 requests answered 500. A 500 tells the customer the shop is
+    broken and tells a crawler to drop the page; the truth is that the shop is
+    busy and the same request would succeed a second later.
+
+    503 with Retry-After is the honest answer. Browsers, crawlers and the
+    frontend's own retry all understand it, and it does not poison anything.
+
+    The real fix for sustained load is more capacity — this is what should
+    happen while that is being arranged, rather than the worst possible
+    response to being popular.
+    """
+    log("database pool exhausted", level="warning", path=request.url.path)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "We are very busy right now. Please try again in a moment."},
+        headers={"Retry-After": "2"},
+    )
+
+app.add_middleware(RequestContextMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        # Port 3100 is where the production build is served for local
+        # verification (`next start -p 3100`), which is the only place the real
+        # security headers, the real CSP and the real bundle are exercised
+        # before a deploy. Without it every browser-driven gate ran against an
+        # app whose API calls were all failing, and reported the resulting
+        # empty pages as passes.
+        "http://localhost:3100",
+        "http://127.0.0.1:3100",
         "https://vijeytextile.com",
         "https://www.vijeytextile.com",
         "https://vijey-textile.vercel.app",
@@ -532,7 +839,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["X-New-Token"],
+    expose_headers=["X-New-Token", "X-Request-ID"],
 )
 
 upload_dir = os.getenv("UPLOAD_DIR", "uploads/products")
@@ -549,6 +856,8 @@ app.include_router(support.router)
 app.include_router(returns.router)
 app.include_router(wishlist.router)
 app.include_router(webhooks.router)
+# Additive: receives browser-side runtime errors. Touches no existing route.
+app.include_router(client_errors.router)
 # Tracking is wired into orders router (/api/orders/{id}/track)
 
 

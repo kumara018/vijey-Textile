@@ -1,255 +1,218 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { Package, ChevronRight, Clock, CheckCircle, Truck, XCircle, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
-import { ordersAPI, returnsAPI } from '@/lib/api';
-import { Order, ReturnRequest } from '@/types';
 import { useAuth } from '@/context/AuthContext';
+import { ordersQuery, returnsQuery } from '@/lib/query';
+import type { Order, ReturnRequest } from '@/types';
+import PageShell from '@/components/system/PageShell';
+import PageHeader from '@/components/system/PageHeader';
+import { ActionLink } from '@/components/system/Action';
+import { EmptyState, ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
+import RouteErrorBoundary from '@/components/resilience/RouteErrorBoundary';
 
-// Mirrors orders/[id]/page.tsx's RETURN_STATUS_LABEL — kept in sync so a
-// return/exchange reads the same everywhere a customer sees it. No "Return:"/
-// "Exchange:" prefix baked in here — the card adds that itself, since which
-// word applies depends on request_type.
-const RETURN_STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  pending:             { label: 'Pending Review',       color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  under_review:        { label: 'Under Review',         color: 'bg-blue-100 text-blue-700 border-blue-300'       },
-  approved:            { label: 'Approved',             color: 'bg-green-100 text-green-700 border-green-300'    },
-  rejected:            { label: 'Rejected',             color: 'bg-red-100 text-red-700 border-red-300'          },
-  pickup_scheduled:    { label: 'Pickup Scheduled',     color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  picked_up:           { label: 'Picked Up',            color: 'bg-cyan-100 text-cyan-700 border-cyan-300'       },
-  processing:          { label: 'Processing',           color: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
-  replacement_shipped: { label: 'Replacement Shipped',  color: 'bg-purple-100 text-purple-700 border-purple-300' },
-  refund_initiated:    { label: 'Refund Initiated',     color: 'bg-amber-100 text-amber-700 border-amber-300'    },
-  refunded:            { label: 'Refund Credited',      color: 'bg-green-100 text-green-700 border-green-300'    },
-  completed:           { label: 'Completed',            color: 'bg-green-100 text-green-700 border-green-300'    },
+/**
+ * Your orders.
+ *
+ * RESTRUCTURED. The old page was a stack of bordered cards with a coloured
+ * status banner across the top of each, a badge, an emoji per category and a
+ * separate return banner underneath — five competing devices saying roughly
+ * one thing. This is a ledger: one row per order, the number set in tabular
+ * figures, status as a word rather than a colour, and the return state folded
+ * into the same line instead of stacked below it.
+ *
+ * STATUS IS NEVER COLOUR-ONLY. The old badges carried meaning in a background
+ * colour, which is invisible to anyone who cannot separate those hues and
+ * meaningless in a screen reader. Here the word IS the status, and brass marks
+ * only the two states that need the customer to do something.
+ *
+ * THIS ROUTE INHERITS THE `records` SCENE — it does not own one. Records is a
+ * restrained scene: line geometry in warm stone, no postprocessing, no product
+ * staging. A list of past purchases is a working surface, and the scene should
+ * stay out of its way.
+ */
+
+/** Which statuses want the customer's attention rather than just informing. */
+const NEEDS_ATTENTION = new Set(['pending', 'out_for_delivery']);
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Awaiting confirmation',
+  confirmed: 'Confirmed',
+  processing: 'Being packed',
+  shipped: 'On its way',
+  out_for_delivery: 'Out for delivery today',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
 };
 
-// Same colour families as RETURN_STATUS_LABEL above, in the banner's -50/
-// -200/-800 shade pattern instead of the pill's -100/-300/-700, so the top
-// banner can switch to the return's own colour once one is active.
-const RETURN_BANNER_COLOR: Record<string, string> = {
-  pending:             'bg-yellow-50 border-yellow-200 text-yellow-800',
-  under_review:        'bg-blue-50 border-blue-200 text-blue-800',
-  approved:            'bg-green-50 border-green-200 text-green-800',
-  rejected:            'bg-red-50 border-red-200 text-red-800',
-  pickup_scheduled:    'bg-purple-50 border-purple-200 text-purple-800',
-  picked_up:           'bg-cyan-50 border-cyan-200 text-cyan-800',
-  processing:          'bg-indigo-50 border-indigo-200 text-indigo-800',
-  replacement_shipped: 'bg-purple-50 border-purple-200 text-purple-800',
-  refund_initiated:    'bg-amber-50 border-amber-200 text-amber-800',
-  refunded:            'bg-green-50 border-green-200 text-green-800',
-  completed:           'bg-green-50 border-green-200 text-green-800',
+const RETURN_LABEL: Record<string, string> = {
+  pending: 'Pending review',
+  under_review: 'Under review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  pickup_scheduled: 'Pickup scheduled',
+  picked_up: 'Picked up',
+  processing: 'Processing',
+  replacement_shipped: 'Replacement shipped',
+  refund_initiated: 'Refund initiated',
+  refunded: 'Refund credited',
+  completed: 'Completed',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; icon: any; color: string; badge: string; banner: string }> = {
-  pending:          { label: 'Pending',          icon: Clock,        color: 'text-yellow-600', badge: 'badge-warning', banner: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
-  confirmed:        { label: 'Confirmed',         icon: CheckCircle,  color: 'text-blue-600',   badge: 'badge-info',    banner: 'bg-blue-50 border-blue-200 text-blue-800' },
-  processing:       { label: 'Processing',        icon: Package,      color: 'text-purple-600', badge: 'badge-default', banner: 'bg-purple-50 border-purple-200 text-purple-800' },
-  shipped:          { label: 'Shipped',           icon: Truck,        color: 'text-blue-700',   badge: 'badge-info',    banner: 'bg-blue-50 border-blue-200 text-blue-800' },
-  out_for_delivery: { label: 'Out for Delivery',  icon: Truck,        color: 'text-orange-600', badge: 'badge-warning', banner: 'bg-maroon-50 border-orange-200 text-orange-800' },
-  delivered:        { label: 'Delivered',         icon: CheckCircle,  color: 'text-green-600',  badge: 'badge-success', banner: 'bg-green-50 border-green-200 text-green-800' },
-  cancelled:        { label: 'Cancelled',         icon: XCircle,      color: 'text-red-600',    badge: 'badge-danger',  banner: 'bg-red-50 border-red-200 text-red-800' },
-};
+const money = (n: number) => `₹${n.toLocaleString('en-IN')}`;
 
-function getDeliveryLine(status: string): string {
-  if (status === 'delivered') return 'Delivered';
-  if (status === 'cancelled') return 'Cancelled';
-  return 'Expected: 3–7 business days';
+function orderDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function getCategoryEmoji(category?: string): string {
-  if (!category) return '👗';
-  if (category === 'Baby Frocks') return '👶';
-  if (category === 'Chudithar') return '👘';
-  if (category === 'Frocks') return '👗';
-  if (category === 'Western Dresses') return '👒';
-  if (category === 'Lehenga') return '💃';
-  if (category === 'Party Wear') return '✨';
-  return '👗';
-}
-
-export default function OrdersPage() {
+function OrdersInner() {
   const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [returnsByOrder, setReturnsByOrder] = useState<Record<number, ReturnRequest>>({});
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const [ordersRes, returnsRes] = await Promise.all([
-        ordersAPI.getAll(),
-        returnsAPI.getAll().catch(() => ({ data: [] as ReturnRequest[] })), // never block the order list on this
-      ]);
-      setOrders(ordersRes.data);
-      // Newest-first from the API — first occurrence per order_id is the
-      // most recent return/exchange request for that order.
-      const map: Record<number, ReturnRequest> = {};
-      for (const rr of returnsRes.data as ReturnRequest[]) {
-        if (!(rr.order_id in map)) map[rr.order_id] = rr;
-      }
-      setReturnsByOrder(map);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
+  // `enabled` keeps both queries from firing before auth resolves — a disabled
+  // query is permanently `pending`, which is why the skeleton below keys off
+  // isLoading rather than isPending.
+  const ordersQ = useQuery({ ...ordersQuery(), enabled: !authLoading && !!user });
+  const returnsQ = useQuery({ ...returnsQuery(), enabled: !authLoading && !!user });
+
+  const orders = (ordersQ.data ?? []) as Order[];
+
+  /**
+   * Newest return per order. The API returns newest-first, so the first
+   * occurrence of an order_id wins.
+   *
+   * Only the ORDERS query can fail this page. Returns failing degrades a line
+   * of detail; it must never replace the list of orders with an error.
+   */
+  const returnsByOrder = useMemo(() => {
+    const map: Record<number, ReturnRequest> = {};
+    for (const r of (returnsQ.data ?? []) as ReturnRequest[]) {
+      if (!(r.order_id in map)) map[r.order_id] = r;
     }
-  };
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
+    return map;
+  }, [returnsQ.data]);
 
   if (authLoading || !user) return null;
 
-  if (loading) return (
-    <div className="max-w-4xl mx-auto px-4 py-12 space-y-4">
-      {Array(3).fill(0).map((_, i) => (
-        <div key={i} className="card overflow-hidden animate-pulse">
-          <div className="h-10 bg-gray-200" />
-          <div className="p-5 space-y-3">
-            <div className="flex justify-between">
-              <div className="h-5 bg-gray-200 rounded w-40" />
-              <div className="h-5 bg-gray-200 rounded w-20" />
-            </div>
-            <div className="h-4 bg-gray-200 rounded w-1/2" />
-            <div className="h-4 bg-gray-200 rounded w-1/3" />
+  if (ordersQ.isLoading) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Your orders" title="Everything you have bought" />
+        <Skeleton label="Loading your orders">
+          <div className="space-y-8">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="space-y-3 border-t border-ink-edge/60 pt-7">
+                <SkeletonLine w="w-28" h="h-2" />
+                <SkeletonLine w="w-2/5" h="h-6" />
+                <SkeletonLine w="w-1/3" h="h-3" />
+              </div>
+            ))}
           </div>
-        </div>
-      ))}
-    </div>
-  );
+        </Skeleton>
+      </PageShell>
+    );
+  }
 
-  if (error) return (
-    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-      <AlertCircle size={80} className="mx-auto text-red-200 mb-6" />
-      <h2 className="text-2xl font-bold text-gray-800 mb-3">Couldn&apos;t load your orders</h2>
-      <p className="text-gray-500 mb-8">Something went wrong on our end. Please try again.</p>
-      <button onClick={load} className="btn-primary inline-flex items-center gap-2">
-        <RefreshCw size={16} /> Try Again
-      </button>
-    </div>
-  );
+  if (ordersQ.isError) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Your orders" title="Everything you have bought" />
+        <ErrorState
+          title="We could not load your orders"
+          body="Your orders are safe — this is a problem reaching our server, not a change to anything you have bought."
+          onRetry={() => ordersQ.refetch()}
+          retrying={ordersQ.isFetching}
+        />
+      </PageShell>
+    );
+  }
 
-  if (orders.length === 0) return (
-    <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-      <Package size={80} className="mx-auto text-maroon-200 mb-6" />
-      <h2 className="text-2xl font-bold text-gray-800 mb-3">No orders yet</h2>
-      <p className="text-gray-500 mb-8">You haven&apos;t placed any orders yet. Start shopping!</p>
-      <Link href="/products" className="btn-primary inline-flex items-center gap-2">
-        Start Shopping
-      </Link>
-    </div>
-  );
+  if (orders.length === 0) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Your orders" title="Everything you have bought" />
+        <EmptyState
+          title="You have not ordered anything yet"
+          body="Nothing is missing — this fills in the moment you place your first order, and everything you buy stays here with its tracking and invoice."
+          action={<ActionLink href="/products">See every piece</ActionLink>}
+        />
+      </PageShell>
+    );
+  }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="section-title mb-6">My Orders</h1>
-      <div className="space-y-4">
-        {orders.map((order) => {
-          const cfg = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
-          const Icon = cfg.icon;
-          const items = order.items_snapshot as any[];
-          const deliveryLine = getDeliveryLine(order.status);
-          const activeReturn = returnsByOrder[order.id];
+    <PageShell rhythm="tight">
+      <PageHeader
+        eyebrow="Your orders"
+        title="Everything you have bought"
+        standfirst={`${orders.length} ${orders.length === 1 ? 'order' : 'orders'}, newest first.`}
+      />
+
+      <ul>
+        {orders.map((o) => {
+          const ret = returnsByOrder[o.id];
+          const attention = NEEDS_ATTENTION.has(o.status);
+          const itemCount = o.items_snapshot?.reduce((n, i: any) => n + (i.quantity ?? 1), 0) ?? 0;
+          const firstItem = o.items_snapshot?.[0] as any;
 
           return (
-            <Link key={order.id} href={`/orders/${order.id}`} className="block group">
-              <div className="card overflow-hidden hover:shadow-md transition-all">
+            <li key={o.id} className="border-t border-ink-edge/60 first:border-t-0">
+              <Link
+                href={`/orders/${o.id}`}
+                className="group block py-8 transition-colors duration-500 motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+                  <div className="min-w-0">
+                    <p className="text-rule uppercase text-paper-faint">
+                      <span className="tabular-nums">{o.order_number}</span>
+                      {orderDate(o.created_at) && <> · {orderDate(o.created_at)}</>}
+                    </p>
 
-                {/* Colored status banner — once a return/exchange is active, this
-                    shows the compound status ("Delivered → Pickup Scheduled")
-                    and switches to the return's own colour, so the banner never
-                    looks like a plain closed order while something is actually
-                    in progress. */}
-                <div className={`border-b px-5 py-2.5 flex items-center justify-between ${activeReturn ? (RETURN_BANNER_COLOR[activeReturn.status] || cfg.banner) : cfg.banner}`}>
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    {activeReturn ? <RotateCcw size={14} /> : <Icon size={14} />}
-                    <span>
-                      {activeReturn
-                        ? `${cfg.label} → ${activeReturn.request_type === 'exchange' ? 'Exchange' : 'Return'}: ${RETURN_STATUS_LABEL[activeReturn.status]?.label || activeReturn.status}`
-                        : cfg.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-medium opacity-80">
-                    <span>{deliveryLine}</span>
-                    <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  {/* Order number + date */}
-                  <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                    <div>
-                      <p className="font-bold text-maroon-900 text-sm">{order.order_number}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {new Date(order.created_at).toLocaleDateString('en-IN', {
-                          day: 'numeric', month: 'long', year: 'numeric',
-                        })}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs text-gray-500">Total</p>
-                      <p className="font-bold text-maroon-900 text-base">₹{order.total.toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Product emoji row */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex -space-x-1">
-                      {items.slice(0, 4).map((item: any, idx: number) => (
-                        <div
-                          key={idx}
-                          className="w-9 h-9 rounded-lg bg-gradient-to-br from-maroon-100 to-gold-50 border border-white flex items-center justify-center text-lg shadow-sm"
-                          title={item.name}
-                        >
-                          {getCategoryEmoji(item.category)}
-                        </div>
-                      ))}
-                      {items.length > 4 && (
-                        <div className="w-9 h-9 rounded-lg bg-gray-100 border border-white flex items-center justify-center text-xs font-bold text-gray-500 shadow-sm">
-                          +{items.length - 4}
-                        </div>
+                    <p className="mt-2.5 font-display text-2xl font-light text-paper transition-colors duration-500 group-hover:text-brass-bright motion-reduce:transition-none">
+                      {firstItem?.name ?? 'Your order'}
+                      {itemCount > 1 && (
+                        <span className="text-paper-faint"> and {itemCount - 1} more</span>
                       )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-700 font-medium line-clamp-1">
-                        {items.map((i: any) => i.name).join(', ')}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {items.length} {items.length === 1 ? 'item' : 'items'}
-                      </p>
-                    </div>
+                    </p>
+
+                    {/* Status as a word. Brass marks only what needs action. */}
+                    <p className={`mt-2 text-sm ${attention ? 'text-brass-bright' : 'text-paper-muted'}`}>
+                      {STATUS_LABEL[o.status] ?? o.status}
+                      {ret && (
+                        <span className="text-paper-faint">
+                          {' · '}
+                          {ret.request_type === 'exchange' ? 'Exchange' : 'Return'}:{' '}
+                          {RETURN_LABEL[ret.status] ?? ret.status}
+                        </span>
+                      )}
+                    </p>
                   </div>
 
-                  {/* Tracking + payment */}
-                  <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
-                    <span className="capitalize">Payment: {order.payment_method.toUpperCase()}</span>
-                    <span>·</span>
-                    <span className={order.payment_status === 'paid' ? 'text-green-600 font-medium' : 'text-orange-600 font-medium'}>
-                      {order.payment_status === 'paid' ? '✓ Paid' : 'Pending'}
-                    </span>
-                    {order.tracking_number && (
-                      <>
-                        <span>·</span>
-                        <span>
-                          Tracking: <span className="font-mono font-medium text-maroon-700">{order.tracking_number}</span>
-                        </span>
-                      </>
-                    )}
-                  </div>
+                  <p className="shrink-0 font-display text-xl tabular-nums text-paper">
+                    {money(o.total)}
+                  </p>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </li>
           );
         })}
+      </ul>
+
+      <div className="mt-[7vh] border-t border-ink-edge/60 pt-10">
+        <ActionLink href="/products">Keep looking</ActionLink>
       </div>
-    </div>
+    </PageShell>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <RouteErrorBoundary routeName="your orders" fallbackHref="/products" fallbackLabel="See every piece">
+      <OrdersInner />
+    </RouteErrorBoundary>
   );
 }

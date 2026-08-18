@@ -1,326 +1,227 @@
 'use client';
-import { useState, useEffect, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { ordersAPI } from '@/lib/api';
+
+import { use } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
-import { Order } from '@/types';
-import toast from 'react-hot-toast';
-import Link from 'next/link';
-import { ArrowLeft, Download, Mail, Share2, Printer } from 'lucide-react';
-import { LogoMark } from '@/components/Logo';
+import { orderDetailQuery } from '@/lib/query';
 import { STORE } from '@/lib/config';
+import { LogoMark } from '@/components/Logo';
+import type { Order } from '@/types';
+import PageShell from '@/components/system/PageShell';
+import { ActionButton, ActionLink } from '@/components/system/Action';
+import { ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
+import RouteErrorBoundary from '@/components/resilience/RouteErrorBoundary';
 
-const PAY_LABEL: Record<string, string> = {
-  razorpay: 'Online Payment (Razorpay)',
-  upi:      'UPI Payment',
-  emi:      'EMI (Razorpay)',
-  cod:      'Cash on Delivery',
-};
+/**
+ * Tax invoice.
+ *
+ * THE ONE PLACE THE PALETTE DELIBERATELY INVERTS, AND WHY.
+ *
+ * Everywhere else, off-white type on warm near-black is the design. An invoice
+ * is different because it has a second medium: paper. Printing #1C1917 across
+ * A4 floods a page with toner, bleeds through cheap stock, and produces grey
+ * text on grey — and this is a document customers print for their own records
+ * and for GST filing.
+ *
+ * So the invoice is one document with two grounds. On screen it belongs to the
+ * site: ink ground, brass rules, Fraunces for the wordmark and figures. On
+ * paper it is ink-on-white, with the SAME typography and the SAME brass
+ * accent, because brass prints as a real colour while the ground does not need
+ * to. The typography carries the brand across both; the ground follows the
+ * medium.
+ *
+ * `@media print` is the whole mechanism — no separate template to drift out of
+ * sync, no second copy of the numbers.
+ *
+ * The old version leaned on emoji (💵, 🛍️) and a gold gradient strip. Neither
+ * survives printing in any useful form, and neither belongs on a tax document.
+ */
 
-const PAY_STATUS_COLOR: Record<string, string> = {
-  paid:     'text-green-700 bg-green-50 border-green-300',
-  pending:  'text-amber-700  bg-amber-50  border-amber-300',
-  refunded: 'text-purple-700 bg-purple-50 border-purple-300',
-};
+const money = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
 
-function InvoiceContent() {
-  const { id } = useParams();
-  const { user, loading: authLoading } = useAuth();
-  const router = useRouter();
+function InvoiceInner({ id }: { id: number }) {
+  const { user } = useAuth();
+  const q = useQuery(orderDetailQuery(id));
+  const order = q.data as Order | undefined;
 
-  const [order, setOrder]       = useState<Order | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [sending, setSending]   = useState(false);
-
-  useEffect(() => {
-    if (authLoading || !user) return;
-    ordersAPI.getOne(Number(id))
-      .then(r => setOrder(r.data))
-      .catch(() => router.push('/orders'))
-      .finally(() => setLoading(false));
-  }, [id, user, authLoading]);
-
-  const handlePrint = () => window.print();
-
-  const handleEmail = async () => {
-    setSending(true);
-    try {
-      await ordersAPI.sendInvoice(Number(id));
-      toast.success('Invoice sent to your email! 📧');
-    } catch {
-      toast.error('Failed to send invoice. Please try again.');
-    } finally { setSending(false); }
-  };
-
-  const handleWhatsApp = () => {
-    const url = encodeURIComponent(`${window.location.origin}/orders/${id}/invoice`);
-    const msg = encodeURIComponent(
-      `📄 *Invoice — ${order?.order_number}*\nVijey Textile · Luxury Kid's & Girls Clothing\nView invoice: ${window.location.origin}/orders/${id}/invoice`
+  if (q.isLoading) {
+    return (
+      <PageShell rhythm="tight">
+        <Skeleton label="Loading your invoice">
+          <div className="space-y-6">
+            <SkeletonLine w="w-40" h="h-8" />
+            <SkeletonLine w="w-full" h="h-40" />
+          </div>
+        </Skeleton>
+      </PageShell>
     );
-    window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
-  };
+  }
 
-  if (loading) return (
-    <div className="max-w-3xl mx-auto px-4 py-12 animate-pulse space-y-4">
-      <div className="h-8 bg-gray-200 rounded w-48" />
-      <div className="h-[600px] bg-gray-200 rounded-2xl" />
-    </div>
-  );
+  if (q.isError || !order) {
+    return (
+      <PageShell rhythm="tight">
+        <ErrorState
+          title="We could not load this invoice"
+          body="The order is safe — this is a problem reaching our server."
+          onRetry={() => q.refetch()}
+          retrying={q.isFetching}
+          fallbackHref="/orders"
+          fallbackLabel="Your orders"
+        />
+      </PageShell>
+    );
+  }
 
-  if (!order) return null;
-
-  const addr = order.shipping_address as any;
-  const pm   = (order.payment_method || 'cod').toLowerCase();
-  const txn  = order.payment_transaction_id || '';
-  const isCod = pm === 'cod';
+  const addr = order.shipping_address;
   const date = new Date(order.created_at).toLocaleDateString('en-IN', {
-    day: 'numeric', month: 'long', year: 'numeric'
+    day: 'numeric', month: 'long', year: 'numeric',
   });
+  const items = (order.items_snapshot ?? []) as any[];
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
-
-      {/* Action bar — hidden on print */}
-      <div className="print:hidden mb-6 flex items-center gap-3 flex-wrap">
-        <Link href={`/orders/${id}`} className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-maroon-800 font-medium">
-          <ArrowLeft size={16} /> Back to Order
-        </Link>
-        <div className="ml-auto flex gap-2 flex-wrap">
-          <button onClick={handleEmail} disabled={sending}
-            className="flex items-center gap-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-60">
-            <Mail size={15} /> {sending ? 'Sending...' : 'Email Invoice'}
-          </button>
-          <button onClick={handleWhatsApp}
-            className="flex items-center gap-1.5 text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            <Share2 size={15} /> WhatsApp
-          </button>
-          <button onClick={handlePrint}
-            className="flex items-center gap-1.5 text-sm bg-maroon-800 hover:bg-maroon-900 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            <Download size={15} /> Download PDF
-          </button>
-        </div>
+    <PageShell rhythm="tight">
+      {/* Controls never print. */}
+      <div className="mb-10 flex flex-wrap items-center gap-x-10 gap-y-4 print:hidden">
+        <ActionButton arrow={false} onClick={() => window.print()}>
+          Print or save as PDF
+        </ActionButton>
+        <ActionLink href={`/orders/${order.id}`} tone="quiet">
+          Back to this order
+        </ActionLink>
       </div>
 
-      {/* Invoice Card */}
-      <div id="invoice" className="bg-white rounded-2xl shadow-lg print:shadow-none border border-gray-100 overflow-hidden">
-
-        {/* ── Header ── */}
-        <div className="bg-gradient-to-r from-maroon-900 via-maroon-800 to-maroon-700 px-8 py-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            {/* Logo on white card */}
-            <div className="bg-white rounded-2xl px-5 py-3.5 shadow-lg flex items-center gap-2.5">
-              <LogoMark size={40} className="text-gold-500 flex-shrink-0" />
-              <div className="flex flex-col leading-tight">
-                <span className="font-bold text-maroon-900 uppercase" style={{ fontSize: '13px', letterSpacing: '0.04em' }}>Vijey Textile</span>
-                <span className="text-maroon-500 font-semibold uppercase mt-0.5" style={{ fontSize: '8px', letterSpacing: '0.1em' }}>Luxury Kid&apos;s &amp; Girls Clothing</span>
-              </div>
-            </div>
-            {/* Invoice details */}
-            <div className="text-right">
-              <div className="bg-white/15 rounded-xl px-5 py-4 inline-block">
-                <p className="text-white/70 text-xs uppercase tracking-wider mb-1">Tax Invoice</p>
-                <p className="text-white text-xl font-bold">{order.order_number}</p>
-                <p className="text-white/70 text-xs mt-1">{date}</p>
-              </div>
-              <p className="text-white/60 text-xs mt-3">Shop Ground Floor No 131, Texvalley Gangapuram</p>
-              <p className="text-white/60 text-xs">vijeytextile.com &nbsp;|&nbsp; +91 94439 47853 / +91 75981 86790</p>
+      <article className="invoice mx-auto max-w-3xl border border-ink-edge/60 p-8 sm:p-12">
+        <header className="flex flex-wrap items-start justify-between gap-8 border-b border-brass/60 pb-8">
+          <div className="flex items-center gap-4">
+            <LogoMark size={44} />
+            <div>
+              <p className="font-display text-xl font-light text-paper">{STORE.name}</p>
+              <p className="mt-1 text-rule uppercase text-paper-faint">{STORE.tagline}</p>
             </div>
           </div>
+          <div className="text-right">
+            <p className="text-rule uppercase text-brass-bright">Tax invoice</p>
+            <p className="mt-2 font-display text-lg tabular-nums text-paper">{order.order_number}</p>
+            <p className="mt-1 text-sm text-paper-muted">{date}</p>
+          </div>
+        </header>
+
+        <div className="mt-10 grid gap-10 sm:grid-cols-2">
+          <section>
+            <h2 className="text-rule uppercase text-paper-faint">Billed to</h2>
+            <p className="mt-3 text-paper">{user?.full_name}</p>
+            {user?.email && <p className="text-sm text-paper-muted">{user.email}</p>}
+            {user?.phone && <p className="text-sm tabular-nums text-paper-muted">{user.phone}</p>}
+          </section>
+
+          <section>
+            <h2 className="text-rule uppercase text-paper-faint">Delivered to</h2>
+            <p className="mt-3 text-paper">{addr?.full_name}</p>
+            <p className="text-sm text-paper-muted">
+              {addr?.address_line1}
+              {addr?.address_line2 && <>, {addr.address_line2}</>}
+            </p>
+            <p className="text-sm text-paper-muted">
+              {addr?.city}, {addr?.state} — <span className="tabular-nums">{addr?.pincode}</span>
+            </p>
+            {addr?.phone && <p className="text-sm tabular-nums text-paper-muted">{addr.phone}</p>}
+          </section>
         </div>
 
-        {/* ── Gold divider strip ── */}
-        <div className="h-1 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400" />
-
-        <div className="px-8 py-7 space-y-6">
-
-          {/* ── Customer + Shipping ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-maroon-50 border border-maroon-100 rounded-xl p-4">
-              <p className="text-xs font-bold text-maroon-700 uppercase tracking-wider mb-3">Bill To</p>
-              <p className="font-bold text-gray-900">{user?.full_name}</p>
-              <p className="text-sm text-gray-600 mt-0.5">{user?.email}</p>
-              <p className="text-sm text-gray-600">{user?.phone}</p>
-            </div>
-            <div className="bg-maroon-50 border border-maroon-200 rounded-xl p-4">
-              <p className="text-xs font-bold text-orange-700 uppercase tracking-wider mb-3">Ship To</p>
-              <p className="font-bold text-gray-900">{addr.full_name}</p>
-              <p className="text-sm text-gray-600 mt-0.5">{addr.address_line1}</p>
-              {addr.address_line2 && <p className="text-sm text-gray-600">{addr.address_line2}</p>}
-              <p className="text-sm text-gray-600">{addr.city}, {addr.state} — {addr.pincode}</p>
-              <p className="text-sm text-gray-600">📞 {addr.phone}</p>
-            </div>
-          </div>
-
-          {/* ── Items Table ── */}
-          <div className="overflow-x-auto rounded-xl border border-gray-100">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-maroon-800 text-white text-xs uppercase tracking-wider">
-                  <th className="px-4 py-3 text-left">Product</th>
-                  <th className="px-4 py-3 text-center">Qty</th>
-                  <th className="px-4 py-3 text-right">Unit Price</th>
-                  <th className="px-4 py-3 text-right">Total</th>
+        <div className="mt-10 overflow-x-auto">
+          <table className="w-full min-w-[28rem] border-collapse text-sm">
+            <caption className="sr-only">Items in order {order.order_number}</caption>
+            <thead>
+              <tr className="border-b border-ink-edge">
+                <th scope="col" className="py-3 text-left text-rule uppercase text-paper-faint">Piece</th>
+                <th scope="col" className="py-3 text-right text-rule uppercase text-paper-faint">Qty</th>
+                <th scope="col" className="py-3 text-right text-rule uppercase text-paper-faint">Price</th>
+                <th scope="col" className="py-3 text-right text-rule uppercase text-paper-faint">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((it, i) => (
+                <tr key={i} className="border-b border-ink-edge/40">
+                  <td className="py-3 pr-4 text-paper">
+                    {it.name}
+                    {(it.size || it.color) && (
+                      <span className="block text-xs text-paper-faint">
+                        {[it.size && `Size ${it.size}`, it.color].filter(Boolean).join(' · ')}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 text-right tabular-nums text-paper-muted">{it.quantity}</td>
+                  <td className="py-3 text-right tabular-nums text-paper-muted">{money(it.price)}</td>
+                  <td className="py-3 text-right tabular-nums text-paper">
+                    {money((it.price ?? 0) * (it.quantity ?? 1))}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {(order.items_snapshot as any[]).map((item, i) => {
-                  const imgSrc = item.image
-                    ? (item.image.startsWith('http') ? item.image : `${process.env.NEXT_PUBLIC_API_URL}${item.image}`)
-                    : null;
-                  const emoji = item.category === 'Baby Frocks' ? '👶' : item.category === 'Chudithar' ? '👘' : item.category === 'Frocks' ? '👗' : item.category === 'Western Dresses' ? '👒' : item.category === 'Lehenga' ? '💃' : item.category === 'Party Wear' ? '✨' : '👗';
-                  return (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-maroon-50/40'}>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-maroon-50 flex items-center justify-center text-lg flex-shrink-0 overflow-hidden border border-maroon-200">
-                            {imgSrc
-                              ? <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; }} />
-                              : <span>{emoji}</span>}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{item.name}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                              Product ID: #{item.product_id}
-                              {item.size ? ` · Size: ${item.size}` : ''}
-                              {item.color ? ` · Colour: ${item.color}` : ''}
-                            </p>
-                            <p className="text-xs text-gray-400">{item.category}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4 text-center font-semibold">{item.quantity}</td>
-                      <td className="px-4 py-4 text-right text-gray-700">₹{Number(item.price).toLocaleString()}</td>
-                      <td className="px-4 py-4 text-right font-bold text-maroon-900">₹{Number(item.subtotal).toLocaleString()}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Totals ── */}
-          <div className="flex justify-end">
-            <div className="w-full sm:w-64 space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span className="font-medium">₹{order.subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
-                <span className={`font-medium ${order.shipping_fee === 0 ? 'text-green-600' : ''}`}>
-                  {order.shipping_fee === 0 ? 'FREE' : `₹${order.shipping_fee}`}
-                </span>
-              </div>
-              {order.discount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount</span>
-                  <span className="font-medium">-₹{order.discount.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="border-t-2 border-maroon-200 pt-3 flex justify-between font-bold text-lg">
-                <span className="text-maroon-900">Grand Total</span>
-                <span className="text-maroon-900">₹{order.total.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ── Payment Details ── */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
-            <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3">Payment Details</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-gray-500 text-xs mb-1">Mode of Payment</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{isCod ? '💵' : '💳'}</span>
-                  <span className="font-semibold text-gray-800">{PAY_LABEL[pm] || pm.toUpperCase()}</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-gray-500 text-xs mb-1">Payment Status</p>
-                <span className={`inline-block text-xs font-bold px-3 py-1 rounded-full border ${PAY_STATUS_COLOR[order.payment_status] || 'text-gray-600 bg-gray-50 border-gray-200'}`}>
-                  {order.payment_status.toUpperCase()}
-                </span>
-              </div>
-              {!isCod && txn && (
-                <div className="sm:col-span-2">
-                  <p className="text-gray-500 text-xs mb-1">Transaction ID</p>
-                  <p className="font-mono text-xs bg-white border border-blue-200 rounded-lg px-3 py-2 text-gray-700 break-all">{txn}</p>
-                </div>
-              )}
-              {isCod && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    💵 Cash on Delivery — Payment collected at the time of delivery.
-                  </p>
-                </div>
-              )}
-              {order.payment_status === 'refunded' && (
-                <div className="sm:col-span-2">
-                  <p className="text-xs text-purple-700 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
-                    💜 Refund initiated — Amount will be credited within 5–7 business days.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ── Order Status ── */}
-          <div className="flex items-center justify-between flex-wrap gap-3 py-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>Order Status:</span>
-              <span className={`font-bold capitalize px-3 py-1 rounded-full text-xs border
-                ${order.status === 'delivered' ? 'bg-green-50 text-green-700 border-green-300' :
-                  order.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-300' :
-                  'bg-blue-50 text-blue-700 border-blue-300'}`}>
-                {order.status.replace('_', ' ')}
-              </span>
-            </div>
-            <p className="text-xs text-gray-400">Invoice generated on {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* ── Footer ── */}
-        <div className="bg-gradient-to-r from-maroon-900 to-maroon-800 px-8 py-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <LogoMark size={36} className="text-white flex-shrink-0" />
-              <div>
-                <p className="text-white font-bold uppercase" style={{ fontSize: '14px', letterSpacing: '0.04em' }}>Vijey Textile</p>
-                <p className="text-maroon-300 text-[9px] font-semibold tracking-widest uppercase mb-1">Luxury Kid&apos;s &amp; Girls Clothing</p>
-                <p className="text-white/60 text-xs">Shop Ground Floor No 131, Texvalley Gangapuram</p>
-                <p className="text-white/60 text-xs">vijeytextile.com · {STORE.email} · {STORE.email2}</p>
-              </div>
+        <div className="mt-8 flex justify-end">
+          <dl className="w-full max-w-xs space-y-2.5 text-sm">
+            <div className="flex justify-between gap-6">
+              <dt className="text-paper-muted">Subtotal</dt>
+              <dd className="tabular-nums text-paper">{money(order.subtotal)}</dd>
             </div>
-            <div className="text-right">
-              <p className="text-white/50 text-xs">Thank you for shopping with us! 🛍️</p>
-              <p className="text-gold-300 text-xs font-medium mt-1">© {new Date().getFullYear()} Vijey Textile. All rights reserved.</p>
+            <div className="flex justify-between gap-6">
+              <dt className="text-paper-muted">Shipping</dt>
+              <dd className="tabular-nums text-paper">{money(order.shipping_fee)}</dd>
+            </div>
+            {order.discount > 0 && (
+              <div className="flex justify-between gap-6">
+                <dt className="text-paper-muted">Discount</dt>
+                <dd className="tabular-nums text-paper">−{money(order.discount)}</dd>
+              </div>
+            )}
+            <div className="flex items-baseline justify-between gap-6 border-t border-brass/60 pt-3">
+              <dt className="text-paper">Total paid</dt>
+              <dd className="font-display text-xl tabular-nums text-paper">{money(order.total)}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <footer className="mt-10 border-t border-ink-edge/60 pt-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <h2 className="text-rule uppercase text-paper-faint">Payment</h2>
+              <p className="mt-2 text-sm capitalize text-paper-muted">
+                {order.payment_method} · {order.payment_status}
+              </p>
+              {order.payment_transaction_id && (
+                <p className="mt-1 font-mono text-xs text-paper-faint">
+                  {order.payment_transaction_id}
+                </p>
+              )}
+            </div>
+            <div className="sm:text-right">
+              <h2 className="text-rule uppercase text-paper-faint">Sold by</h2>
+              <p className="mt-2 text-sm text-paper-muted">
+                {STORE.shopNo}, {STORE.area}
+                <br />
+                {STORE.city}, {STORE.state} — {STORE.pincode}
+                <br />
+                {STORE.email}
+              </p>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Print styles */}
-      <style jsx global>{`
-        @media print {
-          body * { visibility: hidden; }
-          #invoice, #invoice * { visibility: visible; }
-          #invoice { position: fixed; left: 0; top: 0; width: 100%; }
-          .print\\:hidden { display: none !important; }
-        }
-      `}</style>
-    </div>
+          <p className="mt-8 text-xs text-paper-faint">
+            This is a computer-generated invoice and is valid without a signature.
+          </p>
+        </footer>
+      </article>
+    </PageShell>
   );
 }
 
-export default function InvoicePage() {
+export default function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   return (
-    <Suspense fallback={
-      <div className="max-w-3xl mx-auto px-4 py-12 animate-pulse space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-48" />
-        <div className="h-[600px] bg-gray-200 rounded-2xl" />
-      </div>
-    }>
-      <InvoiceContent />
-    </Suspense>
+    <RouteErrorBoundary routeName="this invoice" fallbackHref="/orders" fallbackLabel="Your orders">
+      <InvoiceInner id={Number(id)} />
+    </RouteErrorBoundary>
   );
 }

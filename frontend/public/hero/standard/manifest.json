@@ -1,0 +1,11 @@
+{
+  "tier": "standard",
+  "frames": 48,
+  "width": 1600,
+  "quality": 66,
+  "bytes": {
+    "avif": 1363458,
+    "webp": 1411288,
+    "posterAvif": 50747
+  }
+}

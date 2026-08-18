@@ -1,16 +1,56 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import {
-  CreditCard, AlertCircle, CheckCircle,
-  Lock, Package, ArrowLeft, MapPin, Navigation, Plus, Star, CalendarDays,
-} from 'lucide-react';
+import api, { ordersAPI } from '@/lib/api';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { ordersAPI, addressAPI } from '@/lib/api';
-import api from '@/lib/api';
-import toast from 'react-hot-toast';
+import { shippingAddressSchema } from '@/lib/schemas';
+import { STORE } from '@/lib/config';
+import type { OrderCreatePayload, PaymentDetailsPayload } from '@/lib/contracts';
+import PageShell from '@/components/system/PageShell';
+import PageHeader from '@/components/system/PageHeader';
+import { Field } from '@/components/system/Field';
+import { ActionButton, ActionLink } from '@/components/system/Action';
+import { Announce, Skeleton, SkeletonLine } from '@/components/system/States';
+import RouteErrorBoundary from '@/components/resilience/RouteErrorBoundary';
+import PaymentOutcome, { type Outcome, isMoneyAtRisk } from './PaymentOutcome';
+
+/**
+ * Checkout — the revenue path.
+ *
+ * RESTRUCTURED. The old page was a three-step wizard: address, then payment,
+ * then review. A wizard hides the total behind a step, makes correcting an
+ * address a backwards journey, and — worst on a phone — means the customer
+ * cannot see what they are paying for at the moment they pay. This is one
+ * page: address and payment in the column, the order standing beside them,
+ * total always visible.
+ *
+ * Validation gates the payment, not the scroll. Pressing pay with a bad
+ * address does not silently fail: it marks the fields, moves focus to the
+ * first one, and says so.
+ *
+ * EVERY TERMINAL STATE OF THE PAYMENT IS DESIGNED — see PaymentOutcome.
+ * D1 was a declined card producing no response at all. The fix is not one
+ * banner; it is that "have I been charged?" has four different answers and
+ * the customer is owed the right one.
+ *
+ * ORDERING THAT MATTERS, AND WHY:
+ *   1. create-order          — a Razorpay order id
+ *   2. Razorpay modal        — the customer pays
+ *   3. verify                — signature check, server-side
+ *   4. POST /api/orders/     — the order row
+ *   5. clearCart             — only after 4 succeeds
+ *
+ * The cart is cleared LAST, deliberately. If step 4 fails the customer still
+ * has their bag, which is the difference between "try again" and "I have lost
+ * everything and paid for it".
+ *
+ * `orderPlacedRef` is set synchronously before clearing, because clearCart()
+ * empties `items` and the empty-cart guard would otherwise bounce the
+ * customer to /cart in the same tick their order succeeded.
+ */
 
 const INDIA_STATES = [
   'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh',
@@ -22,563 +62,416 @@ const INDIA_STATES = [
   'Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry',
 ];
 
-type PayMethod = 'razorpay' | 'emi';
-interface Errors { [k: string]: string; }
+type Addr = {
+  full_name: string; phone: string; address_line1: string; address_line2: string;
+  city: string; state: string; pincode: string;
+};
 
-function FieldErr({ msg }: { msg?: string }) {
-  if (!msg) return null;
-  return <p className="error-msg mt-1.5"><AlertCircle size={13} />{msg}</p>;
-}
+const EMPTY: Addr = {
+  full_name: '', phone: '', address_line1: '', address_line2: '',
+  city: '', state: 'Tamil Nadu', pincode: '',
+};
 
 declare global {
-  interface Window { Razorpay: any; }
+  interface Window { Razorpay: any }
 }
 
-export default function CheckoutPage() {
-  const { items, total, clearCart } = useCart();
+const money = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+
+function CheckoutInner() {
+  const { items, total, loading: cartLoading, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  // Declare state first so useEffect hooks below can reference them
-  const [step,    setStep]    = useState<1 | 2 | 3>(1);
-  const [placing, setPlacing] = useState(false);
+  const [addr, setAddr] = useState<Addr>(EMPTY);
+  const [errors, setErrors] = useState<Partial<Record<keyof Addr, string>>>({});
   const [openBox, setOpenBox] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [scriptReady, setScriptReady] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
 
-  // Set synchronously the instant an order is confirmed — clearCart() empties
-  // `items`, which would otherwise race this effect's redirect-to-cart branch
-  // and bounce a customer who just paid back to an empty cart page.
   const orderPlacedRef = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const outcomeRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (authLoading || !user) return;
-    if (orderPlacedRef.current) return;
-    if (items.length === 0) { router.push('/cart'); return; }
-    // Load Razorpay script
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
-  }, [user, items, authLoading]);
-
-  // Warn user before refresh / tab close while on checkout or during payment
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (items.length === 0) return; // cart already empty — order placed, no need to warn
-      const msg = placing
-        ? '⚠️ Your payment is being processed! Leaving now may cause issues.'
-        : 'You are in the middle of checkout. Your order has not been placed yet.';
-      e.preventDefault();
-      e.returnValue = msg;
-      return msg;
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [items.length, placing]);
-
-  // Saved addresses
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
-  const [selectedAddrId, setSelectedAddrId] = useState<number | null>(null);
-  const [showNewAddrForm, setShowNewAddrForm] = useState(false);
-  const [gpsLoading, setGpsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    addressAPI.getAll().then(res => {
-      const addrs = res.data || [];
-      setSavedAddresses(addrs);
-      const def = addrs.find((a: any) => a.is_default);
-      if (def) {
-        setSelectedAddrId(def.id);
-        setAddr({
-          full_name:     def.full_name,
-          phone:         def.phone,
-          address_line1: def.address_line1,
-          address_line2: def.address_line2 || '',
-          city:          def.city,
-          state:         def.state,
-          pincode:       def.pincode,
-        });
-      } else if (addrs.length === 0) {
-        setShowNewAddrForm(true);
-      }
-    }).catch(() => setShowNewAddrForm(true));
-  }, [user]);
-
-  const [addr, setAddr] = useState({
-    full_name:     user?.full_name || '',
-    phone:         user?.phone || '',
-    address_line1: '',
-    address_line2: '',
-    city:          '',
-    state:         'Tamil Nadu',
-    pincode:       '',
-  });
-  const [addrErrors, setAddrErrors] = useState<Errors>({});
-  const [payMethod, setPayMethod] = useState<PayMethod>('razorpay');
-
-  // Use GPS to fill address
-  const detectLocation = () => {
-    if (!navigator.geolocation) { toast.error('Geolocation not supported'); return; }
-    setGpsLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`
-          );
-          const data = await res.json();
-          const a = data.address || {};
-          setAddr(prev => ({
-            ...prev,
-            address_line1: [a.road, a.neighbourhood, a.suburb].filter(Boolean).join(', ') || prev.address_line1,
-            city:  a.city || a.town || a.village || a.county || prev.city,
-            state: a.state || prev.state,
-            pincode: a.postcode || prev.pincode,
-          }));
-          toast.success('Location detected!');
-        } catch { toast.error('Could not fetch address from location'); }
-        finally { setGpsLoading(false); }
-      },
-      () => { toast.error('Location access denied. Please allow location.'); setGpsLoading(false); },
-      { timeout: 10000 }
-    );
-  };
-
-  const shipping   = 49;
+  const shipping = STORE.shippingFee;
   const grandTotal = total + shipping;
 
-  const setA = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setAddr({ ...addr, [f]: e.target.value });
-    setAddrErrors({ ...addrErrors, [f]: '' });
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/auth/login');
+  }, [user, authLoading, router]);
+
+  // Empty bag → back to the bag. Never fires once an order has been placed.
+  useEffect(() => {
+    if (cartLoading || orderPlacedRef.current) return;
+    if (items.length === 0) router.replace('/cart');
+  }, [items.length, cartLoading, router]);
+
+  useEffect(() => {
+    if (user) {
+      setAddr((a) => ({
+        ...a,
+        full_name: a.full_name || user.full_name || '',
+        phone: a.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
+
+  /**
+   * Razorpay's script is the only third-party code on the site, and it is
+   * loaded here rather than in the layout so it exists on exactly one route.
+   * `scriptReady` gates the pay button — offering payment before the script
+   * has parsed is how you get a button that does nothing.
+   */
+  useEffect(() => {
+    const existing = document.querySelector<HTMLScriptElement>('script[data-razorpay]');
+    if (existing) { setScriptReady(true); return; }
+    const s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.async = true;
+    s.dataset.razorpay = 'true';
+    s.onload = () => setScriptReady(true);
+    s.onerror = () => setOutcome({ kind: 'offline' });
+    document.body.appendChild(s);
+    return () => { s.remove(); };
+  }, []);
+
+  // Any outcome is a change of task — move focus so it is not missed.
+  useEffect(() => {
+    if (outcome) outcomeRef.current?.focus();
+  }, [outcome]);
+
+  useEffect(() => {
+    if (!announcement) return;
+    const t = setTimeout(() => setAnnouncement(''), 1800);
+    return () => clearTimeout(t);
+  }, [announcement]);
+
+  const set = (k: keyof Addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setAddr((a) => ({ ...a, [k]: e.target.value }));
+    setErrors((p) => ({ ...p, [k]: '' }));
   };
 
-  const validateAddr = (): boolean => {
-    const e: Errors = {};
-    if (!addr.full_name.trim())      e.full_name     = 'Full name is required';
-    if (!addr.phone.trim())          e.phone         = 'Mobile number is required';
-    else if (!/^(\+91|91|0)?[6-9]\d{9}$/.test(addr.phone.replace(/\s|-/g,'')))
-                                     e.phone         = 'Enter a valid 10-digit Indian mobile number';
-    if (!addr.address_line1.trim())  e.address_line1 = 'Street address is required';
-    if (!addr.city.trim())           e.city          = 'City is required';
-    if (!addr.state)                 e.state         = 'State is required';
-    if (!addr.pincode.trim())        e.pincode       = 'Pincode is required';
-    else if (!/^\d{6}$/.test(addr.pincode.trim()))
-                                     e.pincode       = 'Pincode must be exactly 6 digits';
-    setAddrErrors(e);
-    return Object.keys(e).length === 0;
+  /**
+   * One source of truth for the address rules: the same Zod schema the rest of
+   * the app uses, which mirrors backend/schemas.py:370 field for field
+   * including the Indian mobile pattern. When these drifted, the failure
+   * surfaced as a 422 AFTER the customer had already been sent to Razorpay —
+   * the worst possible moment to discover a validation mismatch.
+   */
+  const validate = (): boolean => {
+    const result = shippingAddressSchema.safeParse(addr);
+    if (result.success) { setErrors({}); return true; }
+    const e: Partial<Record<keyof Addr, string>> = {};
+    for (const issue of result.error.issues) {
+      const f = issue.path[0] as keyof Addr;
+      if (f && !e[f]) e[f] = issue.message;
+    }
+    setErrors(e);
+    // Focus the first bad field rather than leaving the customer to hunt.
+    const first = Object.keys(e)[0];
+    const el = formRef.current?.querySelector<HTMLElement>(`[name="${first}"]`);
+    el?.focus();
+    setAnnouncement('Some delivery details need fixing before you can pay.');
+    return false;
   };
 
-  const handleAddrNext = () => {
-    if (validateAddr()) setStep(2);
-    else toast.error('Please fill all required address fields correctly');
-  };
+  /** Only ever called after Razorpay AND the server have confirmed payment. */
+  const finalise = async (proof: Required<Pick<PaymentDetailsPayload,
+    'razorpay_order_id' | 'razorpay_payment_id' | 'razorpay_signature'>>) => {
+    const payload: OrderCreatePayload = {
+      shipping_address: {
+        full_name: addr.full_name.trim(),
+        phone: addr.phone.replace(/[\s-]/g, ''),
+        address_line1: addr.address_line1.trim(),
+        address_line2: addr.address_line2.trim() || null,
+        city: addr.city.trim(),
+        state: addr.state,
+        pincode: addr.pincode.trim(),
+      },
+      payment: { method: 'razorpay', ...proof },
+      open_box_delivery: openBox,
+    };
 
-  const handlePayNext = () => setStep(3);
-
-  // ── Finalize the order — only ever called after Razorpay confirms payment ──
-  const finalizeOrder = async (method: string, paymentProof: {
-    razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string;
-  }) => {
-    setPlacing(true);
     try {
-      const res = await ordersAPI.place({
-        shipping_address: {
-          full_name:    addr.full_name.trim(),
-          phone:        addr.phone.replace(/\s|-/g, ''),
-          address_line1: addr.address_line1.trim(),
-          address_line2: addr.address_line2.trim() || undefined,
-          city:         addr.city.trim(),
-          state:        addr.state,
-          pincode:      addr.pincode.trim(),
-        },
-        payment: { method, ...paymentProof },
-        open_box_delivery: openBox,
-      });
+      const res = await ordersAPI.place(payload);
+      // Set BEFORE clearing: clearCart empties items, and the empty-bag guard
+      // would otherwise redirect to /cart in the same tick.
       orderPlacedRef.current = true;
       await clearCart();
-      toast.success('Order placed successfully!');
       router.push(`/orders/${res.data.id}?new=1`);
     } catch (err: any) {
-      const d = err.response?.data?.detail;
-      toast.error(Array.isArray(d) ? d.map((x: any) => x.msg).join('. ') : (d || 'Failed to place order'));
-    } finally { setPlacing(false); }
+      // Money has left the customer's account and there is no order. This is
+      // the state that must never be dressed up as "please try again".
+      const d = err?.response?.data?.detail;
+      setOutcome({
+        kind: 'orphaned',
+        paymentId: proof.razorpay_payment_id,
+        detail: typeof d === 'string' ? d : undefined,
+      });
+    } finally {
+      setPlacing(false);
+    }
   };
 
-  // ── Razorpay flow (card / net banking / UPI via Razorpay modal) ──
-  const openRazorpay = async (isEmi = false) => {
-    if (!validateAddr()) { toast.error('Please fill all address fields'); return; }
+  const pay = async () => {
+    setOutcome(null);
+    if (!navigator.onLine) { setOutcome({ kind: 'offline' }); return; }
+    if (!validate()) return;
+    if (!scriptReady || !window.Razorpay) { setOutcome({ kind: 'offline' }); return; }
+
     setPlacing(true);
     try {
       const orderRes = await api.post('/api/payments/create-order', { amount: grandTotal });
       const { order_id, key_id } = orderRes.data;
 
-      const options: any = {
-        key:         key_id,
-        amount:      grandTotal * 100,
-        currency:    'INR',
-        name:        'Vijey Textile',
-        description: 'Premium Textile Purchase',
-        order_id:    order_id,
-        prefill: {
-          name:    addr.full_name,
-          contact: addr.phone,
-          email:   user?.email,
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount: grandTotal * 100,
+        currency: 'INR',
+        name: STORE.name,
+        description: 'Order',
+        order_id,
+        prefill: { name: addr.full_name, contact: addr.phone, email: user?.email },
+        theme: { color: '#A16207' },
+        // Closing the modal is not a failure — say so plainly rather than
+        // leaving the page silent, which is what D1 actually was.
+        modal: {
+          ondismiss: () => {
+            setPlacing(false);
+            setOutcome({ kind: 'dismissed' });
+          },
         },
-        theme: { color: '#e11d48' },
         handler: async (response: any) => {
-          const paymentProof = {
-            razorpay_order_id:   response.razorpay_order_id,
+          const proof = {
+            razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature:  response.razorpay_signature,
+            razorpay_signature: response.razorpay_signature,
           };
           try {
-            await api.post('/api/payments/verify', paymentProof);
-            // Order is only ever created after this — the backend independently
-            // re-verifies the same signature before writing anything to the DB.
-            await finalizeOrder(isEmi ? 'emi' : 'razorpay', paymentProof);
+            await api.post('/api/payments/verify', proof);
           } catch {
-            toast.error('Payment verification failed. Contact support.');
+            // The charge may have succeeded; we simply cannot prove it.
+            // Retrying here risks charging twice, so it is not offered.
             setPlacing(false);
+            setOutcome({ kind: 'unverified', paymentId: proof.razorpay_payment_id });
+            return;
           }
+          await finalise(proof);
         },
-        modal: { ondismiss: () => { setPlacing(false); toast.error('Payment cancelled'); } },
-      };
+      });
 
-      // For EMI: open standard Razorpay modal (EMI tab appears automatically inside)
-      // No custom config — Razorpay shows EMI for eligible credit cards automatically
+      /**
+       * The declined-card path. Razorpay fires this event rather than
+       * rejecting the handler, which is precisely why it was missed: the modal
+       * closes and, without a listener, nothing at all happens.
+       */
+      rzp.on('payment.failed', (resp: {
+        error?: { description?: string; reason?: string; metadata?: { payment_id?: string } };
+      }) => {
+        const e = resp?.error ?? {};
+        setPlacing(false);
+        setOutcome({
+          kind: 'declined',
+          description: e.description || 'The payment could not be completed.',
+          reason: e.reason,
+          paymentId: e.metadata?.payment_id,
+        });
+      });
 
-      const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Payment gateway error. Please try again.';
-      toast.error(Array.isArray(msg) ? msg.map((x: any) => x.msg).join('. ') : msg);
+    } catch {
       setPlacing(false);
+      setOutcome({ kind: 'offline' });
     }
   };
 
-  const handleRazorpay = async () => openRazorpay(false);
+  if (authLoading || !user) return null;
 
-  const handlePlaceOrder = async () => {
-    if (!validateAddr()) {
-      toast.error('Please complete all required fields'); return;
-    }
-    if (payMethod === 'emi') { await openRazorpay(true); return; }
-    await handleRazorpay();
-  };
+  if (cartLoading) {
+    return (
+      <PageShell rhythm="tight">
+        <PageHeader eyebrow="Checkout" title="Where it goes, and how you pay" />
+        <Skeleton label="Loading checkout">
+          <div className="grid gap-x-16 gap-y-10 lg:grid-cols-12">
+            <div className="space-y-7 lg:col-span-7">
+              {[0, 1, 2, 3].map((i) => <SkeletonLine key={i} w="w-full" h="h-10" />)}
+            </div>
+            <div className="lg:col-span-4 lg:col-start-9"><SkeletonLine w="w-full" h="h-40" /></div>
+          </div>
+        </Skeleton>
+      </PageShell>
+    );
+  }
 
-  const StepDot = ({ n, label }: { n: number; label: string }) => (
-    <div className="flex flex-col items-center gap-1">
-      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-all ${step >= n ? 'bg-maroon-800 border-maroon-800 text-white' : 'border-gray-300 text-gray-400'}`}>
-        {step > n ? <CheckCircle size={18} /> : n}
-      </div>
-      <span className={`text-xs font-medium ${step >= n ? 'text-maroon-800' : 'text-gray-400'}`}>{label}</span>
-    </div>
-  );
+  const atRisk = outcome ? isMoneyAtRisk(outcome) : false;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Link href="/cart" className="p-2 hover:bg-maroon-100 rounded-lg"><ArrowLeft size={20} /></Link>
-        <h1 className="text-2xl font-bold text-maroon-900">Secure Checkout</h1>
-        <Lock size={18} className="text-green-600" />
-      </div>
+    <PageShell rhythm="tight">
+      <PageHeader
+        eyebrow="Checkout"
+        title="Where it goes, and how you pay"
+        standfirst="Payment is handled by Razorpay. We never see or store your card details."
+      />
 
-      {/* Steps */}
-      <div className="flex items-center justify-center gap-0 mb-8">
-        <StepDot n={1} label="Address" />
-        <div className={`h-0.5 w-20 sm:w-28 transition-colors ${step >= 2 ? 'bg-maroon-800' : 'bg-gray-200'}`} />
-        <StepDot n={2} label="Payment" />
-        <div className={`h-0.5 w-20 sm:w-28 transition-colors ${step >= 3 ? 'bg-maroon-800' : 'bg-gray-200'}`} />
-        <StepDot n={3} label="Confirm" />
-      </div>
+      <Announce message={announcement} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-
-          {/* ── STEP 1: Address ── */}
-          {step === 1 && (
-            <div className="card p-6">
-              <h2 className="font-bold text-lg text-maroon-900 mb-5 flex items-center gap-2">
-                <Package size={20} /> Delivery Address
-              </h2>
-
-              {/* Saved addresses */}
-              {savedAddresses.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-sm font-semibold text-gray-700 mb-3">Saved Addresses</p>
-                  <div className="space-y-2">
-                    {savedAddresses.map((a: any) => (
-                      <label key={a.id}
-                        className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${selectedAddrId === a.id ? 'border-maroon-700 bg-maroon-50' : 'border-gray-200 hover:border-maroon-300'}`}
-                      >
-                        <input type="radio" name="saved_addr" className="mt-1 accent-maroon-700"
-                          checked={selectedAddrId === a.id}
-                          onChange={() => {
-                            setSelectedAddrId(a.id);
-                            setShowNewAddrForm(false);
-                            setAddr({ full_name: a.full_name, phone: a.phone, address_line1: a.address_line1, address_line2: a.address_line2 || '', city: a.city, state: a.state, pincode: a.pincode });
-                          }}
-                        />
-                        <div className="flex-1 text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900">{a.full_name}</span>
-                            {a.label && <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full">{a.label}</span>}
-                            {a.is_default && <span className="text-xs bg-maroon-100 text-maroon-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Star size={10} /> Default</span>}
-                          </div>
-                          <p className="text-gray-500 mt-0.5">{a.address_line1}{a.address_line2 ? `, ${a.address_line2}` : ''}, {a.city}, {a.state} – {a.pincode}</p>
-                          <p className="text-gray-500">{a.phone}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                  <button onClick={() => { setShowNewAddrForm(v => !v); setSelectedAddrId(null); }}
-                    className="mt-3 flex items-center gap-1.5 text-sm text-maroon-700 font-medium hover:underline">
-                    <Plus size={15} /> {showNewAddrForm ? 'Cancel' : 'Add new address'}
-                  </button>
-                </div>
-              )}
-
-              {/* Address form (new or when no saved addresses) */}
-              {(showNewAddrForm || savedAddresses.length === 0) && (
-              <div className="space-y-4">
-                {/* GPS detect button */}
-                <button type="button" onClick={detectLocation} disabled={gpsLoading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-maroon-300 rounded-xl text-maroon-700 text-sm font-medium hover:bg-maroon-50 transition-colors">
-                  {gpsLoading
-                    ? <><span className="animate-spin h-4 w-4 border-2 border-maroon-600 border-t-transparent rounded-full" /> Detecting location...</>
-                    : <><Navigation size={16} /> Use my current location</>}
-                </button>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Full Name *</label>
-                    <input type="text" value={addr.full_name} onChange={setA('full_name')} placeholder="Your full name" className={`input-field ${addrErrors.full_name ? 'input-error' : ''}`} />
-                    <FieldErr msg={addrErrors.full_name} />
-                  </div>
-                  <div>
-                    <label className="label">Mobile Number *</label>
-                    <input type="tel" value={addr.phone} onChange={setA('phone')} placeholder="+91 98765 43210" className={`input-field ${addrErrors.phone ? 'input-error' : ''}`} maxLength={13} />
-                    <FieldErr msg={addrErrors.phone} />
-                  </div>
-                </div>
-                <div>
-                  <label className="label">Street Address *</label>
-                  <input type="text" value={addr.address_line1} onChange={setA('address_line1')} placeholder="House No, Street, Area" className={`input-field ${addrErrors.address_line1 ? 'input-error' : ''}`} />
-                  <FieldErr msg={addrErrors.address_line1} />
-                </div>
-                <div>
-                  <label className="label">Landmark (Optional)</label>
-                  <input type="text" value={addr.address_line2} onChange={setA('address_line2')} placeholder="Landmark, Apartment number" className="input-field" />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="label">City *</label>
-                    <input type="text" value={addr.city} onChange={setA('city')} placeholder="City" className={`input-field ${addrErrors.city ? 'input-error' : ''}`} />
-                    <FieldErr msg={addrErrors.city} />
-                  </div>
-                  <div>
-                    <label className="label">State *</label>
-                    <select value={addr.state} onChange={setA('state')} className={`input-field ${addrErrors.state ? 'input-error' : ''}`}>
-                      <option value="">Select State</option>
-                      {INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <FieldErr msg={addrErrors.state} />
-                  </div>
-                  <div>
-                    <label className="label">Pincode *</label>
-                    <input type="text" value={addr.pincode} onChange={setA('pincode')} placeholder="600001" className={`input-field ${addrErrors.pincode ? 'input-error' : ''}`} maxLength={6} />
-                    <FieldErr msg={addrErrors.pincode} />
-                  </div>
-                </div>
-              </div>
-              )}
-              {/* end new address form */}
-
-              <button onClick={handleAddrNext} className="btn-primary w-full mt-6 py-3 flex items-center justify-center gap-2">
-                <MapPin size={18} /> Continue to Payment →
-              </button>
+      <div className="grid gap-x-16 gap-y-[6vh] lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          {/* The outcome takes the top of the column when there is one — it is
+              the most important thing on the page at that moment. */}
+          {outcome && (
+            <div ref={outcomeRef} tabIndex={-1} className="mb-[6vh] focus:outline-none">
+              <PaymentOutcome outcome={outcome} onRetry={pay} retrying={placing} />
             </div>
           )}
 
-          {/* ── STEP 2: Payment ── */}
-          {step === 2 && (
-            <div className="card p-6">
-              <h2 className="font-bold text-lg text-maroon-900 mb-5 flex items-center gap-2">
-                <Lock size={20} className="text-green-600" /> Payment Method
-                <span className="ml-auto text-xs text-green-600 flex items-center gap-1"><Lock size={11} /> 100% Secure</span>
-              </h2>
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {([
-                  { val: 'razorpay', icon: CreditCard,    label: 'Card / UPI / Net Banking', sub: 'Visa • Master • UPI • Wallets' },
-                  { val: 'emi',      icon: CalendarDays,  label: 'Pay in EMI',               sub: 'No-cost EMI available' },
-                ] as const).map(({ val, icon: Icon, label, sub }) => (
-                  <button key={val} onClick={() => setPayMethod(val)}
-                    className={`flex flex-col items-center gap-1.5 p-4 rounded-xl border-2 text-sm font-medium transition-all ${payMethod === val ? 'border-maroon-800 bg-maroon-50 text-maroon-800' : 'border-gray-200 text-gray-600 hover:border-maroon-300'}`}>
-                    <Icon size={22} />
-                    <span className="text-center leading-tight font-semibold">{label}</span>
-                    <span className="text-[10px] text-gray-400">{sub}</span>
-                  </button>
-                ))}
+          <form ref={formRef} onSubmit={(e) => { e.preventDefault(); pay(); }} noValidate>
+            <section aria-labelledby="delivery-heading">
+              <div className="flex items-baseline gap-5">
+                <span className="text-rule tabular-nums text-brass-bright">01</span>
+                <h2 id="delivery-heading" className="font-display text-band font-light text-paper">
+                  Where it goes
+                </h2>
               </div>
 
-              {/* Razorpay info */}
-              {payMethod === 'razorpay' && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
-                  <p className="font-semibold text-blue-800 flex items-center gap-2"><CreditCard size={16} /> Razorpay Secure Payment</p>
-                  <p className="text-sm text-blue-700">You will be redirected to Razorpay's secure payment page. Accepts:</p>
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                    {['Credit Card','Debit Card','Net Banking','UPI','Wallets','EMI'].map(m => (
-                      <span key={m} className="bg-white border border-blue-200 px-2.5 py-1 rounded-full text-blue-700">{m}</span>
-                    ))}
-                  </div>
-                  <p className="text-xs text-blue-500 flex items-center gap-1"><Lock size={11} /> Your card details are handled by Razorpay — never stored on our servers.</p>
+              <div className="mt-8 grid gap-7 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field label="Full name" name="full_name" autoComplete="name"
+                    value={addr.full_name} onChange={set('full_name')} error={errors.full_name} />
                 </div>
-              )}
-
-              {/* EMI info */}
-              {payMethod === 'emi' && (
-                <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-2">
-                  <p className="font-semibold text-purple-800 flex items-center gap-2"><CalendarDays size={16} /> EMI — Pay in Easy Instalments</p>
-                  <p className="text-sm text-purple-700">Split your payment into monthly instalments. Available on Credit Cards.</p>
-                  <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                    {['3 months', '6 months', '9 months', '12 months', 'No-cost EMI'].map(m => (
-                      <span key={m} className="bg-white border border-purple-200 px-2.5 py-1 rounded-full text-purple-700">{m}</span>
-                    ))}
-                  </div>
-                  {grandTotal < 1000 ? (
-                    <div className="bg-maroon-50 border border-orange-200 rounded-lg p-3">
-                      <p className="text-xs text-orange-700 font-semibold">⚠️ Your order total is ₹{grandTotal}. EMI requires a minimum order of ₹1,000.</p>
-                      <p className="text-xs text-orange-600 mt-1">You can still pay via Card / UPI using the option above.</p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-purple-500 flex items-center gap-1"><Lock size={11} /> EMI options will appear in the payment screen. Requires a Credit Card.</p>
-                  )}
+                <Field label="Mobile number" name="phone" inputMode="tel" autoComplete="tel"
+                  value={addr.phone} onChange={set('phone')} error={errors.phone}
+                  hint="We call this number if there is a problem with delivery." />
+                <Field label="Pincode" name="pincode" inputMode="numeric" autoComplete="postal-code"
+                  maxLength={6} value={addr.pincode} onChange={set('pincode')} error={errors.pincode} />
+                <div className="sm:col-span-2">
+                  <Field label="Address" name="address_line1" autoComplete="address-line1"
+                    value={addr.address_line1} onChange={set('address_line1')} error={errors.address_line1} />
                 </div>
-              )}
-
-              <div className="flex gap-3 mt-6">
-                <button onClick={() => setStep(1)} className="btn-secondary flex-1 py-3">← Back</button>
-                <button onClick={handlePayNext} className="btn-primary flex-1 py-3 flex items-center justify-center gap-2">
-                  <Lock size={16} /> Review Order →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── STEP 3: Confirm ── */}
-          {step === 3 && (
-            <div className="card p-6">
-              <h2 className="font-bold text-lg text-maroon-900 mb-5 flex items-center gap-2">
-                <CheckCircle size={20} className="text-green-600" /> Review & Place Order
-              </h2>
-
-              {/* Address summary */}
-              <div className="bg-maroon-50 rounded-xl p-4 mb-4">
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">Delivering to</p>
-                    <p className="font-semibold text-gray-800">{addr.full_name}</p>
-                    <p className="text-sm text-gray-600">{addr.address_line1}{addr.address_line2 ? `, ${addr.address_line2}` : ''}</p>
-                    <p className="text-sm text-gray-600">{addr.city}, {addr.state} — {addr.pincode}</p>
-                    <p className="text-sm text-gray-500">📞 {addr.phone}</p>
-                  </div>
-                  <button onClick={() => setStep(1)} className="text-sm text-maroon-700 hover:underline font-medium">Edit</button>
+                <div className="sm:col-span-2">
+                  <Field label="Landmark or apartment (optional)" name="address_line2"
+                    autoComplete="address-line2" value={addr.address_line2} onChange={set('address_line2')} />
                 </div>
-              </div>
-
-              {/* Payment summary */}
-              <div className="bg-maroon-50 rounded-xl p-4 mb-4">
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide mb-1">Payment</p>
-                    <p className="font-semibold text-gray-800 flex items-center gap-2">
-                      {payMethod === 'razorpay' && <><CreditCard size={16} /> Razorpay (Card / Net Banking / UPI)</>}
-                      {payMethod === 'emi'      && <><CalendarDays size={16} /> EMI — Pay in Instalments</>}
-                    </p>
-                  </div>
-                  <button onClick={() => setStep(2)} className="text-sm text-maroon-700 hover:underline font-medium">Edit</button>
-                </div>
-              </div>
-
-              {/* Items */}
-              <div className="space-y-3 mb-5">
-                <p className="text-xs font-semibold text-maroon-700 uppercase tracking-wide">Items ({items.length})</p>
-                {items.map(item => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-lg bg-maroon-100 flex items-center justify-center text-xl flex-shrink-0">
-                      {item.product.category === 'Lehenga' ? '👗' : item.product.category === 'Chudithar' ? '👘' : '👚'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{item.product.name}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}{item.size ? ` · ${item.size}` : ''}{item.color ? ` · ${item.color}` : ''}</p>
-                    </div>
-                    <p className="font-semibold text-maroon-900 text-sm">₹{(item.product.price * item.quantity).toLocaleString()}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Open Box Delivery option */}
-              <label className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors mb-4">
-                <input type="checkbox" checked={openBox} onChange={e => setOpenBox(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 accent-blue-700 flex-shrink-0" />
+                <Field label="City" name="city" autoComplete="address-level2"
+                  value={addr.city} onChange={set('city')} error={errors.city} />
                 <div>
-                  <p className="font-semibold text-blue-900 text-sm">📦 Request Open Box Delivery</p>
-                  <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">
-                    Inspect the package before accepting. If the product is damaged or doesn't match,
-                    you can refuse delivery on the spot for a full refund.
-                  </p>
+                  <label htmlFor="state" className="block text-rule uppercase text-paper-faint">State</label>
+                  <select
+                    id="state" name="state" value={addr.state} onChange={set('state')}
+                    className="mt-2.5 w-full border-b border-ink-edge bg-transparent pb-2.5 text-lg text-paper transition-colors duration-500 motion-reduce:transition-none focus:border-paper-faint focus:outline-none focus-visible:border-brass-bright"
+                  >
+                    {INDIA_STATES.map((s) => (
+                      <option key={s} value={s} className="bg-ink text-paper">{s}</option>
+                    ))}
+                  </select>
                 </div>
+              </div>
+            </section>
+
+            <section aria-labelledby="pay-heading" className="mt-[7vh] border-t border-ink-edge/60 pt-10">
+              <div className="flex items-baseline gap-5">
+                <span className="text-rule tabular-nums text-brass-bright">02</span>
+                <h2 id="pay-heading" className="font-display text-band font-light text-paper">
+                  How you pay
+                </h2>
+              </div>
+
+              <p className="mt-7 max-w-[54ch] text-lede text-paper-muted">
+                Cards, UPI, net banking and EMI, all through Razorpay&rsquo;s own secure window.
+                Cash on delivery is not available.
+              </p>
+
+              <label className="mt-8 flex cursor-pointer items-start gap-4">
+                <input
+                  type="checkbox"
+                  checked={openBox}
+                  onChange={(e) => setOpenBox(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-[#A16207] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+                />
+                <span className="text-sm text-paper-muted">
+                  <span className="text-paper">Open-box delivery.</span> The agent waits while you
+                  check the piece before you accept it.
+                </span>
               </label>
 
-              <div className="flex gap-3">
-                <button onClick={() => setStep(2)} className="btn-secondary flex-1 py-3">← Back</button>
-                <button onClick={handlePlaceOrder} disabled={placing}
-                  className="btn-gold flex-1 py-3.5 flex items-center justify-center gap-2 text-base font-bold rounded-xl">
-                  {placing
-                    ? <><span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" /> Processing...</>
-                    : <><Lock size={18} /> {payMethod === 'razorpay' ? 'Pay with Razorpay' : 'Choose EMI Plan'} · ₹{grandTotal.toLocaleString()}</>
-                  }
-                </button>
+              <div className="mt-10">
+                <ActionButton type="submit" disabled={placing || !scriptReady || atRisk}>
+                  {placing ? 'Opening payment…' : !scriptReady ? 'Preparing…' : `Pay ${money(grandTotal)}`}
+                </ActionButton>
+                {atRisk && (
+                  <p className="mt-4 max-w-[46ch] text-xs text-paper-faint">
+                    Paying again is disabled until we have checked the payment above — we do not
+                    want to take your money twice.
+                  </p>
+                )}
               </div>
-              <p className="text-xs text-gray-400 text-center mt-3">By placing this order, you agree to our Terms of Service.</p>
-            </div>
-          )}
+            </section>
+          </form>
         </div>
 
-        {/* Order Summary sidebar */}
-        <div className="lg:col-span-1">
-          <div className="card p-5 sticky top-28">
-            <h3 className="font-bold text-maroon-900 mb-4">Price Details</h3>
-            <div className="space-y-2.5 text-sm">
-              {items.map(item => (
-                <div key={item.id} className="flex justify-between text-gray-700">
-                  <span className="truncate mr-2">{item.product.name} × {item.quantity}</span>
-                  <span className="font-medium flex-shrink-0">₹{(item.product.price * item.quantity).toLocaleString()}</span>
-                </div>
+        {/* ── What you are paying for, always visible ─────────────────── */}
+        <aside aria-labelledby="order-heading" className="lg:col-span-4 lg:col-start-9">
+          <div className="border-t border-ink-edge/60 pt-8 lg:sticky lg:top-28">
+            <h2 id="order-heading" className="text-rule uppercase text-paper-faint">Your order</h2>
+
+            <ul className="mt-7 space-y-5">
+              {items.map((item) => (
+                <li key={item.id} className="flex justify-between gap-5 text-sm">
+                  <span className="min-w-0 text-paper-muted">
+                    <Link href={`/products/${item.product.id}`} className="text-paper underline-offset-4 hover:underline">
+                      {item.product.name}
+                    </Link>
+                    <span className="mt-0.5 block text-xs text-paper-faint">
+                      {[item.size && `Size ${item.size}`, item.color, `×${item.quantity}`]
+                        .filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-paper">
+                    {money(item.product.price * item.quantity)}
+                  </span>
+                </li>
               ))}
-              <div className="border-t border-maroon-200 pt-2.5 flex justify-between text-gray-700">
-                <span>Subtotal</span><span className="font-medium">₹{total.toLocaleString()}</span>
+            </ul>
+
+            <dl className="mt-8 space-y-3 border-t border-ink-edge/60 pt-6 text-sm">
+              <div className="flex justify-between gap-6">
+                <dt className="text-paper-muted">Subtotal</dt>
+                <dd className="tabular-nums text-paper">{money(total)}</dd>
               </div>
-              <div className="flex justify-between text-gray-700">
-                <span>Shipping</span>
-                <span className="font-medium">₹{shipping}</span>
+              <div className="flex justify-between gap-6">
+                <dt className="text-paper-muted">Shipping</dt>
+                <dd className="tabular-nums text-paper">{money(shipping)}</dd>
               </div>
-              <div className="border-t-2 border-maroon-100 pt-2.5 flex justify-between font-bold text-base">
-                <span className="text-maroon-900">Total</span>
-                <span className="text-maroon-900">₹{grandTotal.toLocaleString()}</span>
+              <div className="flex items-baseline justify-between gap-6 border-t border-ink-edge/60 pt-4">
+                <dt className="text-paper">Total</dt>
+                <dd className="font-display text-2xl tabular-nums text-paper">{money(grandTotal)}</dd>
               </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-maroon-200 space-y-1.5">
-              <p className="text-xs text-gray-500 flex items-center gap-1.5"><Lock size={11} className="text-green-500" /> SSL Secured Checkout</p>
-              <p className="text-xs text-gray-500">↩️ 7-day easy returns</p>
-              <p className="text-xs text-gray-500">✅ 100% Authentic Products</p>
+            </dl>
+
+            <p className="mt-6 text-xs leading-relaxed text-paper-faint">
+              Cancel free within 1 hour.{' '}
+              <Link href="/cancellation" className="underline underline-offset-4 hover:text-paper-muted">
+                Returns and exchanges
+              </Link>
+              .
+            </p>
+
+            <div className="mt-8">
+              <ActionLink href="/cart" tone="quiet" arrow={false}>Edit your bag</ActionLink>
             </div>
           </div>
-        </div>
+        </aside>
       </div>
-    </div>
+    </PageShell>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <RouteErrorBoundary routeName="checkout" fallbackHref="/cart" fallbackLabel="Back to your bag">
+      <CheckoutInner />
+    </RouteErrorBoundary>
   );
 }

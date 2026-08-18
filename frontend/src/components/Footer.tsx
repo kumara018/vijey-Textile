@@ -1,163 +1,226 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { MapPin, Phone, Mail, Instagram, MessageCircle, MapIcon } from 'lucide-react';
-import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, MAIL_URL2, CALL_URL, CALL_URL2 } from '@/lib/config';
-import { LogoMark } from './Logo';
 
-const SHOP_CATEGORIES = ['Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear'];
+import Link from 'next/link';
+import {
+  STORE, WHATSAPP_URL, WHATSAPP_URL2, CALL_URL, CALL_URL2, MAIL_URL, MAIL_URL2,
+} from '@/lib/config';
+
+/**
+ * The Selvedge — site footer.
+ *
+ * A selvedge is the self-finished edge of a bolt of cloth: the part that stops
+ * it fraying, woven tighter than the body. That is what this is doing at the
+ * bottom of every page, and it is why the treatment is denser and quieter than
+ * the sections above rather than louder.
+ *
+ * This is the most-seen component on the site — it renders on every route — so
+ * it was also the loudest remaining piece of the old design: bright magenta and
+ * green social buttons on a maroon ground, undoing the hero's work on every
+ * page a visitor reached. Rebuilt in the brass palette with the same 400-600ms
+ * motion language as everything else.
+ *
+ * Every hover here moves a rule rather than a colour swatch. Underlines grow
+ * from the left on a long cubic-bezier; nothing scales, nothing bounces, and
+ * the only accent is brass.
+ */
+
+/**
+ * Brand marks as inline SVG.
+ *
+ * lucide-react v1 removed every brand glyph for trademark reasons, so there is
+ * no Instagram export to import. A generic camera icon does not read as "our
+ * Instagram" to a customer, and the previous coloured pill buttons read as
+ * someone else's brand entirely — these are single-weight strokes in the
+ * site's own palette, so the social links look like part of this shop.
+ */
+function InstagramMark({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.2" cy="6.8" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function WhatsAppMark({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true"
+      stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.2 20.8l1.3-4.6A8.4 8.4 0 1 1 7.9 19.4L3.2 20.8Z" />
+      <path d="M9.1 8.2c.3-.1.6 0 .8.3l.8 1.3c.1.2.1.5 0 .7l-.5.7c-.1.2-.1.4 0 .6a6 6 0 0 0 2.2 2.2c.2.1.4.1.6 0l.7-.5c.2-.1.5-.2.7 0l1.3.8c.3.2.4.5.3.8a2.4 2.4 0 0 1-2.6 1.5 8.6 8.6 0 0 1-6.2-6.2 2.4 2.4 0 0 1 1.9-2.2Z" />
+    </svg>
+  );
+}
+
+/**
+ * A footer link. The rule under it grows from the left on hover — the same
+ * gesture the occasion bands and the hero CTA use, so the whole site behaves
+ * one way.
+ */
+function FooterLink({ href, children, external = false }: {
+  href: string; children: React.ReactNode; external?: boolean;
+}) {
+  const cls =
+    'group relative inline-block py-1 text-paper-muted transition-colors duration-500 ' +
+    'ease-[cubic-bezier(0.22,0.61,0.24,1)] hover:text-paper ' +
+    'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright';
+
+  const inner = (
+    <>
+      {children}
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 left-0 h-px w-full origin-left scale-x-0 bg-brass
+                   transition-transform duration-[520ms] ease-[cubic-bezier(0.22,0.61,0.24,1)]
+                   group-hover:scale-x-100"
+      />
+    </>
+  );
+
+  return external ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+  ) : (
+    <Link href={href} className={cls}>{inner}</Link>
+  );
+}
+
+const CATEGORIES = [
+  'Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear',
+];
+
+const HELP = [
+  { href: '/products',            label: 'All pieces' },
+  { href: '/orders',              label: 'My orders' },
+  { href: '/support',             label: 'Contact us' },
+  { href: '/support#size-guide',  label: 'Size guide' },
+  { href: '/support#shipping',    label: 'Shipping policy' },
+  { href: '/support#returns',     label: 'Cancel, return & exchange FAQ' },
+  { href: '/cancellation',        label: 'Cancellation, return & exchange policy' },
+  { href: '/authentic',           label: 'Authenticity' },
+  { href: '/terms',               label: 'Terms & conditions' },
+  { href: '/privacy',             label: 'Privacy policy' },
+];
 
 export default function Footer() {
-  const router = useRouter();
+  const year = new Date().getFullYear();
 
   return (
-    <footer className="bg-maroon-900 text-maroon-100 mt-16">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <footer className="relative border-t border-ink-edge/60 bg-ink-deep text-paper-muted">
+      {/* A single brass hairline across the top — the woven edge. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px"
+        style={{ background: 'linear-gradient(to right, transparent, rgba(161,98,7,0.55) 22%, rgba(161,98,7,0.55) 78%, transparent)' }}
+      />
 
-          {/* Brand + Social */}
-          <div>
-            <Link href="/" className="flex items-center gap-3 mb-4">
-              <LogoMark size={40} className="text-white flex-shrink-0" />
-              <div>
-                <p style={{ fontSize: '15px', letterSpacing: '0.04em', fontWeight: 'bold' }}
-                   className="text-white uppercase leading-tight">
-                  Vijey Textile
-                </p>
-                <p className="text-maroon-300 font-semibold uppercase leading-tight mt-1"
-                   style={{ fontSize: '9.5px', letterSpacing: '0.1em' }}>
-                  Luxury Kid&apos;s &amp; Girls Clothing
-                </p>
-              </div>
+      <div className="mx-auto w-full max-w-[112rem] px-6 py-[9vh] sm:px-10">
+        <div className="grid gap-x-14 gap-y-14 lg:grid-cols-12">
+
+          {/* ── The shop ─────────────────────────────────────────────── */}
+          <div className="lg:col-span-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+            >
+              <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="rounded-full" />
+              <span className="font-display text-[1.05rem] tracking-[0.16em] text-paper uppercase">
+                {STORE.name}
+              </span>
             </Link>
-            <p className="text-sm text-maroon-300 leading-relaxed mb-5">
-              Luxury Baby, Kids &amp; Girls fashion — Chudithar, Frocks, Lehenga &amp; more in sizes 12–40. At Texvalley Gangapuram, Erode.
+
+            <p className="mt-7 max-w-[34ch] text-paper-faint">
+              A family shop on the ground floor at Texvalley, Gangapuram. Chosen by hand,
+              checked by hand, packed by someone who answers the phone.
             </p>
-            <div className="flex gap-2 flex-wrap">
-              <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title={`WhatsApp: ${STORE.phone1}`}>
-                <MessageCircle size={16} />
+
+            <div className="mt-9 flex items-center gap-3">
+              <a
+                href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
+                aria-label={`WhatsApp ${STORE.phone1}`}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-edge text-paper-faint
+                           transition-colors duration-500 ease-[cubic-bezier(0.22,0.61,0.24,1)]
+                           hover:border-brass hover:text-brass-bright
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+              >
+                <WhatsAppMark />
               </a>
-              <a href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-green-700 hover:bg-green-600 rounded-lg transition-colors" title={`WhatsApp: ${STORE.phone2}`}>
-                <MessageCircle size={16} />
+              <a
+                href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
+                aria-label={`WhatsApp ${STORE.phone2}`}
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-edge text-paper-faint
+                           transition-colors duration-500 ease-[cubic-bezier(0.22,0.61,0.24,1)]
+                           hover:border-brass hover:text-brass-bright
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+              >
+                <WhatsAppMark />
               </a>
-              <a href={STORE.instagram} target="_blank" rel="noopener noreferrer"
-                className="p-2 bg-maroon-800 hover:bg-pink-600 rounded-lg transition-colors" title="Instagram">
-                <Instagram size={16} />
+              <a
+                href={STORE.instagram} target="_blank" rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="flex h-11 w-11 items-center justify-center rounded-full border border-ink-edge text-paper-faint
+                           transition-colors duration-500 ease-[cubic-bezier(0.22,0.61,0.24,1)]
+                           hover:border-brass hover:text-brass-bright
+                           focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+              >
+                <InstagramMark />
               </a>
             </div>
           </div>
 
-          {/* Shop — use router.push for reliable navigation */}
-          <div>
-            <h4 className="font-semibold text-white mb-4">Shop</h4>
-            <ul className="space-y-2 text-sm text-maroon-300">
-              {SHOP_CATEGORIES.map((cat) => (
-                <li key={cat}>
-                  <button
-                    onClick={() => router.push(`/products?category=${encodeURIComponent(cat)}`)}
-                    className="hover:text-gold-400 transition-colors text-left"
-                  >
-                    {cat}
-                  </button>
+          {/* ── Shop by piece ────────────────────────────────────────── */}
+          <nav aria-labelledby="footer-shop" className="lg:col-span-3">
+            <h2 id="footer-shop" className="text-rule uppercase text-brass-bright">The pieces</h2>
+            <ul className="mt-6 space-y-1.5">
+              {CATEGORIES.map((c) => (
+                <li key={c}>
+                  <FooterLink href={`/products?category=${encodeURIComponent(c)}`}>{c}</FooterLink>
                 </li>
               ))}
-              <li>
-                <button onClick={() => router.push('/products')} className="hover:text-gold-400 transition-colors">
-                  All Products
-                </button>
-              </li>
             </ul>
-          </div>
+          </nav>
 
-          {/* Help & Policies */}
-          <div>
-            <h4 className="font-semibold text-white mb-4">Help & Policies</h4>
-            <ul className="space-y-2 text-sm text-maroon-300">
-              <li><Link href="/orders"             className="hover:text-gold-400 transition-colors">My Orders</Link></li>
-              <li><Link href="/support"             className="hover:text-gold-400 transition-colors">Contact Us</Link></li>
-              <li><Link href="/support#size-guide"  className="hover:text-gold-400 transition-colors">Size Guide</Link></li>
-              <li><Link href="/support#shipping"    className="hover:text-gold-400 transition-colors">Shipping Policy</Link></li>
-              <li><Link href="/support#returns"     className="hover:text-gold-400 transition-colors">Cancel, Return & Exchange FAQ</Link></li>
-              <li><Link href="/cancellation"         className="hover:text-gold-400 transition-colors">Cancellation, Return & Exchange Policy</Link></li>
-              <li><Link href="/terms"               className="hover:text-gold-400 transition-colors">Terms & Conditions</Link></li>
-              <li><Link href="/privacy"             className="hover:text-gold-400 transition-colors">Privacy Policy</Link></li>
+          {/* ── Help and policies ────────────────────────────────────── */}
+          <nav aria-labelledby="footer-help" className="lg:col-span-3">
+            <h2 id="footer-help" className="text-rule uppercase text-brass-bright">Help &amp; policies</h2>
+            <ul className="mt-6 space-y-1.5">
+              {HELP.map((l) => (
+                <li key={l.href}><FooterLink href={l.href}>{l.label}</FooterLink></li>
+              ))}
             </ul>
-          </div>
+          </nav>
 
-          {/* Contact */}
-          <div>
-            <h4 className="font-semibold text-white mb-4">Contact Us</h4>
-            <ul className="space-y-3 text-sm text-maroon-300">
-              <li className="flex items-start gap-2.5">
-                <MapPin size={16} className="text-gold-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <span>{STORE.shopNo},<br />{STORE.area},<br />{STORE.city}, {STORE.state}</span>
-                  <a href={STORE.googleMapsUrl} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 mt-1.5 text-gold-400 hover:text-gold-300 font-medium text-xs transition-colors">
-                    <MapIcon size={12} /> Open in Google Maps
-                  </a>
-                </div>
-              </li>
-              <li>
-                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 hover:text-green-400 transition-colors">
-                  <MessageCircle size={16} className="text-green-400 flex-shrink-0" />
-                  WhatsApp: {STORE.phone1}
-                </a>
-              </li>
-              <li>
-                <a href={WHATSAPP_URL2} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 hover:text-green-400 transition-colors">
-                  <MessageCircle size={16} className="text-green-400 flex-shrink-0" />
-                  WhatsApp: {STORE.phone2}
-                </a>
-              </li>
-              <li>
-                <a href={CALL_URL} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
-                  <Phone size={16} className="text-gold-400 flex-shrink-0" />
-                  {STORE.phone1}
-                </a>
-              </li>
-              <li>
-                <a href={CALL_URL2} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
-                  <Phone size={16} className="text-gold-400 flex-shrink-0" />
-                  {STORE.phone2}
-                </a>
-              </li>
-              <li>
-                <a href={MAIL_URL} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
-                  <Mail size={16} className="text-gold-400 flex-shrink-0" />
-                  {STORE.email}
-                </a>
-              </li>
-              <li>
-                <a href={MAIL_URL2} className="flex items-center gap-2.5 hover:text-gold-400 transition-colors">
-                  <Mail size={16} className="text-gold-400 flex-shrink-0" />
-                  {STORE.email2}
-                </a>
-              </li>
-            </ul>
-            <div className="mt-4 p-3 bg-maroon-900 rounded-lg text-xs text-maroon-300">
-              <p className="font-medium text-white mb-1">Store Timings</p>
-              <p>{STORE.weekdays}</p>
-              <p>{STORE.weekend}</p>
-            </div>
+          {/* ── Reach us ─────────────────────────────────────────────── */}
+          <div className="lg:col-span-2">
+            <h2 className="text-rule uppercase text-brass-bright">Reach us</h2>
+            <address className="mt-6 space-y-4 not-italic">
+              <p className="text-paper-faint">
+                {STORE.shopNo}<br />{STORE.area}<br />{STORE.city}
+              </p>
+              <p className="flex flex-col gap-1.5">
+                <FooterLink href={CALL_URL}>{STORE.phone1}</FooterLink>
+                <FooterLink href={CALL_URL2}>{STORE.phone2}</FooterLink>
+              </p>
+              <p className="flex flex-col gap-1.5">
+                <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
+                <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
+              </p>
+              <p>
+                <FooterLink href={STORE.googleMapsUrl} external>Find us on the map</FooterLink>
+              </p>
+            </address>
           </div>
         </div>
 
-        <div className="border-t border-maroon-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-maroon-400">
-          <p>&copy; {new Date().getFullYear()} Vijey Textile. All rights reserved.</p>
-          <div className="flex gap-4">
-            <Link href="/privacy"      className="hover:text-gold-400 transition-colors">Privacy Policy</Link>
-            <Link href="/terms"        className="hover:text-gold-400 transition-colors">Terms of Service</Link>
-            <Link href="/cancellation" className="hover:text-gold-400 transition-colors">Exchange & Replacement Policy</Link>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-maroon-500">Secure payments:</span>
-            <span className="text-maroon-300 font-medium">Visa • Mastercard • UPI • Net Banking</span>
-          </div>
+        {/* ── Colophon ───────────────────────────────────────────────── */}
+        <div className="mt-[7vh] flex flex-col gap-5 border-t border-ink-edge/60 pt-8 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-caption uppercase text-paper-faint">
+            © {year} {STORE.name} — Erode, Tamil Nadu
+          </p>
+          <p className="text-caption uppercase text-paper-faint">
+            Sizes 12–40 · Delivered across India
+          </p>
         </div>
       </div>
     </footer>

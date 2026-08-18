@@ -223,6 +223,59 @@ class DeviceEvictLogin(BaseModel):
     session_id:    int
 
 
+class AuthBeginIn(BaseModel):
+    """One field: a mobile number or an email address."""
+    identifier: str
+
+
+class AuthBeginOut(BaseModel):
+    """
+    The reply to /auth/begin, which must not depend on whether the account
+    exists. Every field here is derived from the submitted identifier — see
+    `_identifier_hint` in routers/auth.py for why the hint in particular can
+    never be built from a stored record.
+    """
+    sent: bool
+    channel: str          # "sms" | "email"
+    hint: str             # masked echo of what was typed, e.g. "94***53"
+
+
+class AuthContinueIn(BaseModel):
+    identifier: str
+    otp: str
+
+
+class AuthContinueOut(BaseModel):
+    """
+    The branch, returned only after the caller proved control of the identifier.
+
+    `next` is "password" for an existing account and "register" for a new one.
+    Exactly one of `user_hint` / `registration_token` is populated to match.
+    """
+    next: str
+    user_hint: Optional[dict] = None
+    registration_token: Optional[str] = None
+
+
+class RevokeAllIn(BaseModel):
+    """
+    Sign out everywhere.  (AUTH-SPEC.md §3.3)
+
+    Defaults to keeping the caller signed in, because that is what the button
+    in the devices dashboard means and it is the safer default: a customer who
+    taps it and is immediately thrown out cannot tell whether it worked.
+    Passing false signs out this device too.
+    """
+    except_current: bool = True
+
+
+class RevokeAllOut(BaseModel):
+    revoked: int
+    # Tells the frontend whether the token it just used is still good, so it
+    # knows whether to redirect to sign-in or simply refresh the device list.
+    current_session_kept: bool
+
+
 class UserUpdate(BaseModel):
     full_name:     Optional[str] = None
     phone:         Optional[str] = None
@@ -334,6 +387,54 @@ class ProductOut(BaseModel):
     created_at:    datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator(
+        "stock", "is_active", "is_featured", "is_new_arrival", "is_returnable",
+        "rating_avg", "rating_count", "size_options", "colors", "images",
+        mode="before",
+    )
+    @classmethod
+    def _tolerate_null(cls, v, info):
+        """
+        ONE BAD ROW MUST NOT TAKE THE WHOLE CATALOGUE DOWN.
+
+        Every field listed here is non-optional with a PYTHON-side default, so a
+        product created through the ORM always has a value. A product created
+        any other way — a manual SQL fix, a CSV import, an older migration that
+        added the column without backfilling — has NULL, and FastAPI's response
+        validation then raises on the entire list:
+
+            ResponseValidationError: 5 validation errors
+              ('response', 0, 'is_featured'): Input should be a valid boolean
+
+        Note the index: row ZERO. It is not that one product is missing from
+        the listing — the endpoint returns 500 and the shop has no catalogue at
+        all. Found by inserting a test product with raw SQL, which is exactly
+        how it would happen for real.
+
+        A missing flag is not worth an outage. The row renders with the same
+        default it would have been created with, and the shop stays open.
+        """
+        if v is not None:
+            return v
+        return {
+            "stock": 0,
+            "is_active": True,
+            "is_featured": False,
+            "is_new_arrival": False,
+            "is_returnable": True,
+            "rating_avg": 0.0,
+            "rating_count": 0,
+            "size_options": [],
+            "colors": [],
+            "images": [],
+        }.get(info.field_name)
+
+    @field_validator("name", "description", "category", mode="before")
+    @classmethod
+    def _tolerate_null_text(cls, v):
+        """Same reasoning: a null name should show as blank, not 500 the list."""
+        return v if v is not None else ""
 
 
 # ─── CART SCHEMAS ─────────────────────────────────────────────────────────────

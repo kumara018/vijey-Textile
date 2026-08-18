@@ -1,5 +1,5 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON
+    Column, Integer, String, Float, Boolean, DateTime, Text, ForeignKey, JSON, Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -48,6 +48,25 @@ class Category(Base):
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
 
 
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # the navigation: is_active = true ORDER BY sort_order
+        Index("ix_categories_active_sort", "is_active", "sort_order"),
+    )
+
+
 class UserSession(Base):
     """One row per logged-in device — powers the 4-device cap and the
     'Linked Devices' dashboard (WhatsApp-style device list)."""
@@ -68,6 +87,25 @@ class UserSession(Base):
     expires_at     = Column(DateTime(timezone=True), nullable=True)  # slides forward on every active use — see auth.py::get_current_user
 
     user = relationship("User", back_populates="sessions")
+
+
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # the device cap and the session check, on every authenticated request
+        Index("ix_sessions_user_revoked", "user_id", "revoked_at"),
+    )
 
 
 class OTPStore(Base):
@@ -116,6 +154,27 @@ class Product(Base):
     reviews    = relationship("Review",   back_populates="product", cascade="all, delete-orphan")
 
 
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # the catalogue: is_active = true AND category = ?
+        Index("ix_products_active_category", "is_active", "category"),
+        # the catalogue default sort: is_active = true ORDER BY created_at DESC
+        Index("ix_products_active_created", "is_active", "created_at"),
+    )
+
+
 class Address(Base):
     """Saved delivery addresses per user. Each user can have multiple."""
     __tablename__ = "addresses"
@@ -149,6 +208,25 @@ class CartItem(Base):
 
     user    = relationship("User",    back_populates="cart_items")
     product = relationship("Product", back_populates="cart_items")
+
+
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # the cart, read on every page that shows a basket count
+        Index("ix_cart_user", "user_id"),
+    )
 
 
 class Order(Base):
@@ -192,6 +270,29 @@ class Order(Base):
     user = relationship("User", back_populates="orders")
 
 
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # My Orders: user_id = ? ORDER BY created_at DESC
+        Index("ix_orders_user_created", "user_id", "created_at"),
+        # the 15-minute courier poller: status IN (shipped, out_for_delivery)
+        Index("ix_orders_status", "status"),
+        # the Delhivery webhook and the tracking endpoint, which arrive with an AWB and nothing else
+        Index("ix_orders_awb", "awb_code"),
+    )
+
+
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -205,6 +306,25 @@ class Review(Base):
 
     user    = relationship("User",    back_populates="reviews")
     product = relationship("Product", back_populates="reviews")
+
+
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # the product page: product_id = ? ORDER BY created_at DESC
+        Index("ix_reviews_product_created", "product_id", "created_at"),
+    )
 
 
 class SupportRating(Base):
@@ -317,3 +437,124 @@ class ReturnRequest(Base):
     user        = relationship("User")
     product     = relationship("Product", foreign_keys=[product_id])
     new_product = relationship("Product", foreign_keys=[new_product_id])
+
+
+    # ── Indexes, chosen from measured query plans ────────────────────────
+    #
+    # Before these, EXPLAIN showed a full table SCAN plus a temporary B-tree
+    # sort for this table's hot query. The columns the application actually
+    # filters and orders by had no index at all — the thirty-odd `index=True`
+    # in this file are almost entirely primary keys, which were already
+    # indexed, and unique constraints, which bring their own.
+    #
+    # Composite and column-ordered on purpose: an index on `user_id` alone
+    # still leaves the database sorting the matched rows by hand, which is
+    # the "USE TEMP B-TREE FOR ORDER BY" line in the plan and the part that
+    # grows with the customer's order history rather than with the shop's.
+
+    __table_args__ = (
+        # My Returns: user_id = ? ORDER BY created_at DESC
+        Index("ix_returns_user_created", "user_id", "created_at"),
+        # the return/replacement pollers, which sweep by status
+        Index("ix_returns_status", "status"),
+        # the order detail page, which loads a return by its order
+        Index("ix_returns_order", "order_id"),
+    )
+
+
+class ClientError(Base):
+    """
+    One runtime error from a customer's browser.
+
+    Additive: nothing else reads or writes this table, so it cannot affect an
+    order, a payment or a session. Deliberately denormalised and unlinked to a
+    user — a crash on a public page has no session to attribute, and attaching
+    one would make this a place customer identity accumulates for no benefit.
+    """
+    __tablename__ = "client_errors"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    name            = Column(String(100))
+    message         = Column(String(500))
+    stack           = Column(Text)
+    source          = Column(String(40), index=True)
+    component_stack = Column(Text, nullable=True)
+    # Next's digest correlates a browser report to the server log line.
+    digest          = Column(String(100), nullable=True, index=True)
+    # The API's own id for the request that failed, read off X-Request-ID by
+    # the response interceptor. The digest joins a crash to Next's server log;
+    # this joins it to the API's, which is the record that matters when the
+    # failure was a checkout rather than a render.
+    request_id      = Column(String(64), nullable=True, index=True)
+    url             = Column(String(500), index=True)
+    user_agent      = Column(String(300))
+    viewport        = Column(String(40))
+    created_at      = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class RateLimitHit(Base):
+    """
+    One recorded request against one rate-limit bucket.
+
+    WHY THIS IS IN THE DATABASE. The limits were held in process memory, and on
+    this deployment that is close to holding them nowhere. Render's free tier
+    sleeps the instance after fifteen minutes of inactivity and restarts it on
+    the next request, and every deploy restarts it too — so an attacker walking
+    a number space did not need to defeat the limit, only to wait for the shop
+    to go quiet. The budget reset itself. The same applies the moment the
+    service runs more than one worker: each one keeps its own counters, so the
+    real ceiling is the configured limit multiplied by the number of processes.
+
+    A limit that resets on its own is not a limit; it is a delay. This table is
+    the one place the counter can live that survives a restart and is shared by
+    every worker, and it costs one small insert and one count per attempt on
+    endpoints that are already doing bcrypt.
+
+    Deliberately a hit log rather than a counter row: a log needs no upsert, so
+    there is no dialect-specific `ON CONFLICT` to get right across SQLite and
+    Postgres, and no read-modify-write race between workers. Rows are pruned as
+    they expire, and the volume is tiny — the budgets are tens per hour.
+    """
+    __tablename__ = "rate_limit_hits"
+
+    id     = Column(Integer, primary_key=True, index=True)
+    # "<scope>|<key>" — e.g. "send-login-otp|ip:203.0.113.7" or
+    # "identifier|id:9443947853". One namespace per endpoint per key kind.
+    bucket = Column(String(200), nullable=False, index=True)
+    at     = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # The query is always "how many hits for THIS bucket since T", so the
+    # composite is what actually serves it — either single-column index alone
+    # leaves the database filtering the other half by hand.
+    __table_args__ = (Index("ix_rate_limit_bucket_at", "bucket", "at"),)
+
+
+class SchedulerLease(Base):
+    """
+    Which process currently owns the background jobs.
+
+    THE LANDMINE THIS DEFUSES. The Delhivery poller, the return poller and the
+    rate-limit sweep all run on an in-process APScheduler started in `lifespan`.
+    With one uvicorn worker — which is what the Procfile asks for today — that
+    is exactly one of each, and everything is fine. The moment anyone raises the
+    worker count to get more throughput, every worker starts its own scheduler:
+    the courier is polled N times over, an order that just went out for delivery
+    can be advanced by two workers at once, and the customer gets N copies of
+    the same "your order is on its way" email.
+
+    Nothing warns about that. Throughput goes up, the duplication is silent, and
+    the first evidence is a customer asking why they got four identical emails.
+
+    So the jobs are leased. Every process tries to take the lease on boot and
+    renews it while it holds it; a process that cannot take it simply does not
+    run jobs. If the holder dies, the lease expires and another takes over
+    within a couple of minutes. One row, portable across SQLite and Postgres,
+    no extra service.
+    """
+    __tablename__ = "scheduler_lease"
+
+    # Always 1. A single-row table is the simplest expression of "there is one
+    # of these", and it makes the upsert trivial on both dialects.
+    id         = Column(Integer, primary_key=True)
+    owner      = Column(String(64), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
