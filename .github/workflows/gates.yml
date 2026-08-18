@@ -137,11 +137,24 @@ jobs:
       - name: install
         run: pip install -r requirements.txt
 
-      # Import-compile every module. Not a test suite — the repo has none yet —
-      # but it catches the class of error that otherwise only appears when
-      # Render boots the app and the first request 500s.
+      # Import-compile every module. Cheap, and it catches the class of error
+      # that otherwise only appears when Render boots the app and the first
+      # request 500s.
       - name: compile
         run: python -m compileall -q .
+
+      # The test suite. Chosen by consequence rather than coverage: an
+      # arithmetic slip in an order total, a cancellation that fails to restore
+      # stock, an endpoint that answers another customer's order, a forged
+      # payment signature that buys goods. None of those raise an exception,
+      # none appear in a log, and every one of them is found by a customer
+      # rather than by the shop.
+      #
+      # Also asserts the security properties AUTH-SPEC.md asks for, which are
+      # each one careless `if` away from regressing while every other test
+      # keeps passing.
+      - name: tests
+        run: python -m pytest tests/ -q
 
       # Schema, referential integrity, money arithmetic and the auth boundary,
       # against a throwaway database this job creates from the models.
