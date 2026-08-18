@@ -17,6 +17,9 @@ frontend/.env
 # Database
 backend/*.db
 backend/ammalu_tex.db
+backend/*.db-wal
+backend/*.db-shm
+backend/*.db-journal
 
 # Uploads
 backend/uploads/
