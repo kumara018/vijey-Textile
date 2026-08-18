@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import AdminDashboard from '../AdminDashboard';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
 import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView, AdminErrorsView } from '../AdminListViews';
@@ -70,8 +69,21 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   const { view } = await params;
   if (!VIEWS.includes(view as (typeof VIEWS)[number])) notFound();
 
-  // Views cross onto AdminShell one at a time. Anything not yet rebuilt still
-  // mounts the legacy dashboard, which keeps working exactly as before.
+  /**
+   * THE MIGRATION IS OVER, AND THIS IS WHAT FINISHED IT.
+   *
+   * Views crossed onto AdminShell one at a time, and until the last one landed
+   * this function ended with a fallback to the legacy dashboard. Every view in
+   * VIEWS now has a branch — all eight — and anything outside VIEWS is stopped
+   * by `notFound()` several lines above, so that fallback had become
+   * unreachable code holding a 2,261-line component alive.
+   *
+   * It was not harmless. Every old-palette reference left anywhere in this
+   * admin — 252 of them, maroon and generic greys from before the redesign —
+   * was inside that file, so the admin measured as "still the old design"
+   * while nothing a person could actually reach was. Dead code that fails an
+   * audit is worse than dead code that merely costs bytes.
+   */
   if (view === 'orders') return <AdminOrdersView />;
   if (view === 'returns') return <AdminReturnsView />;
   if (view === 'users') return <AdminUsersView />;
@@ -81,5 +93,9 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'admins') return <AdminAdminsView />;
   if (view === 'errors') return <AdminErrorsView />;
 
-  return <AdminDashboard initialView={view} />;
+  // Unreachable: `notFound()` above rejects anything outside VIEWS, and every
+  // member of VIEWS is handled. Kept as a typed exhaustiveness guard so adding
+  // a view without a branch fails the build instead of rendering nothing.
+  const unhandled: never = view as never;
+  return unhandled;
 }
