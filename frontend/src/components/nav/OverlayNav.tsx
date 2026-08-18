@@ -7,6 +7,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import AccountMenu from '@/components/nav/AccountMenu';
+import Finder from '@/components/nav/Finder';
 import { STORE } from '@/lib/config';
 
 /**
@@ -149,6 +150,9 @@ export default function OverlayNav() {
           </Link>
 
           <div className="pointer-events-auto flex items-center gap-1 sm:gap-3">
+            {/* Search, opened as an event — see components/nav/Finder.tsx. */}
+            <Finder />
+
             {/* The icon was a plain link to /account. It opens a menu now —
                 see components/nav/AccountMenu.tsx. */}
             <AccountMenu />

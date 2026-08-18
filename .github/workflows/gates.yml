@@ -100,14 +100,32 @@ jobs:
       # up in a build, so this drives a real browser and reads the console.
       # It already caught one break — connect-src built from the build-time API
       # URL while getApiBase() resolves at runtime.
+      # WHY THIS STEP GOT A REAL READINESS CHECK.
+      #
+      # It backgrounded the server, polled for up to 40s, and then ran the
+      # check REGARDLESS of whether the server had ever answered. On a cold
+      # shared runner that occasionally meant driving a browser at a port with
+      # nothing behind it, and the failure that produced said nothing about the
+      # CSP — it just failed. One run went red that way while the commit before
+      # and after it, and the same gate locally, were all clean.
+      #
+      # A gate that fails at random is worse than no gate: people learn to
+      # re-run it rather than read it. So the wait is longer, and if the server
+      # genuinely never comes up the step says THAT, prints the server's own
+      # log, and stops — instead of blaming the policy.
       - name: csp breaks nothing
         run: |
-          npx next start -p 3100 &
-          for i in $(seq 1 40); do
+          npx next start -p 3100 > /tmp/next-start.log 2>&1 &
+          for i in $(seq 1 90); do
             code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3100/ || true)
             [ "$code" = "200" ] && break
             sleep 1
           done
+          if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3100/ || true)" != "200" ]; then
+            echo "::error::next start never became ready on :3100 — this is not a CSP failure."
+            cat /tmp/next-start.log
+            exit 1
+          fi
           npm run check:csp -- --url http://localhost:3100
 
       # Only meaningful AFTER a build, since it reads .next's own output.

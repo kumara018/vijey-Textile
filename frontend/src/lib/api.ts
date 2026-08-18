@@ -136,7 +136,10 @@ export const authAPI = {
 };
 
 export const productsAPI = {
-  getAll:           (params?: object)          => api.get('/api/products/', { params }),
+  /* `config` carries an AbortSignal for the search-as-you-type finder. It must
+     be a SECOND argument: passing a signal inside `params` would serialise it
+     into the query string and silently never abort anything. */
+  getAll:           (params?: object, config?: object) => api.get('/api/products/', { params, ...config }),
   getOne:           (id: number)               => api.get(`/api/products/${id}`),
   getCategories:    ()                         => api.get('/api/products/categories'),
   getReviews:       (id: number)               => api.get(`/api/products/${id}/reviews`),
