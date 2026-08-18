@@ -1,4 +1,21 @@
-"""Run once to populate the database with sample products and admin user."""
+"""
+Demo catalogue, seeded on first boot when the products table is empty.
+
+NO IMAGE PATHS HERE. Every product in this file used to carry
+`"/images/placeholder-frock.jpg"` and four siblings — paths that neither the
+backend nor the frontend has ever served. The backend mounts `/uploads/products`
+and nothing else, so all twenty-four seeded products rendered a broken-image
+glyph on a shop selling heirloom clothing.
+
+A product genuinely has no photograph until someone uploads one through the
+admin panel, and an empty list says exactly that: the product card then draws
+its own composed placeholder, which is a considered empty state rather than the
+browser's torn-page icon. Pointing at a file that does not exist claimed a photo
+existed and then failed to produce it, which is the worse of the two.
+
+If these rows are already in a live database, `_clear_dead_image_paths()` in
+main.py removes the dead references on boot.
+"""
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
@@ -32,7 +49,7 @@ PRODUCTS = [
      "category": "Baby Frocks", "fabric": "Organic Cotton",
      "size_options": INFANT_SIZES,
      "colors": ["Pink", "Lavender", "Mint Green", "Peach"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 80, "sku": "BF-001", "is_featured": True},
 
     {"name": "Smocked Bow Luxury Baby Frock",
@@ -41,7 +58,7 @@ PRODUCTS = [
      "category": "Baby Frocks", "fabric": "Cotton Lycra",
      "size_options": INFANT_SIZES,
      "colors": ["White", "Peach", "Sky Blue"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 60, "sku": "BF-002", "is_featured": True},
 
     {"name": "Silk Embroidered Festive Baby Frock",
@@ -50,7 +67,7 @@ PRODUCTS = [
      "category": "Baby Frocks", "fabric": "Silk Blend",
      "size_options": INFANT_SIZES,
      "colors": ["Red & Gold", "Pink & Gold", "Purple & Gold"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 45, "sku": "BF-003", "is_featured": False},
 
     {"name": "Ruffle Muslin Baby Frock",
@@ -59,7 +76,7 @@ PRODUCTS = [
      "category": "Baby Frocks", "fabric": "Muslin Cotton",
      "size_options": INFANT_SIZES,
      "colors": ["Yellow", "Blue", "White", "Pink"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 90, "sku": "BF-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
@@ -71,7 +88,7 @@ PRODUCTS = [
      "category": "Chudithar", "fabric": "Pure Cotton",
      "size_options": OLDER_SIZES,
      "colors": ["Blue", "Green", "Pink", "Yellow"],
-     "images": ["/images/placeholder-chudithar.jpg"],
+     "images": [],
      "stock": 70, "sku": "CH-001", "is_featured": True},
 
     {"name": "Embroidered Silk Chudithar for Girls",
@@ -80,7 +97,7 @@ PRODUCTS = [
      "category": "Chudithar", "fabric": "Art Silk",
      "size_options": OLDER_SIZES,
      "colors": ["Purple", "Red", "Teal", "Royal Blue"],
-     "images": ["/images/placeholder-chudithar.jpg"],
+     "images": [],
      "stock": 40, "sku": "CH-002", "is_featured": True},
 
     {"name": "Georgette Printed Chudithar",
@@ -89,7 +106,7 @@ PRODUCTS = [
      "category": "Chudithar", "fabric": "Georgette",
      "size_options": OLDER_SIZES,
      "colors": ["Multicolor", "Pink", "Peach"],
-     "images": ["/images/placeholder-chudithar.jpg"],
+     "images": [],
      "stock": 55, "sku": "CH-003", "is_featured": False},
 
     {"name": "Festive Kurthi Palazzo Set",
@@ -98,7 +115,7 @@ PRODUCTS = [
      "category": "Chudithar", "fabric": "Rayon",
      "size_options": OLDER_SIZES,
      "colors": ["Yellow", "Orange", "Pink", "Mint"],
-     "images": ["/images/placeholder-chudithar.jpg"],
+     "images": [],
      "stock": 60, "sku": "CH-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
@@ -110,7 +127,7 @@ PRODUCTS = [
      "category": "Frocks", "fabric": "Pure Cotton",
      "size_options": ALL_SIZES,
      "colors": ["Pink", "Blue", "Yellow", "White", "Red"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 100, "sku": "FR-001", "is_featured": True},
 
     {"name": "Lace Trim Floral Frock",
@@ -119,7 +136,7 @@ PRODUCTS = [
      "category": "Frocks", "fabric": "Georgette",
      "size_options": OLDER_SIZES,
      "colors": ["Peach", "Lavender", "Mint", "Pink"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 75, "sku": "FR-002", "is_featured": True},
 
     {"name": "Twirl Umbrella Frock",
@@ -128,7 +145,7 @@ PRODUCTS = [
      "category": "Frocks", "fabric": "Polyester",
      "size_options": OLDER_SIZES,
      "colors": ["Multicolor", "Pink Print", "Purple Print"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 80, "sku": "FR-003", "is_featured": False},
 
     {"name": "Embroidered Collar Luxury Frock",
@@ -137,7 +154,7 @@ PRODUCTS = [
      "category": "Frocks", "fabric": "Cotton Satin",
      "size_options": OLDER_SIZES,
      "colors": ["White", "Cream", "Light Pink", "Sky Blue"],
-     "images": ["/images/placeholder-frock.jpg"],
+     "images": [],
      "stock": 55, "sku": "FR-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
@@ -149,7 +166,7 @@ PRODUCTS = [
      "category": "Western Dresses", "fabric": "Cotton Blend",
      "size_options": OLDER_SIZES,
      "colors": ["Floral Print", "Pink", "Yellow"],
-     "images": ["/images/placeholder-western.jpg"],
+     "images": [],
      "stock": 65, "sku": "WD-001", "is_featured": True},
 
     {"name": "Denim Pinafore Dress",
@@ -158,7 +175,7 @@ PRODUCTS = [
      "category": "Western Dresses", "fabric": "Denim",
      "size_options": OLDER_SIZES,
      "colors": ["Light Blue", "Dark Blue", "Black"],
-     "images": ["/images/placeholder-western.jpg"],
+     "images": [],
      "stock": 50, "sku": "WD-002", "is_featured": True},
 
     {"name": "Striped Jersey T-Shirt Dress",
@@ -167,7 +184,7 @@ PRODUCTS = [
      "category": "Western Dresses", "fabric": "Jersey Cotton",
      "size_options": ALL_SIZES,
      "colors": ["Pink Stripe", "Blue Stripe", "Rainbow", "Red Stripe"],
-     "images": ["/images/placeholder-western.jpg"],
+     "images": [],
      "stock": 90, "sku": "WD-003", "is_featured": False},
 
     {"name": "Polka Dot Shirt Dress",
@@ -176,7 +193,7 @@ PRODUCTS = [
      "category": "Western Dresses", "fabric": "Cotton",
      "size_options": OLDER_SIZES,
      "colors": ["Red & White", "Navy & White", "Black & White"],
-     "images": ["/images/placeholder-western.jpg"],
+     "images": [],
      "stock": 55, "sku": "WD-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
@@ -188,7 +205,7 @@ PRODUCTS = [
      "category": "Lehenga", "fabric": "Art Silk",
      "size_options": ALL_SIZES,
      "colors": ["Red & Gold", "Pink & Gold", "Green & Gold", "Purple & Gold"],
-     "images": ["/images/placeholder-lehenga.jpg"],
+     "images": [],
      "stock": 40, "sku": "LH-001", "is_featured": True},
 
     {"name": "Embroidered Net Lehenga",
@@ -197,7 +214,7 @@ PRODUCTS = [
      "category": "Lehenga", "fabric": "Net Embroidery",
      "size_options": OLDER_SIZES,
      "colors": ["Pink & Silver", "Purple & Gold", "Blue & Silver"],
-     "images": ["/images/placeholder-lehenga.jpg"],
+     "images": [],
      "stock": 30, "sku": "LH-002", "is_featured": True},
 
     {"name": "Teen Bridal Lehenga Set",
@@ -206,7 +223,7 @@ PRODUCTS = [
      "category": "Lehenga", "fabric": "Velvet & Net",
      "size_options": GIRLS_SIZES,
      "colors": ["Red & Gold", "Maroon & Gold", "Navy & Gold"],
-     "images": ["/images/placeholder-lehenga.jpg"],
+     "images": [],
      "stock": 20, "sku": "LH-003", "is_featured": False},
 
     {"name": "Cotton Block Print Lehenga",
@@ -215,7 +232,7 @@ PRODUCTS = [
      "category": "Lehenga", "fabric": "Cotton",
      "size_options": OLDER_SIZES,
      "colors": ["Multicolor", "Yellow & Red", "Orange & Blue"],
-     "images": ["/images/placeholder-lehenga.jpg"],
+     "images": [],
      "stock": 55, "sku": "LH-004", "is_featured": False},
 
     # ────────────────────────────────────────────────────────
@@ -227,7 +244,7 @@ PRODUCTS = [
      "category": "Party Wear", "fabric": "Sequin Net",
      "size_options": ALL_SIZES,
      "colors": ["Gold", "Silver", "Pink", "Purple"],
-     "images": ["/images/placeholder-party.jpg"],
+     "images": [],
      "stock": 35, "sku": "PW-001", "is_featured": True},
 
     {"name": "Tutu Ruffle Birthday Dress",
@@ -236,7 +253,7 @@ PRODUCTS = [
      "category": "Party Wear", "fabric": "Tulle & Satin",
      "size_options": ALL_SIZES,
      "colors": ["Pink", "White", "Lavender", "Teal"],
-     "images": ["/images/placeholder-party.jpg"],
+     "images": [],
      "stock": 45, "sku": "PW-002", "is_featured": True},
 
     {"name": "Velvet Festive Party Frock",
@@ -245,7 +262,7 @@ PRODUCTS = [
      "category": "Party Wear", "fabric": "Velvet",
      "size_options": OLDER_SIZES,
      "colors": ["Red", "Emerald Green", "Navy Blue", "Purple"],
-     "images": ["/images/placeholder-party.jpg"],
+     "images": [],
      "stock": 40, "sku": "PW-003", "is_featured": False},
 
     {"name": "Floral Organza Teen Party Gown",
@@ -254,7 +271,7 @@ PRODUCTS = [
      "category": "Party Wear", "fabric": "Organza",
      "size_options": GIRLS_SIZES,
      "colors": ["Pink", "White", "Gold", "Purple"],
-     "images": ["/images/placeholder-party.jpg"],
+     "images": [],
      "stock": 25, "sku": "PW-004", "is_featured": True},
 ]
 

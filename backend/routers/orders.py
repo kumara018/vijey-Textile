@@ -97,6 +97,26 @@ def place_order(
             detail="Your cart is empty. Please add items before placing an order.",
         )
 
+    # ── VERIFY THE PAYMENT FIRST. Nothing before this line may act on it. ──
+    #
+    # This used to sit AFTER the stock check, and the comment beneath it said
+    # "Payment must be verified BEFORE any order/stock mutation" — which was
+    # true of the order and the stock, and missed the mutation that matters
+    # most. The stock-error branch calls `_refund_uncredited_payment` with
+    # whatever `razorpay_payment_id` the request supplied, using the shop's own
+    # API keys, and it ran while the signature was still unchecked.
+    #
+    # That is a real hole and it moves money. A caller could put an
+    # out-of-stock item in their cart, POST a genuine payment id belonging to
+    # someone else's order together with a garbage signature, and the shop would
+    # fetch that payment from Razorpay and refund it. No order is created and
+    # nothing looks wrong in the logs — the money simply goes back to a stranger.
+    #
+    # Verification is cheap, has no side effects, and answers "is this payment
+    # real, and is it this transaction's" — which every branch below depends on.
+    # It belongs at the top.
+    _verify_razorpay_payment(payload.payment)
+
     items_snapshot = []
     subtotal = 0.0
     stock_error = None
@@ -125,8 +145,12 @@ def place_order(
         })
 
     if stock_error:
+        # Safe to refund: the signature was verified at the top of this
+        # function, so this payment is genuinely this customer's and genuinely
+        # for this transaction.
+        #
         # The frontend only calls this endpoint after Razorpay's widget has
-        # already captured payment — so if we can't fulfill the order, that
+        # already captured payment — so if we can't fulfil the order, that
         # money needs to come back rather than vanish into a failed request.
         pay_id = payload.payment.razorpay_payment_id if payload.payment else None
         if pay_id:
@@ -137,10 +161,6 @@ def place_order(
                 " Your payment will be refunded — our team has been notified."
             )
         raise HTTPException(status_code=400, detail=stock_error)
-
-    # Payment must be verified BEFORE any order/stock mutation — no order is
-    # ever created on an unverified or missing payment.
-    _verify_razorpay_payment(payload.payment)
 
     shipping_fee = 49.0
     total = subtotal + shipping_fee

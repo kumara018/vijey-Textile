@@ -114,6 +114,37 @@ cd backend && python -m pytest tests/ -q && python loadtest.py --users 50 --seco
 
 ---
 
+## Measured capacity, honestly
+
+One uvicorn worker, on a development laptop, with the backend competing against
+everything else running:
+
+| Concurrent visitors | Throughput | p95 |
+|---|---|---|
+| 1 | 156 req/s | 8ms |
+| 50 | 99-142 req/s | 660-740ms |
+| 100 | ~24 req/s | overload, answered 503 |
+
+The 50-visitor row is a range because three consecutive identical runs gave 137,
+99 and 113 req/s with no code change between them. That 38% spread is the noise
+floor on this machine, and it is why I reverted a catalogue cache I had written:
+it looked like a 29% win in one run and a 45% loss in another, and I could not
+demonstrate which. An optimisation that adds staleness and cannot be shown to
+help should not ship.
+
+The server's own access log agrees with the client at 50 visitors (p95 661ms
+server, 700ms client), so that number is the application, not a measurement
+artefact.
+
+**To raise the ceiling** there are two levers, in order:
+
+1. **More uvicorn workers.** The Procfile asks for one. `--workers 2` or `4`
+   roughly multiplies throughput — and is now SAFE to do, which it was not
+   before: the background jobs are leased to a single process, so a second
+   worker no longer double-polls the courier or sends duplicate notifications.
+2. **A paid Render instance.** The free tier is 0.1 CPU, so more workers on it
+   would contend rather than help.
+
 ## Two things I did not do, and why
 
 **The hero image sequence is still in the repo.** 540 frames, about 37MB, in
@@ -123,9 +154,8 @@ by 37MB, but it also deletes the offline render pipeline that produced the
 posters, and that is a bigger decision than a cleanup. Say the word and I will
 strip the frames and keep the posters.
 
-**The seeded catalogue has broken image paths.** `backend/seed_data.py` stores
-`/images/placeholder-frock.jpg`, a path neither service has ever served, so all
-24 seeded products would show a broken image. The card now degrades to a
-composed placeholder instead of a broken-image glyph, so it is no longer ugly —
-but if those seeded rows exist in the production database they are 24 products
-with no photograph, and that is a data question rather than a code one.
+**FIXED since this doc was first written:** the seeded catalogue's broken image
+paths. `seed_data.py` no longer writes them, and `_clear_dead_image_paths()`
+strips them from an existing database on boot — verified locally, it cleared 24
+products. Those products now correctly show as having no photograph, which they
+do; uploading real ones through the admin panel is a shop task, not a code one.

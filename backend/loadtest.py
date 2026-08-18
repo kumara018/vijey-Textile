@@ -49,6 +49,14 @@ JOURNEY = [
 
 # Anything at or above this is worth a person's attention. 500ms is roughly
 # where a page stops feeling like it responded to the tap.
+#
+# Treat a breach as "look at this", not "the site is broken". The bar is
+# absolute rather than relative to the machine, and a development laptop running
+# a browser, two dev servers and a build alongside a single uvicorn worker will
+# cross it at concurrencies a Render instance would not. Measured here across
+# three consecutive identical runs at 50 visitors: 137, 99 and 113 req/s — a
+# 38% spread from run to run with no code change between them, which is the
+# noise floor to keep in mind before reading anything into a single number.
 SLOW_MS = 500
 
 

@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
+import uuid
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -71,6 +73,41 @@ def _ensure_products():
             print("[Startup] Products seeded.")
         else:
             print(f"[Startup] {count} products already in database.")
+    finally:
+        db.close()
+
+
+def _clear_dead_image_paths():
+    """
+    Remove image references that point at files no service has ever served.
+
+    seed_data.py used to give every demo product `/images/placeholder-frock.jpg`
+    and four siblings. The backend mounts `/uploads/products` and nothing else,
+    so those paths 404 in every environment — twenty-four products rendering a
+    broken-image glyph on a shop selling heirloom clothing. The seed file no
+    longer writes them, but any database seeded before now still holds them, and
+    a fix that only helps fresh installs does not help this shop.
+
+    An empty list is the honest value: the product genuinely has no photograph
+    until someone uploads one, and the card draws a composed placeholder for
+    that case. Only touches rows whose ONLY images are these known-dead paths —
+    a product with a real Cloudinary URL alongside is left alone.
+    """
+    DEAD = "/images/placeholder-"
+    db = SessionLocal()
+    try:
+        fixed = 0
+        for p in db.query(models.Product).all():
+            images = p.images or []
+            live = [i for i in images if not str(i).startswith(DEAD)]
+            if len(live) != len(images):
+                p.images = live
+                fixed += 1
+        if fixed:
+            db.commit()
+            print(f"[Startup] Cleared dead image paths on {fixed} product(s)")
+    except Exception as e:
+        print(f"[Startup] Image path cleanup note: {e}")
     finally:
         db.close()
 
@@ -541,6 +578,65 @@ def _sync_delhivery_statuses():
         db.close()
 
 
+# ── Background jobs run in exactly ONE process ───────────────────────────────
+#
+# See models.SchedulerLease for why. Short version: the pollers live on an
+# in-process scheduler, and a second uvicorn worker would silently double every
+# courier poll and every customer notification.
+_SCHEDULER_OWNER = f"{os.getpid()}-{uuid.uuid4().hex[:8]}"
+_LEASE_SECONDS = 120
+
+
+def _try_take_scheduler_lease() -> bool:
+    """
+    Take or renew the lease. True if this process owns the jobs.
+
+    Renewal is what makes a crash survivable: the holder pushes the expiry
+    forward every minute, so if it dies the lease lapses within two and another
+    worker picks the jobs up. Without renewal a crashed holder would keep the
+    jobs parked forever.
+    """
+    db = SessionLocal()
+    try:
+        now = datetime.now(timezone.utc)
+        row = db.query(models.SchedulerLease).filter(models.SchedulerLease.id == 1).first()
+        if row is None:
+            db.add(models.SchedulerLease(
+                id=1, owner=_SCHEDULER_OWNER, expires_at=now + timedelta(seconds=_LEASE_SECONDS)))
+            db.commit()
+            return True
+
+        expires = row.expires_at
+        if expires is not None and expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+
+        if row.owner == _SCHEDULER_OWNER or expires is None or expires <= now:
+            row.owner = _SCHEDULER_OWNER
+            row.expires_at = now + timedelta(seconds=_LEASE_SECONDS)
+            db.commit()
+            return True
+        return False
+    except Exception as e:
+        # If the lease cannot be read, run the jobs. A shop that stops syncing
+        # couriers is a worse failure than one that syncs twice, and this path
+        # only happens when the database is already in trouble.
+        print(f"[Scheduler] lease check failed, running jobs anyway: {e}")
+        return True
+    finally:
+        db.close()
+
+
+def _renew_scheduler_lease():
+    """Heartbeat, so the lease does not lapse under an alive holder."""
+    if not _try_take_scheduler_lease():
+        print("[Scheduler] lease lost — pausing background jobs in this process")
+        for job in ("delhivery_sync", "rate_limit_sweep"):
+            try:
+                _scheduler.pause_job(job)
+            except Exception:
+                pass
+
+
 def _sweep_rate_limits():
     """
     Drop rate-limit rows no live window can reference.
@@ -578,12 +674,20 @@ async def lifespan(app: FastAPI):
     # Always ensure admin + products exist
     _ensure_admin()
     _ensure_products()
+    # Strip image paths that have never resolved in any environment
+    _clear_dead_image_paths()
 
-    _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
-    _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
-    _scheduler.start()
+    if _try_take_scheduler_lease():
+        _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
+        _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
+        _scheduler.add_job(_renew_scheduler_lease, "interval", seconds=60, id="scheduler_lease", replace_existing=True)
+        _scheduler.start()
+        print(f"[Scheduler] background jobs owned by {_SCHEDULER_OWNER}")
+    else:
+        print("[Scheduler] another process holds the lease — no background jobs here")
     yield
-    _scheduler.shutdown(wait=False)
+    if _scheduler.running:
+        _scheduler.shutdown(wait=False)
 
 
 # ── App ───────────────────────────────────────────────────────────────────────

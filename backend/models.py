@@ -527,3 +527,34 @@ class RateLimitHit(Base):
     # composite is what actually serves it — either single-column index alone
     # leaves the database filtering the other half by hand.
     __table_args__ = (Index("ix_rate_limit_bucket_at", "bucket", "at"),)
+
+
+class SchedulerLease(Base):
+    """
+    Which process currently owns the background jobs.
+
+    THE LANDMINE THIS DEFUSES. The Delhivery poller, the return poller and the
+    rate-limit sweep all run on an in-process APScheduler started in `lifespan`.
+    With one uvicorn worker — which is what the Procfile asks for today — that
+    is exactly one of each, and everything is fine. The moment anyone raises the
+    worker count to get more throughput, every worker starts its own scheduler:
+    the courier is polled N times over, an order that just went out for delivery
+    can be advanced by two workers at once, and the customer gets N copies of
+    the same "your order is on its way" email.
+
+    Nothing warns about that. Throughput goes up, the duplication is silent, and
+    the first evidence is a customer asking why they got four identical emails.
+
+    So the jobs are leased. Every process tries to take the lease on boot and
+    renews it while it holds it; a process that cannot take it simply does not
+    run jobs. If the holder dies, the lease expires and another takes over
+    within a couple of minutes. One row, portable across SQLite and Postgres,
+    no extra service.
+    """
+    __tablename__ = "scheduler_lease"
+
+    # Always 1. A single-row table is the simplest expression of "there is one
+    # of these", and it makes the upsert trivial on both dialects.
+    id         = Column(Integer, primary_key=True)
+    owner      = Column(String(64), nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)

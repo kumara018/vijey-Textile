@@ -388,6 +388,54 @@ class ProductOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
+    @field_validator(
+        "stock", "is_active", "is_featured", "is_new_arrival", "is_returnable",
+        "rating_avg", "rating_count", "size_options", "colors", "images",
+        mode="before",
+    )
+    @classmethod
+    def _tolerate_null(cls, v, info):
+        """
+        ONE BAD ROW MUST NOT TAKE THE WHOLE CATALOGUE DOWN.
+
+        Every field listed here is non-optional with a PYTHON-side default, so a
+        product created through the ORM always has a value. A product created
+        any other way — a manual SQL fix, a CSV import, an older migration that
+        added the column without backfilling — has NULL, and FastAPI's response
+        validation then raises on the entire list:
+
+            ResponseValidationError: 5 validation errors
+              ('response', 0, 'is_featured'): Input should be a valid boolean
+
+        Note the index: row ZERO. It is not that one product is missing from
+        the listing — the endpoint returns 500 and the shop has no catalogue at
+        all. Found by inserting a test product with raw SQL, which is exactly
+        how it would happen for real.
+
+        A missing flag is not worth an outage. The row renders with the same
+        default it would have been created with, and the shop stays open.
+        """
+        if v is not None:
+            return v
+        return {
+            "stock": 0,
+            "is_active": True,
+            "is_featured": False,
+            "is_new_arrival": False,
+            "is_returnable": True,
+            "rating_avg": 0.0,
+            "rating_count": 0,
+            "size_options": [],
+            "colors": [],
+            "images": [],
+        }.get(info.field_name)
+
+    @field_validator("name", "description", "category", mode="before")
+    @classmethod
+    def _tolerate_null_text(cls, v):
+        """Same reasoning: a null name should show as blank, not 500 the list."""
+        return v if v is not None else ""
+
 
 # ─── CART SCHEMAS ─────────────────────────────────────────────────────────────
 

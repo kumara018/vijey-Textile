@@ -143,6 +143,77 @@ class TestOrders:
             "stock moved for an order that was never paid for"
         )
 
+    def test_a_forged_signature_cannot_trigger_a_refund(self, client, make_user, product, db):
+        """
+        The most valuable test in this file. It guards a hole that moved money.
+
+        `_refund_uncredited_payment` runs when the cart cannot be fulfilled, and
+        it refunds whatever `razorpay_payment_id` the REQUEST supplied, using
+        the shop's own API keys. That branch used to execute before the payment
+        signature was checked — so a caller could put an out-of-stock item in
+        their cart, POST a real payment id belonging to somebody else's order
+        with a garbage signature, and the shop would fetch that payment from
+        Razorpay and refund it. No order created, nothing odd in the logs, money
+        gone to a stranger.
+
+        Verification now happens at the top of the endpoint. This test drives
+        exactly that request and asserts the refund is never reached.
+        """
+        import models
+        from unittest.mock import patch
+        import routers.orders as orders_router
+
+        _, headers = make_user()
+        # A cart that CANNOT be fulfilled, so the stock-error branch is the one
+        # the request lands in.
+        self._stocked_cart(client, headers, product, qty=1)
+        p = db.query(models.Product).get(product.id)
+        p.stock = 0
+        db.commit()
+
+        with patch.object(orders_router, "_refund_uncredited_payment") as refund:
+            r = client.post("/api/orders/", headers=headers,
+                            json=order_body("9000000129", valid_signature=False))
+
+        assert r.status_code == 400, r.text
+        refund.assert_not_called(), (
+            "a forged signature reached the refund path — this endpoint would "
+            "refund a payment id it never verified"
+        )
+
+    def test_a_genuine_payment_is_refunded_when_stock_ran_out(
+        self, client, make_user, product, db
+    ):
+        """
+        The other half: a REAL payment that cannot be fulfilled must be given
+        back, not silently kept.
+
+        Razorpay captures inside the checkout widget, before this endpoint is
+        called — so by the time the shop discovers the last one sold thirty
+        seconds ago, the customer has already paid. This path had never been
+        executed by anything.
+        """
+        import models
+        from unittest.mock import patch
+        import routers.orders as orders_router
+
+        _, headers = make_user()
+        self._stocked_cart(client, headers, product, qty=1)
+        p = db.query(models.Product).get(product.id)
+        p.stock = 0
+        db.commit()
+
+        with patch.object(orders_router, "_refund_uncredited_payment",
+                          return_value="rfnd_TEST") as refund:
+            r = client.post("/api/orders/", headers=headers,
+                            json=order_body("9000000130"))
+
+        assert r.status_code == 400, r.text
+        refund.assert_called_once()
+        assert "refunded" in r.json()["detail"].lower(), (
+            f"the customer was not told their money is coming back: {r.json()['detail']}"
+        )
+
     def test_an_empty_cart_cannot_become_an_order(self, client, make_user):
         _, headers = make_user()
         r = client.post("/api/orders/", headers=headers, json=order_body("9000000123"))
