@@ -17,6 +17,15 @@ frontend/.env
 # Database
 backend/*.db
 backend/ammalu_tex.db
+# SQLite's write-ahead log and shared-memory files. These were tracked, and
+# that is why `git checkout` failed with "local changes would be overwritten":
+# the running backend — and OneDrive — hold an OS lock on them, so git can
+# neither unlink nor rewrite them, and every branch switch aborted. They are
+# transient journals for a LOCAL dev database. Nothing should ever have been
+# reading them from the repository.
+backend/*.db-wal
+backend/*.db-shm
+backend/*.db-journal
 
 # Uploads
 backend/uploads/
