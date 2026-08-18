@@ -68,6 +68,40 @@ def _ensure_products():
         db.close()
 
 
+def _ensure_indexes():
+    """
+    Create any index a model declares that the live database does not have.
+
+    `create_all` only builds indexes for tables it CREATES. Every table here
+    already exists in production, so an index added to models.py later would
+    never appear — which is how the situation this fixes arose: the application
+    filters orders by user, products by active flag, returns by status and
+    sessions by revoked_at, and not one of those columns had an index. Measured
+    with EXPLAIN, eight of the ten hot query shapes were full table scans, most
+    of them with a temporary B-tree sort on top.
+
+    Driven off `Base.metadata` rather than a hand-written list of CREATE INDEX
+    statements, so it cannot drift from the declarations the way the gate route
+    lists drifted from the app. `checkfirst=True` makes it idempotent on both
+    SQLite and Postgres.
+
+    Additive and safe to run on every boot: creating an index does not touch a
+    row. On Postgres it takes a brief lock on tables this size; at this scale
+    that is milliseconds.
+    """
+    created = []
+    for table in Base.metadata.sorted_tables:
+        for index in table.indexes:
+            try:
+                index.create(bind=engine, checkfirst=True)
+                created.append(index.name)
+            except Exception as e:
+                # One index failing must not stop the app from booting.
+                print(f"[Startup] Index {index.name} note: {e}")
+    if created:
+        print(f"[Startup] Indexes verified: {len(created)}")
+
+
 def _migrate_db():
     """Add new columns/tables without dropping data. Each step is independently safe."""
     from sqlalchemy import text, inspect as sa_inspect
@@ -520,6 +554,8 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # Migrate new columns without data loss
     _migrate_db()
+    # Bring indexes on EXISTING tables up to what the models declare
+    _ensure_indexes()
     # Delete accounts whose 4-hour deletion window expired + send goodbye email
     _cleanup_deleted_accounts()
     # Always ensure admin + products exist
