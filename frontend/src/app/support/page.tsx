@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import PageShell from '@/components/system/PageShell';
 import PageHeader from '@/components/system/PageHeader';
+import Disclosure from '@/components/system/Disclosure';
 import { ActionLink } from '@/components/system/Action';
 import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, MAIL_URL2 } from '@/lib/config';
 
@@ -188,11 +189,7 @@ export default function SupportPage() {
       />
 
       {/* ── Size guide ─────────────────────────────────────────────────── */}
-      <section id="size-guide" className="scroll-mt-32 border-t border-ink-edge/60 pt-10">
-        <div className="flex items-baseline gap-5">
-          <span className="text-rule tabular-nums text-brass-bright">01</span>
-          <h2 className="font-display text-doc-head font-normal text-paper">Size guide</h2>
-        </div>
+      <Disclosure id="size-guide" index="01" title="Size guide" defaultOpen>
 
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
           Standard Indian sizes, 12 to 40. Measure around the fullest part of the chest, the
@@ -247,14 +244,10 @@ export default function SupportPage() {
           Still unsure? Send us the measurements on WhatsApp and we will tell you which size to
           order — we would rather answer first than handle a return afterwards.
         </p>
-      </section>
+      </Disclosure>
 
       {/* ── FAQ ────────────────────────────────────────────────────────── */}
-      <section id="faq" className="mt-[10vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
-        <div className="flex items-baseline gap-5">
-          <span className="text-rule tabular-nums text-brass-bright">02</span>
-          <h2 className="font-display text-doc-head font-normal text-paper">Common questions</h2>
-        </div>
+      <Disclosure id="faq" index="02" title="Common questions">
 
         <dl className="mt-10 grid gap-x-16 gap-y-10 lg:grid-cols-2">
           {FAQS.map((f) => (
@@ -266,14 +259,10 @@ export default function SupportPage() {
             </div>
           ))}
         </dl>
-      </section>
+      </Disclosure>
 
       {/* ── Policies, summarised and linked ────────────────────────────── */}
-      <section className="mt-[10vh] border-t border-ink-edge/60 pt-10">
-        <div className="flex items-baseline gap-5">
-          <span className="text-rule tabular-nums text-brass-bright">03</span>
-          <h2 className="font-display text-doc-head font-normal text-paper">The policies</h2>
-        </div>
+      <Disclosure index="03" title="The policies">
 
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
           Each of these lives in one place, so what you read here is what applies.
@@ -292,15 +281,10 @@ export default function SupportPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Disclosure>
 
       {/* ── Reach a person ─────────────────────────────────────────────── */}
-      <section id="contact" className="mt-[10vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
-        <div className="flex items-baseline gap-5">
-          <span className="text-rule tabular-nums text-brass-bright">04</span>
-          <h2 className="font-display text-doc-head font-normal text-paper">Reach us</h2>
-        </div>
-
+      <Disclosure id="contact" index="04" title="Reach us">
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
           A real person answers, {STORE.weekdays.toLowerCase()}.
         </p>
@@ -357,7 +341,7 @@ export default function SupportPage() {
         <div className="mt-12">
           <ActionLink href="/products">See every piece</ActionLink>
         </div>
-      </section>
+      </Disclosure>
     </PageShell>
   );
 }

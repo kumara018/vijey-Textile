@@ -5,14 +5,13 @@ import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { LoginPromptProvider } from '@/context/LoginPromptContext';
 import { WishlistProvider } from '@/context/WishlistContext';
-import NavGate, { ChromeGate } from '@/components/nav/NavGate';
+import NavGate from '@/components/nav/NavGate';
 import FooterWrapper from '@/components/FooterWrapper';
 import { fontVariables } from '@/lib/fonts';
 import LoginPromptModal from '@/components/LoginPromptModal';
 import PageTransition from '@/components/PageTransition';
 import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
-import Letterbox from '@/components/Letterbox';
 import CaptureMode from '@/components/CaptureMode';
 import ErrorReporting from '@/components/ErrorReporting';
 import { Toaster } from 'react-hot-toast';
@@ -95,26 +94,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <main id="main" className="flex-1"><PageTransition>{children}</PageTransition></main>
                 <FooterWrapper />
               </div>
-              {/* Cinematic overlays. Both sit above the canvas and below the
-                  modals, and neither takes pointer events — the path to
-                  checkout is never behind them. */}
-              <ChromeGate>
-                <Letterbox />
-                {/* THE AMBIENT SOUND TOGGLE IS GONE.
-                    It was a fixed bottom-left black circle on z-30, which
-                    means it sat on top of the page content on every route at
-                    every size — on a phone it covered the first column of the
-                    footer, which is where the shop's own name and address
-                    are. It was also bg-black/55 on a shop that has been relit
-                    to a pale ground, so the single darkest object on the page
-                    was a decorative control.
-                    A shop where a customer is deciding whether to spend money
-                    does not open with sound, and no storefront a customer
-                    would compare this to has an ambient audio control. The
-                    component is left in the tree, unmounted, rather than
-                    deleted — it is a design decision, not a bug fix, and it
-                    should be easy to reverse. */}
-              </ChromeGate>
+              {/* THE TWO CINEMATIC OVERLAYS ARE BOTH UNMOUNTED, and the
+                  ChromeGate that carried them goes with them — it existed only
+                  to hold these two.
+
+                  Letterbox drew two solid bg-black 21:9 matte bars fixed over
+                  the top and bottom of / and /products. At a 980px viewport —
+                  which is what a phone reports in desktop-site mode — that is
+                  a 56px black strip directly under the header and another
+                  across the bottom of the product grid, on a shop whose ground
+                  is #F7EAEE. Measured, not guessed: the strip was reported as
+                  a dark gap under the header, and an earlier black band at the
+                  foot of /products was misread as a screenshot artefact
+                  because the overlay is pointer-events-none and
+                  elementFromPoint looks straight through it.
+
+                  SoundToggle was a fixed bottom-left bg-black/55 circle on
+                  z-30, sitting on the page content on every route; on a phone
+                  it covered the footer's first column, where the shop's name
+                  and address are.
+
+                  Between them they were the darkest objects on a relit shop
+                  and cost ~112px of screen on the two pages that most need it.
+                  Both components stay in the tree, unmounted, so either is one
+                  line to restore. */}
               <LoginPromptModal />
               <Toaster
                 position="top-right"

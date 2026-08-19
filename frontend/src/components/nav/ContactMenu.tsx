@@ -80,8 +80,8 @@ export default function ContactMenu() {
     );
     return (
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-        <path d="M10 18s6-5.3 6-9.4a6 6 0 1 0-12 0C4 12.7 10 18 10 18Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-        <circle cx="10" cy="8.4" r="2.1" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M8.2 17s5.6-4.9 5.6-8.4a5.6 5.6 0 1 0-11.2 0C2.6 12.1 8.2 17 8.2 17Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        <circle cx="8.2" cy="8.6" r="2" stroke="currentColor" strokeWidth="1.3" />
       </svg>
     );
   };
