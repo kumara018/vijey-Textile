@@ -318,13 +318,24 @@ export default function ProductCard({ product }: Props) {
             * they are the shop talking about itself — and the price row
             * already shows the saving in figures.
             *
-            * So: one badge, chosen by what matters most, in the shop's own
-            * colour with white on it at 11.97:1.
+            * So: one badge, chosen by what matters most.
+            *
+            * AND IT IS LIGHT, NOT A SOLID BLOCK OF CERISE. A filled dark badge
+            * plus a filled dark button put two heavy rectangles on top of a
+            * photograph of a pale garment, and the card read as the colour
+            * rather than as the dress — which is exactly the "dark rose /
+            * cinematic" note that came back three times. Both are now a pale
+            * ground with the deep tone carried by the TEXT and a hairline
+            * edge. Measured: #6B1230 on #FDE7EE is 10.17:1, well past AAA,
+            * and the #C22B62 hairline is 4.71:1 against the page ground, so
+            * the control edge clears WCAG 1.4.11 without being a slab.
             */}
           {(product.stock === 0 || discount) && (
             <span
-              className={`absolute left-0 top-3 z-10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white ${
-                product.stock === 0 ? 'bg-paper-muted' : 'bg-maroon-600'
+              className={`absolute left-0 top-3 z-10 border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] ${
+                product.stock === 0
+                  ? 'border-steel bg-ink-raised text-paper-muted'
+                  : 'border-maroon-500 bg-maroon-100 text-maroon-800'
               }`}
             >
               {product.stock === 0 ? 'Sold out' : `${discount}% off`}
@@ -387,7 +398,7 @@ export default function ProductCard({ product }: Props) {
             <button
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="mt-3 flex w-full items-center justify-center gap-2 bg-maroon-600 py-2.5 text-sm font-medium text-white transition-colors duration-300 hover:bg-maroon-700 active:scale-[0.99] disabled:bg-ink-edge disabled:text-paper-faint"
+              className="mt-3 flex w-full items-center justify-center gap-2 border border-maroon-500 bg-maroon-100 py-2.5 text-sm font-medium text-maroon-800 transition-colors duration-300 hover:bg-maroon-200 active:scale-[0.99] disabled:border-ink-edge disabled:bg-ink-raised disabled:text-paper-faint"
             >
               <ShoppingCart size={15} />
               {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}

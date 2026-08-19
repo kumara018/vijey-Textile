@@ -183,7 +183,12 @@ function ProductsContent() {
         * rather than a size that makes a point. Amazon puts the category name
         * and the results on one screen; so does this.
         */}
-      <section className="border-b border-ink-edge/60 px-6 pb-6 pt-28 sm:px-10">
+      {/* `pt-28` stood here to clear a FIXED header. The header is `sticky
+          top-0`, which occupies its own 110px in normal flow — so that padding
+          was not clearance, it was 112px of empty screen above the first
+          heading, on the one page a customer comes here to use. Measured:
+          134px between the header's bottom edge and the h1. */}
+      <section className="border-b border-ink-edge/60 px-6 pb-6 pt-8 sm:px-10">
         <div className="mx-auto w-full max-w-[112rem]">
           <Reveal>
             <p className="mb-2 text-rule uppercase text-brass-bright">{identity.eyebrow}</p>

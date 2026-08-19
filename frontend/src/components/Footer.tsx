@@ -105,7 +105,7 @@ const HELP = [
 
 
 /* One hairline weight, sized to sit on the first line of the text beside it. */
-const ico = 'mt-0.5 h-4 w-4 shrink-0 text-brass-bright';
+const ico = 'mt-[0.28em] h-4 w-4 shrink-0 text-brass-bright';
 
 function Shop() {
   return (
@@ -159,10 +159,31 @@ export default function Footer() {
       />
 
       <div className="mx-auto w-full max-w-[112rem] px-6 py-[4.5vh] sm:px-10">
-        <div className="grid gap-x-14 gap-y-14 lg:grid-cols-12">
+        {/**
+          * THE GUTTER AND THE COLUMN SPLIT ARE MEASURED, NOT CHOSEN BY EYE.
+          *
+          * This grid pushed the whole document 41px wider than the viewport at
+          * exactly 1024px — the width a laptop actually is — and the page
+          * scrolled sideways. Nothing looked broken in isolation, which is why
+          * it survived several passes: no single element overflowed, the SUM
+          * did. Twelve columns with a 56px gutter spends 616px on gaps alone
+          * out of 944px of content width, leaving 27px per column, and the
+          * "Reach us" column at 2/12 then had 111px to fit an email address in.
+          *
+          * Three things, each necessary:
+          *   - the gutter scales (32px at lg, 56px only at xl where it fits);
+          *   - the split gives "Reach us" 3 columns instead of 2, since it
+          *     holds the longest strings in the footer;
+          *   - every child gets `min-w-0`. A grid item defaults to
+          *     `min-width: auto`, which means it refuses to shrink below its
+          *     content no matter what its column says — the same rule that
+          *     broke the header wordmark. Without this the other two fixes
+          *     only move the overflow point.
+          */}
+        <div className="grid gap-x-8 gap-y-14 lg:grid-cols-12 xl:gap-x-14">
 
           {/* ── The shop ─────────────────────────────────────────────── */}
-          <div className="lg:col-span-4">
+          <div className="min-w-0 lg:col-span-4">
             <Link
               href="/"
               className="inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
@@ -225,7 +246,7 @@ export default function Footer() {
           </div>
 
           {/* ── Shop by piece ────────────────────────────────────────── */}
-          <nav aria-labelledby="footer-shop" className="lg:col-span-3">
+          <nav aria-labelledby="footer-shop" className="min-w-0 lg:col-span-2">
             <h2 id="footer-shop" className="text-rule uppercase text-brass-bright">The pieces</h2>
             <ul className="mt-6 space-y-1.5">
               {CATEGORIES.map((c) => (
@@ -237,7 +258,7 @@ export default function Footer() {
           </nav>
 
           {/* ── Help and policies ────────────────────────────────────── */}
-          <nav aria-labelledby="footer-help" className="lg:col-span-3">
+          <nav aria-labelledby="footer-help" className="min-w-0 lg:col-span-3">
             <h2 id="footer-help" className="text-rule uppercase text-brass-bright">Help &amp; policies</h2>
             <ul className="mt-6 space-y-1.5">
               {HELP.map((l) => (
@@ -247,7 +268,7 @@ export default function Footer() {
           </nav>
 
           {/* ── Reach us ─────────────────────────────────────────────── */}
-          <div className="lg:col-span-2">
+          <div className="min-w-0 lg:col-span-3">
             <h2 className="text-rule uppercase text-brass-bright">Reach us</h2>
             {/**
               * EACH ROW GETS ITS SYMBOL.
@@ -281,7 +302,7 @@ export default function Footer() {
               </p>
               <p className="flex gap-3">
                 <Envelope />
-                <span className="flex min-w-0 flex-col gap-1.5">
+                <span className="flex min-w-0 flex-col gap-1.5 break-words">
                   <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
                   <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
                 </span>
