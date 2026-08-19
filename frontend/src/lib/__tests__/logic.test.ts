@@ -75,42 +75,30 @@ describe('isMoneyAtRisk — the question a customer is actually asking', () => {
  * remembered to list would have been silently fine. `everything that is not
  * the homepage is plain` cannot rot that way.
  */
-describe('sceneForPath — the scene is the entrance, and nowhere else', () => {
-  it('gives the homepage the entrance', () => {
-    expect(sceneForPath('/')).toBe('entrance');
-  });
-
-  it('gives every other route the quiet ground', () => {
-    const elsewhere = [
-      '/products',
-      '/products?sort=new',
-      '/products/42',
-      '/products/42/reviews',
-      '/cart',
-      '/wishlist',
-      '/checkout',
-      '/orders',
-      '/orders/1001',
-      '/account',
-      '/returns/7',
-      '/auth/login',
-      '/admin',
-      '/admin/orders',
-      '/some/page/nobody/built',
+describe('sceneForPath — no scene mounts anywhere', () => {
+  /**
+   * The rule changed again, and these tests changed with it rather than being
+   * deleted. The entrance scene drew a product photograph behind the homepage
+   * copy — that garment was asked to be removed from the opening twice, and
+   * the scene was what drew it. With the homepage the last route using it,
+   * retiring it takes the remaining three.js off the site entirely.
+   *
+   * Asserted as a rule, not a list: every route resolves to the quiet ground,
+   * so a route added later cannot silently acquire a scene.
+   */
+  it('gives every route the quiet ground', () => {
+    const routes = [
+      '/', '/products', '/products?sort=new', '/products/42',
+      '/cart', '/wishlist', '/checkout', '/orders', '/orders/1001',
+      '/account', '/returns/7', '/auth/login', '/admin', '/nobody/built/this',
     ];
-    for (const path of elsewhere) {
+    for (const path of routes) {
       expect(sceneForPath(path)).toBe('plain');
     }
   });
 
-  /**
-   * The homepage match is exact, not a prefix. `/products` starts with `/`,
-   * so a `startsWith('/')` here would hand the entrance scene to the entire
-   * site — which is the failure mode this whole change exists to avoid.
-   */
-  it('matches the homepage exactly rather than by prefix', () => {
-    expect(sceneForPath('/')).toBe('entrance');
-    expect(sceneForPath('/anything')).toBe('plain');
+  it('treats the quiet ground as restrained, so no effects budget is spent', () => {
+    expect(isRestrained(sceneForPath('/'))).toBe(true);
   });
 });
 

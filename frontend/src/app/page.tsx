@@ -11,10 +11,8 @@ import type { Product } from '@/types';
 import Reveal from '@/components/home/Reveal';
 import DeliverTo from '@/components/home/DeliverTo';
 import OccasionBand from '@/components/home/OccasionBand';
-import HeirloomPlate from '@/components/home/HeirloomPlate';
 import MeasureRule from '@/components/home/MeasureRule';
 import ProductCard from '@/components/ProductCard';
-import HeroStage from '@/components/hero/HeroStage';
 
 /**
  * The Trousseau — Vijey Textile homepage.
@@ -114,18 +112,9 @@ export default function HomePage() {
         * z-index instead put it over the headline and greyed the text out —
         * the same stacking-context trap the letterbox hit one level up.
         */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          // Pulled left of where it was. The subject is staged further into the
-          // frame now that it is sized against the frustum, and the old stops
-          // (0.62 at 46%, 0.18 at 60%) put a grey wash across its left third —
-          // which is a slower, subtler version of the same "dull" complaint.
-          background:
-            'linear-gradient(96deg, rgba(247,234,238,0.97) 0%, rgba(247,234,238,0.92) 24%, rgba(247,234,238,0.58) 37%, rgba(247,234,238,0.16) 50%, rgba(247,234,238,0) 62%)',
-        }}
-      />
+        {/* The wash under the copy is gone with the photograph it was
+            protecting the type from. On the shop's own ground the type is
+            already at 13.61:1. */}
 
       {/* Everything the visitor reads or clicks sits above the scrim. */}
       <div className="relative z-10">
@@ -183,7 +172,12 @@ export default function HomePage() {
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
-          <HeroStage />
+          {/* THE STAGED GARMENT IS GONE FROM THE OPENING.
+              It filled the right half of the hero and ran up behind the
+              header, so the wordmark and "Deliver to" sat on a photograph of
+              a frock. Asked for directly: the same opening as the sister
+              shop — type on the shop's own ground. The garments are the
+              section immediately below, where each has a name and a price. */}
 
           <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
@@ -216,14 +210,9 @@ export default function HomePage() {
                 See every piece
                 <span aria-hidden="true" className="transition-transform duration-500 group-hover:translate-x-1.5">→</span>
               </Link>
-              {hero && (
-                <Link
-                  href={`/products/${hero.id}`}
-                  className="text-caption uppercase text-paper-faint transition-colors duration-500 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
-                >
-                  In frame: {hero.name}
-                </Link>
-              )}
+              {/* "In frame: …" named the garment staged behind this copy. There
+                  is no frame any more — the piece it pointed at is in the grid
+                  below with its price, which is a better link than a caption. */}
             </div>
             </Reveal>
           </div>
@@ -360,7 +349,8 @@ export default function HomePage() {
       {/* ═══ III. The heirloom in frame ════════════════════════════════
           One piece, one viewport. The camera cranes down it as you
           scroll — the scene handles that; this is the type over it. */}
-      <HeirloomPlate product={plate} loading={featured.isPending && recent.isPending} />
+      {/* The single featured piece is gone: a full-width plate for one
+          product that already appears, with its price, in the grid above. */}
 
       {/* ═══ IV. The measure ═══════════════════════════════════════════
           Sizes 12–40 as an actual rule. Replaces a trust-badge row with
@@ -368,50 +358,8 @@ export default function HomePage() {
       <MeasureRule />
 
       {/* ═══ V. The makers ═════════════════════════════════════════════ */}
-      <section aria-labelledby="makers-heading" className="border-t border-ink-edge/60 py-[6vh]">
-        <div className="mx-auto grid w-full max-w-[112rem] gap-x-16 gap-y-10 px-6 sm:px-10 lg:grid-cols-12">
-          <div className="lg:col-span-5">
-            <Reveal>
-              <h2 id="makers-heading" className="font-display text-chapter font-light text-paper">
-                The makers
-              </h2>
-            </Reveal>
-          </div>
-          <div className="lg:col-span-6 lg:col-start-7">
-            <Reveal delay={120}>
-              <p className="max-w-[46ch] text-lede text-paper-muted">
-                We are a family shop on the ground floor at Texvalley, Gangapuram. Everything
-                here is chosen by hand, checked by hand, and packed by someone who will answer
-                the phone if it is wrong.
-              </p>
-            </Reveal>
-            <Reveal delay={200}>
-              <dl className="mt-12 grid gap-x-10 gap-y-7 sm:grid-cols-2">
-                <div>
-                  <dt className="text-rule uppercase text-paper-faint">Find us</dt>
-                  <dd className="mt-2.5 text-paper-muted">
-                    Shop No 131, Ground Floor<br />Texvalley, Gangapuram, Erode
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-rule uppercase text-paper-faint">Speak to us</dt>
-                  <dd className="mt-2.5 space-y-1">
-                    <a href={`tel:${STORE.phone1}`} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
-                      {STORE.phone1}
-                    </a>
-                    <a href={MAIL_URL} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
-                      {STORE.email}
-                    </a>
-                    <a href={MAIL_URL2} className="block text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
-                      {STORE.email2}
-                    </a>
-                  </dd>
-                </div>
-              </dl>
-            </Reveal>
-          </div>
-        </div>
-      </section>
+      {/* The makers section was removed on request. Where the shop is and
+          the numbers to call are in the footer, which is where people look. */}
 
       {/* ═══ VI. Recently kept ═════════════════════════════════════════
           New arrivals as an offset stagger. Never a uniform row. */}

@@ -30,9 +30,19 @@ const SceneRouter = dynamic(() => import('./SceneRouter'), { ssr: false });
  */
 export default function ThreeProvider() {
   const pathname = usePathname();
-  /* The one route that draws. Kept beside `sceneForPath` in spirit: if a
-     second scene ever returns, this is the single line that has to change. */
-  const showsScene = pathname === '/';
+  /**
+   * ASK THE ROUTE MAP, DO NOT RE-STATE IT.
+   *
+   * This read `pathname === '/'` — a second copy of a rule that already lives
+   * in `sceneForPath`. The two then disagreed: the map was changed to return
+   * the quiet ground everywhere, and the canvas kept mounting on the homepage
+   * anyway, because this line had never heard about it. The garment stayed in
+   * the hero after the scene that drew it had supposedly been retired.
+   *
+   * One source of truth. If `sceneForPath` ever returns a real scene again,
+   * the canvas comes back on its own and nothing here needs editing.
+   */
+  const showsScene = sceneForPath(pathname) !== 'plain';
   const { profile } = useDeliveryTier();
   const setCapabilities = useSceneStore((s) => s.setCapabilities);
   const goToScene = useSceneStore((s) => s.goToScene);

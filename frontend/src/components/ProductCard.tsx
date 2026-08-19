@@ -145,15 +145,40 @@ export default function ProductCard({ product }: Props) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
-      whileHover={{ y: -6 }}
       className="h-full"
     >
-    <Link href={`/products/${product.id}`} target="_blank" rel="noopener noreferrer" className="group block h-full">
-      <div className="card hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
+    {/**
+      * THE CARD IS THE PHOTOGRAPH, NOT A BOX AROUND IT.
+      *
+      * This was `.card` — `bg-white rounded-2xl shadow-sm border` — with the
+      * garment inset by 16px on a maroon-to-gold gradient, and a rounded
+      * filled button under it. That is the card every storefront template
+      * ships with, and it was named as such more than once. Four things went:
+      *
+      *   THE WHITE BOX. The shop's own ground is a blush; a white card on it
+      *   is a foreign object, and twenty of them make a grid of tiles rather
+      *   than a rail of clothes.
+      *
+      *   THE SHADOW AND THE 16px RADIUS. Both say "component". Neither says
+      *   anything about the garment.
+      *
+      *   THE GRADIENT BEHIND THE PHOTOGRAPH, and the padding that made room
+      *   for it. A product photograph does not need a backdrop invented for
+      *   it; it needs the whole plate. `object-cover`, edge to edge.
+      *
+      *   THE LIFT ON HOVER. A card that jumps 6px when the pointer crosses it
+      *   is movement without meaning, and on a grid it is a field of twitching
+      *   rectangles.
+      *
+      * What is left is the photograph, the name, the price and one button —
+      * which is all a customer needs and all Amazon shows.
+      */}
+    <Link href={`/products/${product.id}`} className="group block h-full">
+      <div className="flex h-full flex-col">
 
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
-          className="relative bg-gradient-to-br from-maroon-100 to-gold-50 aspect-[3/4] overflow-hidden p-4"
+          className="relative aspect-[3/4] overflow-hidden bg-ink-raised"
           style={{ perspective: 1200 }}
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={handleMouseLeave}
@@ -192,7 +217,7 @@ export default function ProductCard({ product }: Props) {
                 exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}
                 transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                 style={{ transformStyle: 'preserve-3d' }}
-                className="absolute inset-0 w-full h-full object-contain group-hover:scale-[1.03] transition-transform duration-500"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] group-hover:scale-[1.04] motion-reduce:transition-none"
               />
             ) : (
               /**
@@ -362,7 +387,7 @@ export default function ProductCard({ product }: Props) {
             <button
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-maroon-800 hover:bg-maroon-900 text-paper text-sm font-semibold transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="mt-3 flex w-full items-center justify-center gap-2 bg-maroon-800 py-2.5 text-sm font-medium text-white transition-colors duration-300 hover:bg-maroon-900 active:scale-[0.99] disabled:bg-ink-edge disabled:text-paper-faint"
             >
               <ShoppingCart size={15} />
               {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}

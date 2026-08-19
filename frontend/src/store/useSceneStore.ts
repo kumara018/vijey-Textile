@@ -139,26 +139,24 @@ export const useSceneStore = create<SceneState>((set, get) => ({
 /** Route → scene. Kept beside the store so both stay in sync. */
 export function sceneForPath(pathname: string): SceneId {
   /**
-   * THE SCENE IS THE ENTRANCE, AND NOWHERE ELSE.
+   * NO SCENE, ANYWHERE — AND THE GARMENT IN THE HERO IS WHY.
    *
-   * Every route used to get its own scene, and on a dark ground the drifting
-   * panels read as large brown rectangles sliding behind the merchandise. On
-   * the shelf that is a second grid competing with the photographs — the
-   * category rail and the REFINE control were sitting on top of moving brown
-   * blocks, and a customer comparing two lehengas was reading them through
-   * animated furniture.
+   * The entrance scene staged a product photograph behind the opening copy.
+   * Removing <HeroStage /> did not remove it, because the scene was what drew
+   * it: the page fed the photograph to the store and the canvas rendered it
+   * across the right half of the hero, up behind the header. Asked twice to
+   * take that garment out of the opening.
    *
-   * The instinct behind "make it cinematic" is right about the entrance and
-   * wrong about everywhere else. A film has one title sequence, not one per
-   * scene. The entrance still carries the full stack; the moment somebody is
-   * choosing, paying, or reading their own records, the background stops
-   * asking for attention.
+   * Rather than keep the engine to draw nothing, it stops mounting. The
+   * homepage was the only route still using it, so this takes the last of the
+   * 717KB of three.js off the site completely — a desktop customer now loads
+   * roughly 300KB on the homepage as well, matching every other page.
    *
-   * `plain` is in RESTRAINED below, so this also takes the effects budget off
-   * every page that is not the homepage — which is most of the time a phone
-   * spends on this site.
+   * `sceneForPath` and the whole three/ tree stay in place. Returning
+   * something other than 'plain' from here is all it takes to bring a scene
+   * back, and nothing else has to be rebuilt to do it.
    */
-  if (pathname === '/') return 'entrance';
+  void pathname;
   return 'plain';
 }
 
