@@ -2,6 +2,16 @@
 module.exports = {
   content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
+    screens: {
+      /* 430px: the widest common phone in portrait. Below it the header has
+         room for the mark and the four controls, and nothing else. */
+      xs: '430px',
+      sm: '640px',
+      md: '768px',
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         /**

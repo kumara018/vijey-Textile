@@ -153,9 +153,15 @@ export default function OverlayNav() {
             className="flex min-w-0 items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-3"
           >
             <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="h-8 w-8 shrink-0 rounded-full sm:h-[34px] sm:w-[34px]" />
-            <span className="truncate font-display text-[0.8rem] font-medium uppercase tracking-[0.09em] text-paper sm:text-[0.95rem] sm:tracking-[0.18em]">
+            {/* Hidden on the narrowest screens rather than truncated. With
+                four controls beside it, 390px leaves room for about eight
+                characters — and "VIJEY TE…" is a worse mark than no mark at
+                all. The logo is the identity there; the name returns as soon
+                as it can be shown whole. */}
+            <span className="hidden font-display text-[0.8rem] font-medium uppercase tracking-[0.09em] text-paper xs:inline sm:text-[0.95rem] sm:tracking-[0.18em]">
               {STORE.name}
             </span>
+            <span className="sr-only">{STORE.name}</span>
           </Link>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-3">
