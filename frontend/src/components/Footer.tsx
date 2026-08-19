@@ -197,7 +197,12 @@ export default function Footer() {
             >
               <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="shrink-0 rounded-full" />
               <span>
-                <span className="block font-display text-[1.05rem] uppercase leading-tight tracking-[0.16em] text-paper">
+                {/* `leading-none`, for the same reason as the sister shop's wordmark:
+                    half-leading pushed the brand name below the cap-top of the
+                    column headings beside it. Smaller offset here (1.5px against
+                    3.7px) because this mark is 16.8px and already sat on
+                    leading-tight, but it is the same defect. */}
+                <span className="block font-display text-[1.05rem] uppercase leading-none tracking-[0.16em] text-paper">
                   {STORE.name}
                 </span>
                 {/* The same line as the header and the invoice, from one place
