@@ -9,7 +9,7 @@ import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
 import { HERO_FIXTURE } from '@/lib/heroFixture';
 import type { Product } from '@/types';
 import Reveal from '@/components/home/Reveal';
-import DeliverTo from '@/components/home/DeliverTo';
+import PaperDrift from '@/components/home/PaperDrift';
 import OccasionBand from '@/components/home/OccasionBand';
 import MeasureRule from '@/components/home/MeasureRule';
 import ProductCard from '@/components/ProductCard';
@@ -169,6 +169,7 @@ export default function HomePage() {
             a reserved 62svh was 400px of nothing above the first words. The
             staged photograph and the reserved height return at `md`. */}
         <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.25rem,4vh,2.5rem)] pt-[clamp(1.25rem,4vh,2rem)] sm:px-10 md:sticky md:top-0 md:min-h-[62svh] md:justify-end md:pb-[clamp(2rem,5vh,3.5rem)] md:pt-[clamp(2rem,6vh,4rem)]">
+          <PaperDrift />
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
@@ -185,11 +186,6 @@ export default function HomePage() {
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
             </p>
 
-            {/* Where this order is going. Directly under the line that says
-                where the shop IS — the two halves of the same question. */}
-            <div className="mb-[clamp(1rem,2.6vh,2rem)]">
-              <DeliverTo />
-            </div>
           </Reveal>
 
           <Reveal delay={120}>

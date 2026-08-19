@@ -261,3 +261,24 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
 
   @page { margin: 16mm; }
 }
+
+/* ── The drifting panels (components/home/PaperDrift.tsx) ──────────────────
+   transform + opacity only, so the browser keeps this on the compositor and
+   it cannot stutter the page while it scrolls. The travel is deliberately
+   tiny — a few percent — because cloth in a still room barely moves, and
+   anything larger reads as a slideshow. */
+@keyframes paper-drift {
+  0%   { transform: rotate(var(--rot)) skewY(var(--skw)) translate3d(0, 0, 0) scale(1); }
+  50%  { transform: rotate(calc(var(--rot) * 0.4)) skewY(calc(var(--skw) * -0.6)) translate3d(-1.5%, 2%, 0) scale(1.035); }
+  100% { transform: rotate(var(--rot)) skewY(var(--skw)) translate3d(0, 0, 0) scale(1); }
+}
+.paper-drift {
+  will-change: transform;
+  animation-name: paper-drift;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The composition stays; only the movement goes. */
+  .paper-drift { animation: none; }
+}
