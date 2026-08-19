@@ -183,14 +183,15 @@ export default function SupportPage() {
       <PageHeader
         eyebrow="Support"
         title="Measurements, answers, and a person to call"
-        standfirst="Most questions here are about fit. The chart below is measured from actual garments rather than a generic standard, which is why our sizes mean something specific."
+        standfirst="Sizes and delivery below. If it is quicker to ask, the shop answers the phone."
+        scale="doc"
       />
 
       {/* ── Size guide ─────────────────────────────────────────────────── */}
       <section id="size-guide" className="scroll-mt-32 border-t border-ink-edge/60 pt-10">
         <div className="flex items-baseline gap-5">
           <span className="text-rule tabular-nums text-brass-bright">01</span>
-          <h2 className="font-display text-band font-light text-paper">Size guide</h2>
+          <h2 className="font-display text-doc-head font-normal text-paper">Size guide</h2>
         </div>
 
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
@@ -252,7 +253,7 @@ export default function SupportPage() {
       <section id="faq" className="mt-[10vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
         <div className="flex items-baseline gap-5">
           <span className="text-rule tabular-nums text-brass-bright">02</span>
-          <h2 className="font-display text-band font-light text-paper">Common questions</h2>
+          <h2 className="font-display text-doc-head font-normal text-paper">Common questions</h2>
         </div>
 
         <dl className="mt-10 grid gap-x-16 gap-y-10 lg:grid-cols-2">
@@ -271,7 +272,7 @@ export default function SupportPage() {
       <section className="mt-[10vh] border-t border-ink-edge/60 pt-10">
         <div className="flex items-baseline gap-5">
           <span className="text-rule tabular-nums text-brass-bright">03</span>
-          <h2 className="font-display text-band font-light text-paper">The policies</h2>
+          <h2 className="font-display text-doc-head font-normal text-paper">The policies</h2>
         </div>
 
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
@@ -297,7 +298,7 @@ export default function SupportPage() {
       <section id="contact" className="mt-[10vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
         <div className="flex items-baseline gap-5">
           <span className="text-rule tabular-nums text-brass-bright">04</span>
-          <h2 className="font-display text-band font-light text-paper">Reach us</h2>
+          <h2 className="font-display text-doc-head font-normal text-paper">Reach us</h2>
         </div>
 
         <p className="mt-7 max-w-[60ch] text-lede text-paper-muted">
