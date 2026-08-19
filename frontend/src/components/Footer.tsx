@@ -231,7 +231,17 @@ export default function Footer() {
           <div className="min-w-0 lg:col-span-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              /* Raised by the measured cap-height difference. `leading-none`
+                 on the wordmark was not enough — taken honestly, by
+                 rasterising both strings and finding the first row of real
+                 ink rather than trusting font-metric APIs, the wordmark's
+                 cap-top still sat 5.5px below the column headings'. The
+                 face's ascent is nearly a full em, so even a collapsed line
+                 box puts the letters well below the top of it.
+                 5.5px = 0.344rem, and this wordmark is a fixed 1.05rem rather
+                 than a clamp, so a fixed rem is exact at every width. On the
+                 link, so the mark and the name rise together. */
+              className="-mt-[0.344rem] inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
             >
               <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="shrink-0 rounded-full" />
               <span>
