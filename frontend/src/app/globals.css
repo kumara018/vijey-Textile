@@ -261,24 +261,24 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
 
   @page { margin: 16mm; }
 }
-
-/* ── The drifting panels (components/home/PaperDrift.tsx) ──────────────────
-   transform + opacity only, so the browser keeps this on the compositor and
-   it cannot stutter the page while it scrolls. The travel is deliberately
-   tiny — a few percent — because cloth in a still room barely moves, and
-   anything larger reads as a slideshow. */
-@keyframes paper-drift {
-  0%   { transform: rotate(var(--rot)) skewY(var(--skw)) translate3d(0, 0, 0) scale(1); }
-  50%  { transform: rotate(calc(var(--rot) * 0.4)) skewY(calc(var(--skw) * -0.6)) translate3d(-1.5%, 2%, 0) scale(1.035); }
-  100% { transform: rotate(var(--rot)) skewY(var(--skw)) translate3d(0, 0, 0) scale(1); }
+/* ── The pleat fall (components/home/PleatFall.tsx) ────────────────────────
+   Vertical breath only. A pleat hanging in a still room lengthens and
+   shortens fractionally as the air moves; it does not slide sideways, and
+   anything that does reads as a curtain being drawn. `transform` only, so the
+   browser keeps this off the main thread entirely. */
+@keyframes pleat-fall {
+  0%   { transform: skewX(var(--skx)) scaleY(1); }
+  50%  { transform: skewX(var(--skx)) scaleY(1.045) translate3d(0, -0.6%, 0); }
+  100% { transform: skewX(var(--skx)) scaleY(1); }
 }
-.paper-drift {
+.pleat-fall {
+  transform-origin: 50% 0;
   will-change: transform;
-  animation-name: paper-drift;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  animation-name: pleat-fall;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
   animation-iteration-count: infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* The composition stays; only the movement goes. */
-  .paper-drift { animation: none; }
+  /* The fall stays; only the breath goes. */
+  .pleat-fall { animation: none; }
 }

@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import AccountMenu from '@/components/nav/AccountMenu';
 import HeaderSearch from '@/components/nav/HeaderSearch';
 import DeliverTo from '@/components/home/DeliverTo';
+import ContactMenu from '@/components/nav/ContactMenu';
 import { STORE } from '@/lib/config';
 
 /**
@@ -203,8 +204,12 @@ export default function OverlayNav() {
             "do you deliver to me" is a question a customer has on the shelf
             and at the product just as much as at the door. */}
         <div className="border-t border-ink-edge/60">
-          <div className="mx-auto flex w-full max-w-[112rem] px-6 py-1.5 sm:px-10">
+          <div className="mx-auto flex w-full max-w-[112rem] items-center justify-between gap-6 px-6 py-1.5 sm:px-10">
             <DeliverTo />
+            {/* Contact us, on every page — see nav/ContactMenu.tsx. The numbers
+                were only in the footer, several screens down, which is where a
+                question that could have become an order goes to die. */}
+            <ContactMenu />
           </div>
         </div>
 
