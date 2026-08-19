@@ -10,6 +10,7 @@ import AccountMenu from '@/components/nav/AccountMenu';
 import HeaderSearch from '@/components/nav/HeaderSearch';
 import DeliverTo from '@/components/home/DeliverTo';
 import ContactMenu from '@/components/nav/ContactMenu';
+import HelpMenu from '@/components/nav/HelpMenu';
 import { STORE } from '@/lib/config';
 
 /**
@@ -206,10 +207,18 @@ export default function OverlayNav() {
         <div className="border-t border-ink-edge/60">
           <div className="mx-auto flex w-full max-w-[112rem] items-center justify-between gap-6 px-6 py-1.5 sm:px-10">
             <DeliverTo />
-            {/* Contact us, on every page — see nav/ContactMenu.tsx. The numbers
-                were only in the footer, several screens down, which is where a
-                question that could have become an order goes to die. */}
-            <ContactMenu />
+            {/* Contact us and Help, on every page — see nav/ContactMenu.tsx
+                and nav/HelpMenu.tsx. The numbers were only in the footer,
+                several screens down, which is where a question that could
+                have become an order goes to die; Help was a link to a long
+                document a customer had to search for the one line they
+                wanted. Both are now questions you can pick off from the
+                header. `shrink-0` on the pair so the two controls never
+                compress into each other on a narrow window. */}
+            <div className="flex shrink-0 items-center gap-6">
+              <HelpMenu />
+              <ContactMenu />
+            </div>
           </div>
         </div>
 
