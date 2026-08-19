@@ -9,6 +9,7 @@ import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
 import { HERO_FIXTURE } from '@/lib/heroFixture';
 import type { Product } from '@/types';
 import Reveal from '@/components/home/Reveal';
+import DeliverTo from '@/components/home/DeliverTo';
 import OccasionBand from '@/components/home/OccasionBand';
 import HeirloomPlate from '@/components/home/HeirloomPlate';
 import MeasureRule from '@/components/home/MeasureRule';
@@ -164,6 +165,12 @@ export default function HomePage() {
             <p className="mb-[clamp(1rem,2.6vh,2rem)] text-rule uppercase text-brass-bright">
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
             </p>
+
+            {/* Where this order is going. Directly under the line that says
+                where the shop IS — the two halves of the same question. */}
+            <div className="mb-[clamp(1rem,2.6vh,2rem)]">
+              <DeliverTo />
+            </div>
           </Reveal>
 
           <Reveal delay={120}>
