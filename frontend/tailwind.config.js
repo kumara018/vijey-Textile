@@ -18,10 +18,10 @@ module.exports = {
          * the light one; `paper` was light type and is now dark type.
          */
         ink: {
-          DEFAULT: '#FBF7F8',   // the ground: near-white with a rose cast
-          deep:    '#FFFFFF',   // lifted — a card, a sheet
-          raised:  '#F4EDEF',   // a surface set back
-          edge:    '#E4D6DA',   // hairlines
+          DEFAULT: '#F7EAEE',   // the ground: blush, tinted from the logo's cerise
+          deep:    '#FFFBFC',   // lifted — a card, a sheet
+          raised:  '#EFDDE3',   // a surface set back
+          edge:    '#DCC3CB',   // hairlines
         },
         brass: {
           DEFAULT: '#A21D48',   // the accent — the logo's own cerise. AAA on shell.
@@ -34,10 +34,10 @@ module.exports = {
           faint:   '#8D7A81',   // annotations only; 3.78:1 is large-text contrast
         },
         night: {
-          DEFAULT: '#FBF7F8',
-          deep:    '#FFFFFF',
-          raised:  '#F4EDEF',
-          edge:    '#E4D6DA',
+          DEFAULT: '#F7EAEE',
+          deep:    '#FFFBFC',
+          raised:  '#EFDDE3',
+          edge:    '#DCC3CB',
         },
         /* The other half of the logo. Never type — 1.89:1 on the ground — so
            it is a rule, a border, a metallic edge, and nothing else. */
@@ -85,18 +85,27 @@ module.exports = {
         // one ground that drift apart is how half a site ends up a shade
         // lighter than the other half.
         // Vijey Textile — "Wine & Steel" palette, matched to the logo's own color
+        /**
+         * The legacy `maroon-*` ramp, remapped onto the logo's cerise.
+         *
+         * It was still the old dark scale, which is why a filled Add-to-bag
+         * button rendered near-black with near-black text on it — invisible,
+         * on the one control the shop most needs a customer to press. Dozens
+         * of usages point at these numbers, so remapping the ramp fixes them
+         * all rather than hunting each one.
+         */
         maroon: {
-          50:  '#fcfbfb',
-          100: '#f6f1f3',
-          200: '#eee0e4',
-          300: '#e3bfcb',
-          400: '#db4d7b',
-          500: '#b42251',
-          600: '#871c3f',
-          700: '#631730',
-          800: '#431423',
-          900: '#2b0f18',
-          950: '#190a0f',
+          50:  '#FFF5F8',
+          100: '#FDE7EE',
+          200: '#F7C9D8',
+          300: '#EFA0BA',
+          400: '#E06A90',
+          500: '#C22B62',
+          600: '#A21D48',
+          700: '#86173A',
+          800: '#6B1230',
+          900: '#4E0C22',
+          950: '#2F0715',
         },
         silver: {
           50:  '#fafafa',

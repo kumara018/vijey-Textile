@@ -26,7 +26,7 @@ export default function NotFound() {
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(251,247,248,0.94) 0%, rgba(251,247,248,0.86) 55%, rgba(251,247,248,0.94) 100%)',
+            'linear-gradient(180deg, rgba(247,234,238,0.94) 0%, rgba(247,234,238,0.86) 55%, rgba(247,234,238,0.94) 100%)',
         }}
       />
 

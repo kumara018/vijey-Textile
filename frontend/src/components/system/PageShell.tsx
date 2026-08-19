@@ -39,7 +39,7 @@ export default function PageShell({
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(251,247,248,0.94) 0%, rgba(251,247,248,0.88) 50%, rgba(251,247,248,0.94) 100%)',
+            'linear-gradient(180deg, rgba(247,234,238,0.94) 0%, rgba(247,234,238,0.88) 50%, rgba(247,234,238,0.94) 100%)',
         }}
       />
       <div

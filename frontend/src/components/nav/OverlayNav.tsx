@@ -7,7 +7,7 @@ import { ShoppingBag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import AccountMenu from '@/components/nav/AccountMenu';
-import Finder from '@/components/nav/Finder';
+import HeaderSearch from '@/components/nav/HeaderSearch';
 import { STORE } from '@/lib/config';
 
 /**
@@ -134,7 +134,7 @@ export default function OverlayNav() {
           className="pointer-events-none absolute inset-x-0 top-0 h-32"
           style={{
             background:
-              'linear-gradient(to bottom, rgba(251,247,248,0.92) 0%, rgba(251,247,248,0.72) 38%, rgba(251,247,248,0.32) 68%, rgba(251,247,248,0) 100%)',
+              'linear-gradient(to bottom, rgba(247,234,238,0.92) 0%, rgba(247,234,238,0.72) 38%, rgba(247,234,238,0.32) 68%, rgba(247,234,238,0) 100%)',
           }}
         />
 
@@ -150,8 +150,8 @@ export default function OverlayNav() {
           </Link>
 
           <div className="pointer-events-auto flex items-center gap-1 sm:gap-3">
-            {/* Search, opened as an event — see components/nav/Finder.tsx. */}
-            <Finder />
+            {/* Search never leaves the header — see nav/HeaderSearch.tsx. */}
+            <HeaderSearch />
 
             {/* The icon was a plain link to /account. It opens a menu now —
                 see components/nav/AccountMenu.tsx. */}

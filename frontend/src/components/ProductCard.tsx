@@ -45,23 +45,48 @@ export default function ProductCard({ product }: Props) {
   const [failedImages, setFailedImages] = useState<string[]>([]);
   const touchStartX = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const goCard = useCallback((idx: number) => {
     if (totalSlides === 0) return;
     setImgIdx((idx + totalSlides) % totalSlides);
   }, [totalSlides]);
 
-  // Auto-scroll every 3.8s (slow, unhurried pace), pause on hover
+  /**
+   * The gallery slides on its own, and ONLY while the card is on screen.
+   *
+   * It already auto-advanced, but every card in the grid did so forever —
+   * twenty cards decoding an image each on their own timer, most of them
+   * scrolled past and invisible. That is real work done for nobody, and on a
+   * phone it is exactly the kind of background cost that reads as "the site is
+   * laggy". An IntersectionObserver stops every card the customer cannot see;
+   * usually two or three run at a time.
+   *
+   * Hovering now QUICKENS it rather than pausing it. Pausing on hover is
+   * backwards: pointing at a card is asking to see the rest of it.
+   */
+  const [onScreen, setOnScreen] = useState(false);
   useEffect(() => {
-    if (totalSlides <= 1 || hovering) {
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') { setOnScreen(true); return; }
+    const io = new IntersectionObserver(
+      ([e]) => setOnScreen(e.isIntersecting),
+      { rootMargin: '0px 0px -10% 0px', threshold: 0.35 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (totalSlides <= 1 || !onScreen) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       return;
     }
     intervalRef.current = setInterval(() => {
       setImgIdx(i => (i + 1) % totalSlides);
-    }, 3800);
+    }, hovering ? 1800 : 3400);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [totalSlides, hovering]);
+  }, [totalSlides, hovering, onScreen]);
 
   // Reset to first slide on mouse leave
   const handleMouseLeave = () => {
@@ -115,6 +140,7 @@ export default function ProductCard({ product }: Props) {
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}

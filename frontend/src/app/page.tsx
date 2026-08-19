@@ -13,7 +13,7 @@ import DeliverTo from '@/components/home/DeliverTo';
 import OccasionBand from '@/components/home/OccasionBand';
 import HeirloomPlate from '@/components/home/HeirloomPlate';
 import MeasureRule from '@/components/home/MeasureRule';
-import KeptStagger from '@/components/home/KeptStagger';
+import ProductCard from '@/components/ProductCard';
 import HeroStage from '@/components/hero/HeroStage';
 
 /**
@@ -123,7 +123,7 @@ export default function HomePage() {
           // (0.62 at 46%, 0.18 at 60%) put a grey wash across its left third —
           // which is a slower, subtler version of the same "dull" complaint.
           background:
-            'linear-gradient(96deg, rgba(251,247,248,0.97) 0%, rgba(251,247,248,0.92) 24%, rgba(251,247,248,0.58) 37%, rgba(251,247,248,0.16) 50%, rgba(251,247,248,0) 62%)',
+            'linear-gradient(96deg, rgba(247,234,238,0.97) 0%, rgba(247,234,238,0.92) 24%, rgba(247,234,238,0.58) 37%, rgba(247,234,238,0.16) 50%, rgba(247,234,238,0) 62%)',
         }}
       />
 
@@ -153,7 +153,14 @@ export default function HomePage() {
         * `overflow-hidden` on the sticky frame is load-bearing: media is
         * clipped to the frame, so nothing bleeds into the sections below.
         */}
-      <section data-hero-section="" className="relative h-[190svh]">
+      {/* THE HERO IS A BAND NOW, NOT TWO SCREENS.
+          It was `h-[190svh]` — a customer scrolled nearly two full screens of
+          photograph and sentence before reaching anything they could buy. The
+          owner's words were "product should be visible in homepage mainly not
+          down", and they are describing this. 64svh keeps the staged garment
+          and the scroll effect while putting real stock above the fold on a
+          laptop and one short flick away on a phone. */}
+      <section data-hero-section="" className="relative h-[64svh]">
         {/**
           * `min-h` rather than `h`, and this is not a cosmetic preference.
           *
@@ -169,7 +176,7 @@ export default function HomePage() {
           * nothing changes at all — the content is shorter than the viewport
           * and the minimum is what applies.
           */}
-        <div className="sticky top-0 flex min-h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(3.5rem,12vh,8rem)] pt-[clamp(6.5rem,15vh,10rem)] sm:px-10">
+        <div className="sticky top-0 flex min-h-[62svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(2rem,5vh,3.5rem)] pt-[clamp(6.5rem,12vh,8rem)] sm:px-10">
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
@@ -189,7 +196,10 @@ export default function HomePage() {
           </Reveal>
 
           <Reveal delay={120}>
-            <h1 className="max-w-[min(15ch,46vw)] text-balance font-display text-plate font-light text-paper">
+            {/* Sized for the band, not the old two-screen hero. `text-plate` ran
+              past the bottom edge once the section shrank — the screenshot
+              showed "remembered" sliced in half. */}
+            <h1 className="max-w-[min(18ch,44vw)] text-balance font-display text-[clamp(1.9rem,4.4vw,3.4rem)] font-light leading-[1.06] text-paper">
               Heirloom pieces, worn once, remembered always
             </h1>
           </Reveal>
@@ -244,6 +254,41 @@ export default function HomePage() {
           of a screen of empty ground between the hero releasing and the first
           word of the next movement, on top of whatever the pin had already
           left. Tightened to 7 + 4.5 — still generous, no longer a void. */}
+
+      {/**
+        * STOCK FIRST, AS A GRID.
+        *
+        * This was KeptStagger — an editorial run where each piece takes most
+        * of the viewport and the eye is walked through them one at a time. It
+        * is a beautiful way to show six garments and a poor way to let anyone
+        * BUY one: a customer scrolls a whole screen per product and sees no
+        * price until they arrive at it.
+        *
+        * The same cards the shelf uses, in a plain responsive grid. Four
+        * across on a laptop, two on a phone, each with its photograph, name,
+        * price and Add to bag — so the homepage answers "what do you sell and
+        * what does it cost" in one screen instead of six.
+        */}
+      <section aria-labelledby="new-heading" className="mx-auto w-full max-w-[112rem] px-6 pb-[7vh] pt-[5vh] sm:px-10">
+        <div className="mb-7 flex flex-wrap items-baseline justify-between gap-4">
+          <h2 id="new-heading" className="font-display text-[clamp(1.4rem,2.6vw,2rem)] font-light text-paper">
+            New in the shop
+          </h2>
+          <Link
+            href="/products"
+            className="text-rule uppercase text-brass-bright transition-colors duration-300 hover:text-brass"
+          >
+            See everything &rarr;
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+          {recentItems.slice(0, 8).map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </section>
+
       <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 pb-[11vh] pt-[7vh]">
         <div className="mx-auto mb-[4.5vh] w-full max-w-[112rem] px-6 sm:px-10">
           <Reveal>
@@ -337,8 +382,6 @@ export default function HomePage() {
 
       {/* ═══ VI. Recently kept ═════════════════════════════════════════
           New arrivals as an offset stagger. Never a uniform row. */}
-      <KeptStagger items={recentItems} loading={recent.isPending} />
-
       </div>
       </div>
     </div>
