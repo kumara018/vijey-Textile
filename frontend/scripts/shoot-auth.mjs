@@ -84,6 +84,9 @@ async function main() {
     `--window-size=${WIDTH},${HEIGHT}`,
     '--ignore-gpu-blocklist',
     '--enable-gpu',
+    /* Software WebGL fallback for a GPU-less CI runner — without it the
+       persistent canvas crashes the renderer and the route never hydrates. */
+    '--enable-unsafe-swiftshader',
     '--hide-scrollbars',
     '--force-color-profile=srgb',
     '--no-first-run', '--no-default-browser-check', 'about:blank',

@@ -42,6 +42,13 @@ const chrome = spawn(CHROME, [
   '--remote-debugging-port=9750', `--user-data-dir=${profile}`,
   '--headless=new', '--window-size=1440,900',
   '--ignore-gpu-blocklist', '--enable-gpu',
+  /* A CI runner has no GPU. With only --enable-gpu, WebGL context creation
+     fails there and this site's persistent canvas takes the renderer down with
+     it — which surfaces as a route that never hydrates, and gets reported as a
+     CSP failure it has nothing to do with. This lets Chrome fall back to
+     software rasterisation when there is no device to use, and changes nothing
+     on a machine that has one. */
+  '--enable-unsafe-swiftshader',
   '--no-first-run', '--no-default-browser-check', 'about:blank',
 ], { stdio: 'ignore' });
 
