@@ -178,6 +178,24 @@ module.exports = {
         'plate':   ['clamp(2.6rem, min(9.4vw, 12.2vh), 9.6rem)', { lineHeight: '0.92', letterSpacing: '-0.03em' }],
         'chapter': ['clamp(2.4rem, 7.5vw, 6.5rem)', { lineHeight: '0.94', letterSpacing: '-0.025em' }],
         'band':    ['clamp(1.9rem, 4.6vw, 3.9rem)', { lineHeight: '1.02', letterSpacing: '-0.02em' }],
+        /**
+         * DOCUMENT SCALE — for pages that are read rather than looked at.
+         *
+         * The policy pages were set in `chapter` and `band`, which are HERO
+         * steps: at a 1280px window `chapter` resolves to 96px and `band` to
+         * 59px. A cancellation policy is a functional document somebody opens
+         * with a question, and at that size its headline alone took 200px and
+         * two lines, the first section heading took two more, and the answer —
+         * "1 hour to cancel" — sat below the fold. The document read as
+         * enormous even though no paragraph in it exceeds 41 words, which is
+         * why trimming the prose had not fixed it.
+         *
+         * These are sized so a heading is unmistakably a heading and nothing
+         * more: 41px and 25px at 1280px, roughly a print document's
+         * title-to-heading ratio, and they still scale with the viewport.
+         */
+        'doc':     ['clamp(1.75rem, 3.2vw, 2.6rem)',  { lineHeight: '1.08', letterSpacing: '-0.02em' }],
+        'doc-head':['clamp(1.2rem, 1.95vw, 1.6rem)',  { lineHeight: '1.2',  letterSpacing: '-0.01em' }],
         'lede':    ['clamp(1.02rem, 1.5vw, 1.3rem)', { lineHeight: '1.62', letterSpacing: '0' }],
         'caption': ['0.78rem', { lineHeight: '1.45', letterSpacing: '0.14em' }],
         'rule':    ['0.68rem', { lineHeight: '1.3',  letterSpacing: '0.26em' }],

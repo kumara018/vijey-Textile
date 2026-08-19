@@ -50,7 +50,7 @@ export default function PolicyDoc({
 }) {
   return (
     <PageShell>
-      <PageHeader eyebrow={eyebrow} title={title} standfirst={standfirst}>
+      <PageHeader eyebrow={eyebrow} title={title} standfirst={standfirst} scale="doc">
         <p className="text-rule uppercase text-paper-faint">Last updated · {updated}</p>
       </PageHeader>
 
@@ -93,7 +93,7 @@ export default function PolicyDoc({
                   <span className="text-rule tabular-nums text-brass-bright">
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <h2 className="font-display text-band font-light text-paper">{section.title}</h2>
+                  <h2 className="font-display text-doc-head font-normal text-paper">{section.title}</h2>
                 </div>
               </Reveal>
 

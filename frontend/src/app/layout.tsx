@@ -13,7 +13,6 @@ import PageTransition from '@/components/PageTransition';
 import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
 import Letterbox from '@/components/Letterbox';
-import SoundToggle from '@/components/SoundToggle';
 import CaptureMode from '@/components/CaptureMode';
 import ErrorReporting from '@/components/ErrorReporting';
 import { Toaster } from 'react-hot-toast';
@@ -101,7 +100,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   checkout is never behind them. */}
               <ChromeGate>
                 <Letterbox />
-                <SoundToggle />
+                {/* THE AMBIENT SOUND TOGGLE IS GONE.
+                    It was a fixed bottom-left black circle on z-30, which
+                    means it sat on top of the page content on every route at
+                    every size — on a phone it covered the first column of the
+                    footer, which is where the shop's own name and address
+                    are. It was also bg-black/55 on a shop that has been relit
+                    to a pale ground, so the single darkest object on the page
+                    was a decorative control.
+                    A shop where a customer is deciding whether to spend money
+                    does not open with sound, and no storefront a customer
+                    would compare this to has an ambient audio control. The
+                    component is left in the tree, unmounted, rather than
+                    deleted — it is a design decision, not a bug fix, and it
+                    should be easy to reverse. */}
               </ChromeGate>
               <LoginPromptModal />
               <Toaster

@@ -205,7 +205,7 @@ export default function OverlayNav() {
             "do you deliver to me" is a question a customer has on the shelf
             and at the product just as much as at the door. */}
         <div className="border-t border-ink-edge/60">
-          <div className="mx-auto flex w-full max-w-[112rem] items-center justify-between gap-6 px-6 py-1.5 sm:px-10">
+          <div className="mx-auto flex w-full max-w-[112rem] flex-wrap items-center justify-between gap-x-6 gap-y-1 px-6 py-1.5 sm:px-10">
             <DeliverTo />
             {/* Contact us and Help, on every page — see nav/ContactMenu.tsx
                 and nav/HelpMenu.tsx. The numbers were only in the footer,
@@ -213,9 +213,18 @@ export default function OverlayNav() {
                 have become an order goes to die; Help was a link to a long
                 document a customer had to search for the one line they
                 wanted. Both are now questions you can pick off from the
-                header. `shrink-0` on the pair so the two controls never
-                compress into each other on a narrow window. */}
-            <div className="flex shrink-0 items-center gap-6">
+                header.
+
+                THE ROW WRAPS, IT DOES NOT HOLD ITS WIDTH. The first version of
+                this pair carried `shrink-0` — reasoning that two controls
+                should never compress into each other — and that is precisely
+                what pushed the document 16px past the right edge of a 390px
+                phone and sliced the end off "Contact us". `shrink-0` on a
+                fixed-width row does not protect the controls, it just moves
+                the damage to the viewport. The row wraps instead: on a narrow
+                phone the pair drops to a second line, both stay whole, and
+                nothing leaves the screen. */}
+            <div className="flex items-center gap-6">
               <HelpMenu />
               <ContactMenu />
             </div>
