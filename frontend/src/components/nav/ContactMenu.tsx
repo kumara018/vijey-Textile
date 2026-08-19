@@ -69,7 +69,7 @@ export default function ContactMenu() {
     );
     if (kind === 'chat') return (
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-        <path d="M17 9.5c0 3.3-3.1 6-7 6a8 8 0 0 1-2.3-.3L4 16.5l1.1-2.8A5.7 5.7 0 0 1 3 9.5c0-3.3 3.1-6 7-6s7 2.7 7 6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        <path d="M17.5 9.4c0 3.4-3.4 6.2-7.5 6.2a9.3 9.3 0 0 1-2.5-.33L2.5 17l1.2-3.1A6.1 6.1 0 0 1 2.5 9.4c0-3.4 3.4-6.2 7.5-6.2s7.5 2.8 7.5 6.2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       </svg>
     );
     if (kind === 'mail') return (
