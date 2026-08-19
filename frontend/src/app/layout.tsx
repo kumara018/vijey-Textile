@@ -48,9 +48,9 @@ export const metadata: Metadata = {
     google: 'IQsLO0zH60lGqrYy7Jd7nvjDFO_Uf0HKbtNcK8bDsHM',
   },
   icons: {
-    icon: [{ url: '/icon-mark.jpg', type: 'image/jpeg' }],
-    shortcut: '/icon-mark.jpg',
-    apple: '/icon-mark.jpg',
+    icon: [{ url: '/hero-mark-v3.jpg', type: 'image/jpeg' }],
+    shortcut: '/hero-mark-v3.jpg',
+    apple: '/hero-mark-v3.jpg',
   },
 };
 
@@ -58,9 +58,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={fontVariables}>
       <head>
-        <link rel="icon" type="image/jpeg" href="/icon-mark.jpg?v=4" />
-        <link rel="shortcut icon" href="/icon-mark.jpg?v=4" />
-        <link rel="apple-touch-icon" href="/icon-mark.jpg?v=4" />
+        <link rel="icon" type="image/jpeg" href="/hero-mark-v3.jpg?v=5" />
+        <link rel="shortcut icon" href="/hero-mark-v3.jpg?v=5" />
+        <link rel="apple-touch-icon" href="/hero-mark-v3.jpg?v=5" />
       </head>
       {/* Cinematic ground. Never pure black — print black is lifted and cool,
           and the film LUT grades toward that same toe. */}
@@ -121,18 +121,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <LoginPromptModal />
               <Toaster
                 position="top-right"
+                /* The toast is the most-seen surface on the site after the
+                   header — it fires on every add-to-cart — and it was still
+                   dressed in colours from the old system: a PURPLE success
+                   tick (#7c3aed), a foreign red (#c62828), pure white on a
+                   warm-black that appears nowhere else, and a tan border.
+                   On the relit shop that purple was the single most
+                   off-palette pixel a customer saw, and they saw it constantly.
+                   Ground, type and rule now come from the palette, and the tick
+                   is the shop's own cerise. */
                 toastOptions={{
                   duration: 3000,
                   style: {
-                    background: '#fff',
-                    color: '#1a0800',
-                    border: '1px solid #f0e0d4',
-                    borderRadius: '12px',
+                    background: '#FFFBFC',
+                    color: '#2A1F24',
+                    border: '1px solid #DCC3CB',
+                    borderRadius: '2px',
                     padding: '12px 16px',
-                    boxShadow: '0 4px 20px rgba(139,21,56,0.12)',
+                    boxShadow: '0 4px 20px rgba(42,31,36,0.10)',
                   },
-                  success: { iconTheme: { primary: '#7c3aed', secondary: '#fff' } },
-                  error:   { iconTheme: { primary: '#c62828', secondary: '#fff' } },
+                  success: { iconTheme: { primary: '#A21D48', secondary: '#FFFBFC' } },
+                  error:   { iconTheme: { primary: '#94402E', secondary: '#FFFBFC' } },
                 }}
               />
             </LoginPromptProvider>

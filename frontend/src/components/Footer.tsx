@@ -110,10 +110,9 @@ const ico = 'mt-[0.28em] h-4 w-4 shrink-0 text-brass-bright';
 function Shop() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-      <path d="M3 8v8.5h14V8" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M2.5 8 4 3.5h12L17.5 8a2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.9 0 2.4 2.4 0 0 1-4.8 0Z"
-            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M8 16.5v-4h4v4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M3.4 8.4v8.2h13.2V8.4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M2.5 8.4 4 3.4h12l1.5 5a2.4 2.4 0 0 1-4.75 0 2.4 2.4 0 0 1-4.85 0 2.4 2.4 0 0 1-4.75 0Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M8.2 16.6v-4.1h3.6v4.1" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -121,8 +120,7 @@ function Shop() {
 function Handset() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-      <path d="M6.4 3.5 8 6.6 6.4 8.3a10 10 0 0 0 5.3 5.3l1.7-1.6 3.1 1.6v2.6c0 .6-.5 1.1-1.1 1.1A13.6 13.6 0 0 1 2.6 3.6c0-.6.5-1.1 1.1-1.1h2.7Z"
-            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M6.8 3.2 8.3 6.2 6.8 7.8a9.8 9.8 0 0 0 5.2 5.2l1.6-1.5 2.9 1.5v2.5c0 .6-.5 1.1-1.1 1.1A13.3 13.3 0 0 1 3 4.3c0-.6.5-1.1 1.1-1.1h2.7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -130,8 +128,8 @@ function Handset() {
 function Envelope() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-      <rect x="2.5" y="4.5" width="15" height="11" rx="1" stroke="currentColor" strokeWidth="1.3" />
-      <path d="m3 5.5 7 5 7-5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <rect x="2.5" y="4.4" width="15" height="11.2" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <path d="m3.1 5.2 6.9 5 6.9-5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -146,9 +144,8 @@ function Pin() {
           is exactly what reads as "the symbols are not straight". It was also
           the tallest of the four at 15.4 units against the envelope's 11.
           Aligning the boxes was never enough; the ink has to line up. */}
-      <path d="M8.2 17s5.6-4.9 5.6-8.4a5.6 5.6 0 1 0-11.2 0C2.6 12.1 8.2 17 8.2 17Z"
-            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <circle cx="8.2" cy="8.6" r="2" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M10 17.3s5.7-5.2 5.7-8.7a5.7 5.7 0 1 0-11.4 0c0 3.5 5.7 8.7 5.7 8.7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="10" cy="8.6" r="2" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   );
 }
@@ -157,7 +154,48 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative border-t border-ink-edge/60 bg-ink-deep text-paper-muted">
+    <footer className="relative overflow-hidden border-t border-ink-edge/60 bg-ink-deep text-paper-muted">
+      {/**
+        * THE GROUND, WHICH WAS A FLAT SHEET OF NEAR-WHITE.
+        *
+        * `bg-ink-deep` is #FFFBFC. On a page whose body is #F7EAEE that is
+        * almost the same colour, so the footer did not read as a place — it
+        * read as the page running out. The sister shop anchors its footer with
+        * a dark ground; doing that here would just make the two shops look
+        * alike again, and this one has been deliberately relit.
+        *
+        * So the depth comes from WEAVE rather than from darkness. Two
+        * repeating gradients at right angles, a couple of percent apart in
+        * tone, produce the over-under of a plain weave at close range — the
+        * one texture that belongs to a cloth shop and to nothing else. Over
+        * it, a wide radial lifts the centre so the columns sit in light and
+        * the corners fall away.
+        *
+        * Both are painted, not animated, and both are CSS gradients rather
+        * than images: no request, no decode, no layout, and it scales to any
+        * width without tiling artefacts.
+        */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: [
+            'radial-gradient(120% 90% at 50% 0%, rgba(247,234,238,0.9) 0%, rgba(239,221,227,0.55) 45%, rgba(239,221,227,0) 100%)',
+            'repeating-linear-gradient(90deg, rgba(220,195,203,0.22) 0 1px, transparent 1px 7px)',
+            'repeating-linear-gradient(0deg,  rgba(220,195,203,0.16) 0 1px, transparent 1px 7px)',
+          ].join(','),
+        }}
+      />
+      {/* A single cerise hairline arc across the head of the footer — the
+          selvedge thread, and the one saturated mark down here. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-24"
+        style={{
+          backgroundImage:
+            'radial-gradient(140% 100% at 50% 0%, rgba(194,43,98,0.16) 0%, rgba(194,43,98,0) 70%)',
+        }}
+      />
       {/* A single brass hairline across the top — the woven edge. */}
       <div
         aria-hidden="true"
@@ -165,7 +203,7 @@ export default function Footer() {
         style={{ background: 'linear-gradient(to right, transparent, rgba(161,98,7,0.55) 22%, rgba(161,98,7,0.55) 78%, transparent)' }}
       />
 
-      <div className="mx-auto w-full max-w-[112rem] px-6 py-[4.5vh] sm:px-10">
+      <div className="relative z-10 mx-auto w-full max-w-[112rem] px-6 py-[4.5vh] sm:px-10">
         {/**
           * THE GUTTER AND THE COLUMN SPLIT ARE MEASURED, NOT CHOSEN BY EYE.
           *

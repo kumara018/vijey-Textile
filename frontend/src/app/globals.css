@@ -261,24 +261,30 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
 
   @page { margin: 16mm; }
 }
-/* ── The pleat fall (components/home/PleatFall.tsx) ────────────────────────
-   Vertical breath only. A pleat hanging in a still room lengthens and
-   shortens fractionally as the air moves; it does not slide sideways, and
-   anything that does reads as a curtain being drawn. `transform` only, so the
-   browser keeps this off the main thread entirely. */
-@keyframes pleat-fall {
-  0%   { transform: skewX(var(--skx)) scaleY(1); }
-  50%  { transform: skewX(var(--skx)) scaleY(1.045) translate3d(0, -0.6%, 0); }
-  100% { transform: skewX(var(--skx)) scaleY(1); }
+/* ── The silk fall (components/home/SilkFall.tsx) ─────────────────────────
+   The turn, in three dimensions. Each panel rocks a few degrees around its
+   own vertical axis and drifts a little in depth, so the light band running
+   down it slides as it moves — which is the whole reason silk is worth
+   looking at.
+
+   `transform` only, and the transform keeps the panel's own --z and --turn as
+   its base so nine panels can share one keyframe set without collapsing onto
+   the same position. Compositor-only: this never touches layout, so it cannot
+   stutter a scroll. */
+@keyframes silk-turn {
+  0%   { transform: translateZ(var(--z)) rotateY(var(--turn)) scaleY(1); }
+  50%  { transform: translateZ(calc(var(--z) + 26px)) rotateY(calc(var(--turn) * 0.55)) scaleY(1.035); }
+  100% { transform: translateZ(var(--z)) rotateY(var(--turn)) scaleY(1); }
 }
-.pleat-fall {
+.silk-panel {
   transform-origin: 50% 0;
   will-change: transform;
-  animation-name: pleat-fall;
+  animation-name: silk-turn;
   animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
   animation-iteration-count: infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* The fall stays; only the breath goes. */
-  .pleat-fall { animation: none; }
+  /* The depth stays; only the movement goes. A still projection is still a
+     three-dimensional image. */
+  .silk-panel { animation: none; }
 }

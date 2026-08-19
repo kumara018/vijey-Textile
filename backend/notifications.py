@@ -154,14 +154,22 @@ def _bg(to: str, subject: str, html: str):
 #   tagline     = maroon-500 #8f7a5f
 #   font-display= Georgia    (brand name)
 # Logo is an absolute URL (email clients can't load relative/local paths) —
-# same cropped mark image used for the site's favicon/header icon.
+# the SAME cropped mark the site header and footer use.
+#
+# It used to point at icon-mark.jpg, which is the full lock-up: the heart with
+# "GRAND TREAT FOR GIRLS" set into the artwork underneath it. At 46x46 inside a
+# circular crop that baked-in line is roughly two pixels tall — an illegible
+# smudge under a heart shrunk to nothing — and the tagline was ALSO being set
+# properly in live text right beside it, so the mail was saying it twice and
+# getting it wrong once. hero-mark-v3.jpg is the mark alone, which is what
+# survives being 46px wide.
 _HEADER_HTML = f"""\
           <tr>
             <td style="padding:34px 36px 0;background:#FFFBFC;">
               <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
                   <td valign="middle" style="padding-right:15px;">
-                    <img src="{STORE_URL}/icon-mark.jpg" width="46" height="46" alt="Vijey Textile"
+                    <img src="{STORE_URL}/hero-mark-v3.jpg" width="46" height="46" alt="Vijey Textile"
                          style="display:block;width:46px;height:46px;border:0;border-radius:50%;" />
                   </td>
                   <td valign="middle" style="text-align:left;">

@@ -303,7 +303,7 @@ function ProductsContent() {
                           className={`min-w-[3rem] border px-3 py-2 text-sm tabular-nums transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright ${
                             on
                               ? 'border-brass bg-maroon-600 text-white'
-                              : 'border-ink-edge text-paper-muted hover:border-brass-bright hover:text-paper'
+                              : 'border-maroon-300 text-paper-muted hover:border-maroon-600 hover:text-paper'
                           }`}
                         >
                           {sz}
@@ -319,7 +319,7 @@ function ProductsContent() {
                     id="sort"
                     value={filters.sort}
                     onChange={(e) => setF('sort', e.target.value)}
-                    className="mt-3 w-full border border-ink-edge bg-ink-raised px-3 py-2.5 text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+                    className="mt-3 w-full border border-maroon-500 bg-ink-raised px-3 py-2.5 text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
                   >
                     {SORT_OPTIONS.map((o) => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -332,7 +332,7 @@ function ProductsContent() {
                     id="min-price" type="number" inputMode="numeric" min={0}
                     value={filters.minPrice}
                     onChange={(e) => setF('minPrice', e.target.value)}
-                    className="mt-3 w-full border border-ink-edge bg-ink-raised px-3 py-2.5 tabular-nums text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+                    className="mt-3 w-full border border-maroon-500 bg-ink-raised px-3 py-2.5 tabular-nums text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
                   />
                 </div>
                 <div>
@@ -341,7 +341,7 @@ function ProductsContent() {
                     id="max-price" type="number" inputMode="numeric" min={0}
                     value={filters.maxPrice}
                     onChange={(e) => setF('maxPrice', e.target.value)}
-                    className="mt-3 w-full border border-ink-edge bg-ink-raised px-3 py-2.5 tabular-nums text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+                    className="mt-3 w-full border border-maroon-500 bg-ink-raised px-3 py-2.5 tabular-nums text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
                   />
                 </div>
               </div>
