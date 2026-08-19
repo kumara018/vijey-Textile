@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { mediaUrl } from '@/lib/media';
+import { clothFor, boltGround } from '@/lib/cloth';
 import Link from 'next/link';
 import { ShoppingCart, Star, Heart, ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -168,23 +169,54 @@ export default function ProductCard({ product }: Props) {
                 className="absolute inset-0 w-full h-full object-contain group-hover:scale-[1.03] transition-transform duration-500"
               />
             ) : (
+              /**
+               * NO PHOTOGRAPH — SHOWN AS THE CLOTH, NOT AS A CARTOON.
+               *
+               * This was an emoji at six times the body size, picked by
+               * category: 👶 for Baby Frocks, 💃 for Lehenga. On a shop whose
+               * whole promise is that the colour you see is the colour that
+               * arrives, the fallback for a missing photograph was a cartoon —
+               * and one that says "baby" tells a customer nothing about the
+               * garment.
+               *
+               * A bolt of silk in a dim room is not a flat colour; it is a deep
+               * colour with a band of light lying across the fold. So the plate
+               * becomes that bolt (lib/cloth.ts), with the piece's id choosing
+               * its dye lot so two pieces in one category are not the same
+               * rectangle.
+               *
+               * It carries only the cloth's name. The caption directly beneath
+               * already gives category, name and price, and repeating the name
+               * on the plate reads as a rendering fault rather than as design.
+               */
               <motion.div
                 key="placeholder"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
-                className="w-full h-full flex flex-col items-center justify-center text-maroon-200"
+                style={boltGround(clothFor(product.category), product.id)}
+                className="flex h-full w-full flex-col justify-between p-5"
               >
-                <div className="text-6xl mb-2">
-                  {product.category === 'Baby Frocks' ? '👶' :
-                   product.category === 'Chudithar' ? '👘' :
-                   product.category === 'Frocks' ? '👗' :
-                   product.category === 'Western Dresses' ? '👒' :
-                   product.category === 'Lehenga' ? '💃' :
-                   product.category === 'Party Wear' ? '✨' : '👗'}
-                </div>
-                <span className="text-xs font-medium text-maroon-300">{product.category}</span>
+                <span
+                  className="text-rule uppercase"
+                  style={{ color: clothFor(product.category).ink, opacity: 0.66 }}
+                >
+                  {clothFor(product.category).name}
+                </span>
+                <span className="block">
+                  <span
+                    aria-hidden="true"
+                    className="mb-2.5 block h-px w-8"
+                    style={{ backgroundColor: clothFor(product.category).ink, opacity: 0.4 }}
+                  />
+                  <span
+                    className="block text-caption uppercase"
+                    style={{ color: clothFor(product.category).ink, opacity: 0.5 }}
+                  >
+                    Not yet photographed
+                  </span>
+                </span>
               </motion.div>
             )}
           </AnimatePresence>

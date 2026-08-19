@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Reveal from '@/components/home/Reveal';
 import type { Product } from '@/types';
+import { clothFor, boltGround } from '@/lib/cloth';
 import { rowPlan, type Rhythm } from '@/lib/categories';
 
 const inr = new Intl.NumberFormat('en-IN', {
@@ -62,8 +63,24 @@ function Tile({ product, size, index }: { product: Product; size: 1 | 2 | 3; ind
                        motion-safe:group-hover:scale-[1.03]"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="text-rule uppercase text-paper-faint/50">Not yet photographed</span>
+          /* The bolt, not an empty rectangle — see lib/cloth.ts. The shelf is
+             where this matters most: a grid of unphotographed stock rendered
+             as identical dark plates reads as a page that failed to load. */
+          <div
+            style={boltGround(clothFor(product.category), product.id)}
+            className="flex h-full w-full flex-col justify-between p-6"
+          >
+            {/* Right-aligned: the REDUCED badge occupies the top-left corner,
+                and two labels stacked there read as one confused label. */}
+            <span
+              className="self-end text-rule uppercase"
+              style={{ color: clothFor(product.category).ink, opacity: 0.66 }}
+            >
+              {clothFor(product.category).name}
+            </span>
+            <span className="text-rule uppercase" style={{ color: clothFor(product.category).ink, opacity: 0.5 }}>
+              Not yet photographed
+            </span>
           </div>
         )}
 

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { mediaUrl } from '@/lib/media';
+import { clothFor, boltGround } from '@/lib/cloth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { productDetailQuery, productReviewsQuery, qk } from '@/lib/query';
@@ -260,8 +261,34 @@ export default function ProductDetail({ id }: { id: number }) {
                 fetchPriority={frame === 0 ? 'high' : 'auto'}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <p className="text-rule uppercase text-paper-faint">Photograph coming</p>
+              /* The bolt, not a line of grey text — see lib/cloth.ts. This
+                 screen gets the full plate, because it is the one place a
+                 customer came specifically to look at the piece. The piece's
+                 name sits in the column beside this, so the plate does not
+                 repeat it. */
+              <div
+                style={boltGround(clothFor(product.category), product.id)}
+                className="flex h-full w-full flex-col justify-between p-8"
+              >
+                <span
+                  className="text-rule uppercase"
+                  style={{ color: clothFor(product.category).ink, opacity: 0.66 }}
+                >
+                  {clothFor(product.category).name}
+                </span>
+                <span className="block">
+                  <span
+                    aria-hidden="true"
+                    className="mb-4 block h-px w-14"
+                    style={{ backgroundColor: clothFor(product.category).ink, opacity: 0.4 }}
+                  />
+                  <span
+                    className="block max-w-[34ch] text-caption uppercase"
+                    style={{ color: clothFor(product.category).ink, opacity: 0.55 }}
+                  >
+                    Not yet photographed &middot; call the shop and we will describe it
+                  </span>
+                </span>
               </div>
             )}
           </figure>
