@@ -64,7 +64,7 @@ export default function ContactMenu() {
   const Icon = ({ kind }: { kind: string }) => {
     if (kind === 'phone') return (
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-        <path d="M6.8 3.2 8.3 6.2 6.8 7.8a9.8 9.8 0 0 0 5.2 5.2l1.6-1.5 2.9 1.5v2.5c0 .6-.5 1.1-1.1 1.1A13.3 13.3 0 0 1 3 4.3c0-.6.5-1.1 1.1-1.1h2.7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+        <path d="M6.6 3.2 8.2 6.3 6.6 7.9a10.2 10.2 0 0 0 5.3 5.3l1.7-1.6 3.9 1.6v2.6c0 .6-.5 1.1-1.1 1.1A13.8 13.8 0 0 1 2.5 4.3c0-.6.5-1.1 1.1-1.1h3Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       </svg>
     );
     if (kind === 'chat') return (
@@ -80,8 +80,8 @@ export default function ContactMenu() {
     );
     return (
       <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
-        <path d="M10 17.3s5.7-5.2 5.7-8.7a5.7 5.7 0 1 0-11.4 0c0 3.5 5.7 8.7 5.7 8.7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-      <circle cx="10" cy="8.6" r="2" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M2.5 5.6 7.5 3.6l5 2 5-2v10.8l-5 2-5-2-5 2V5.6Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M7.5 3.6v10.8M12.5 5.6v10.8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
     );
   };
