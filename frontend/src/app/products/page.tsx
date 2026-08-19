@@ -299,7 +299,7 @@ function ProductsContent() {
       </section>
 
       {/* ═══ The rail ══════════════════════════════════════════════════ */}
-      <section aria-label="Pieces" className="px-6 pb-[9vh] pt-[3vh] sm:px-10">
+      <section aria-label="Pieces" className="px-6 pb-[4.5vh] pt-[3vh] sm:px-10">
         <div className="mx-auto w-full max-w-[112rem]">
           {loading ? (
             <div className="space-y-[7vh]" aria-busy="true">

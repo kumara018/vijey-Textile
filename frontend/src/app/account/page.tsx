@@ -103,7 +103,7 @@ function AccountInner() {
       {/* Leaving, in order of how permanent it is. These stay on the hub
           because they are one-line actions, not pages — a screen whose only
           content is a "Sign out" button would be worse than this. */}
-      <div className="mt-[9vh] flex flex-col items-start gap-6 border-t border-ink-edge/60 pt-10">
+      <div className="mt-[5vh] flex flex-col items-start gap-6 border-t border-ink-edge/60 pt-10">
         <p className="text-rule uppercase text-paper-faint">Leaving</p>
 
         {/* A navigation, not a sign-out. Signing out first cost you the

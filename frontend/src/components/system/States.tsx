@@ -30,7 +30,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="border-t border-ink-edge/60 py-[10vh]">
+    <div className="border-t border-ink-edge/60 py-[5vh]">
       {eyebrow && <p className="mb-6 text-rule uppercase text-paper-faint">{eyebrow}</p>}
       <h2 className="max-w-[22ch] font-display text-band font-light text-paper">{title}</h2>
       {body && <p className="mt-6 max-w-[48ch] text-lede text-paper-muted">{body}</p>}
@@ -65,7 +65,7 @@ export function ErrorState({
   fallbackLabel?: string;
 }) {
   return (
-    <div role="alert" className="border-t border-ink-edge/60 py-[10vh]">
+    <div role="alert" className="border-t border-ink-edge/60 py-[5vh]">
       <p className="mb-6 text-rule uppercase text-brass-bright">Something went wrong</p>
       <h2 className="max-w-[22ch] font-display text-band font-light text-paper">{title}</h2>
       <p className="mt-6 max-w-[48ch] text-lede text-paper-muted">{body}</p>

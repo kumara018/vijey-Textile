@@ -58,7 +58,7 @@ export default function Loading() {
 
         {/* A single brass hairline that fills left to right, the only moving
             element. It reads as progress without claiming to measure any. */}
-        <div className="mt-[9vh] h-px w-full overflow-hidden bg-ink-edge/60">
+        <div className="mt-[5vh] h-px w-full overflow-hidden bg-ink-edge/60">
           <div className="h-px w-1/3 animate-pulse bg-brass motion-reduce:animate-none" />
         </div>
       </div>

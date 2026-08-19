@@ -54,7 +54,7 @@ export default function PolicyDoc({
         <p className="text-rule uppercase text-paper-faint">Last updated · {updated}</p>
       </PageHeader>
 
-      <div className="grid gap-x-16 gap-y-[7vh] lg:grid-cols-12">
+      <div className="grid gap-x-16 gap-y-[4vh] lg:grid-cols-12">
         {/* Contents. Sticky on wide screens because these documents are long
             and a reader who scrolled to clause 9 should still be able to get
             back to clause 2 without scrolling up. */}
@@ -111,7 +111,7 @@ export default function PolicyDoc({
           ))}
 
           {footnote && (
-            <div className="mt-[9vh] border-t border-ink-edge/60 pt-10">
+            <div className="mt-[5vh] border-t border-ink-edge/60 pt-10">
               <p className="max-w-[62ch] text-lede text-paper-muted">{footnote}</p>
               <div className="mt-8">
                 <ActionLink href="/support">Speak to us</ActionLink>

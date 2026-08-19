@@ -280,7 +280,7 @@ function AccountInner() {
 
       <Announce message={announcement} />
 
-      <div className="grid gap-x-16 gap-y-[7vh] lg:grid-cols-12">
+      <div className="grid gap-x-16 gap-y-[4vh] lg:grid-cols-12">
         <nav aria-label="Contents" className="lg:col-span-3">
           <div className="lg:sticky lg:top-32">
             <ol className="space-y-3">
@@ -339,7 +339,7 @@ function AccountInner() {
           </section>
 
           {/* ── Password ─────────────────────────────────────────────── */}
-          <section id="password" className="mt-[9vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
+          <section id="password" className="mt-[5vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
             <h2 className="font-display text-band font-light text-paper">Password</h2>
             {/**
               * CHANGING A PASSWORD GOES THROUGH THE EMAIL, NOT THROUGH THIS PAGE.
@@ -378,7 +378,7 @@ function AccountInner() {
           </section>
 
           {/* ── Devices ──────────────────────────────────────────────── */}
-          <section id="devices" className="mt-[9vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
+          <section id="devices" className="mt-[5vh] scroll-mt-32 border-t border-ink-edge/60 pt-10">
             <h2
               ref={devicesHeading}
               tabIndex={-1}

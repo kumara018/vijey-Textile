@@ -50,7 +50,7 @@ export default function PageShell({
            * THE TOP HAS TO CLEAR A FIXED HEADER, AND A PERCENTAGE CANNOT
            * PROMISE THAT.
            *
-           * The rhythm was `py-[7vh]` / `py-[12vh]` on both edges. The header
+           * The rhythm was `py-[4vh]` / `py-[6vh]` on both edges. The header
            * (components/nav/OverlayNav.tsx) is `fixed`, and roughly 5.5rem
            * tall regardless of viewport — so on any screen where 7vh is less
            * than that, the first element on the page renders UNDERNEATH it.
@@ -67,9 +67,11 @@ export default function PageShell({
            * clearance on a short one. The bottom keeps the plain percentage —
            * nothing is fixed down there.
            */
-          rhythm === 'open'
-            ? 'pt-[max(12vh,7.5rem)] pb-[12vh]'
-            : 'pt-[max(7vh,6.5rem)] pb-[7vh]',
+          /* The header is in flow now (see nav/OverlayNav.tsx), so it takes its
+             own space and nothing has to be padded out from under it. The
+             `max(…, 6.5rem)` clearance that used to be here is now just
+             double spacing at the top of every page. */
+          rhythm === 'open' ? 'py-[6vh]' : 'py-[4vh]',
         ].join(' ')}
       >
         {children}

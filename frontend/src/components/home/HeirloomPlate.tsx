@@ -33,7 +33,7 @@ export default function HeirloomPlate({
       aria-labelledby="heirloom-heading"
       className="relative flex min-h-[100svh] items-center border-t border-ink-edge"
     >
-      <div className="mx-auto w-full max-w-[112rem] px-6 py-[12vh] sm:px-10">
+      <div className="mx-auto w-full max-w-[112rem] px-6 py-[6vh] sm:px-10">
         <div className="grid gap-x-16 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Reveal>

@@ -56,7 +56,7 @@ export default function NotFound() {
 
         {/* The catalogue, as an index rather than a grid of tiles — this is a
             wayfinding surface, and a numbered list reads faster than cards. */}
-        <nav aria-label="Departments" className="mt-[9vh] border-t border-ink-edge/60 pt-10">
+        <nav aria-label="Departments" className="mt-[5vh] border-t border-ink-edge/60 pt-10">
           <h2 className="text-rule uppercase text-paper-faint">Or go straight to</h2>
           <ul className="mt-8 grid gap-x-12 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
             {CATEGORY_ORDER.map((c, i) => (

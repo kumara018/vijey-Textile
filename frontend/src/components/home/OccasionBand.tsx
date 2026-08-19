@@ -30,48 +30,43 @@ export default function OccasionBand({
   category: string;
   align: 'left' | 'right';
 }) {
-  const right = align === 'right';
+  /**
+   * ONE COMPACT ROW, NOT AN ALTERNATING SPREAD.
+   *
+   * These alternated left and right across a 12-column grid, so every band
+   * left half the row deliberately empty — three of them stacked meant three
+   * screens of mostly nothing between the products and the rest of the shop.
+   * Reported as exactly that: "don't leave this much space".
+   *
+   * White space is worth paying for when it frames something. Framing an
+   * empty half-row frames nothing. The numeral, the title, the line and the
+   * link now sit on one row that is as tall as its content, and the alignment
+   * no longer alternates — a reader's eye should not have to cross the page
+   * to find where the next item starts.
+   */
+  void align;
 
   return (
     <article className="border-t border-ink-edge first:border-t-0">
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
-        <div
-          className={`grid gap-x-16 gap-y-6 py-[9vh] lg:grid-cols-12 ${
-            right ? 'lg:text-right' : ''
-          }`}
-        >
-          <div className={`lg:col-span-2 ${right ? 'lg:order-2 lg:col-start-11' : ''}`}>
-            <Reveal>
-              <span className="font-display text-[0.82rem] tabular-nums text-maroon-300/60">
-                {index}
-              </span>
-            </Reveal>
-          </div>
+        <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3 py-6">
+          <span className="font-display text-[0.82rem] tabular-nums text-brass-bright/70">
+            {index}
+          </span>
 
-          <div className={`lg:col-span-9 ${right ? 'lg:order-1 lg:col-start-2' : 'lg:col-start-3'}`}>
-            <Reveal delay={80}>
-              <h3 className="font-display text-band font-light text-paper">{title}</h3>
-            </Reveal>
+          <h3 className="font-display text-[clamp(1.25rem,2.2vw,1.7rem)] font-light leading-tight text-paper">
+            {title}
+          </h3>
 
-            <Reveal delay={160}>
-              <p className={`mt-6 max-w-[52ch] text-lede text-paper-muted ${right ? 'lg:ml-auto' : ''}`}>
-                {copy}
-              </p>
-            </Reveal>
+          <p className="min-w-[16rem] flex-1 text-paper-muted">{copy}</p>
 
-            <Reveal delay={240}>
-              <div className={`mt-9 flex items-baseline gap-6 ${right ? 'lg:justify-end' : ''}`}>
-                <Link
-                  href={`/products?category=${encodeURIComponent(category)}`}
-                  className="group inline-flex items-baseline gap-3 border-b border-ink-edge pb-1.5 text-caption uppercase text-paper transition-colors duration-500 hover:border-maroon-300 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
-                >
-                  {category}
-                  <span aria-hidden="true" className="transition-transform duration-500 group-hover:translate-x-1">→</span>
-                </Link>
-                <span className="text-rule uppercase text-paper-faint">{note}</span>
-              </div>
-            </Reveal>
-          </div>
+          <Link
+            href={`/products?category=${encodeURIComponent(category)}`}
+            className="group inline-flex shrink-0 items-baseline gap-3 border-b border-ink-edge pb-1 text-caption uppercase text-paper transition-colors duration-500 hover:border-brass-bright hover:text-brass-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+          >
+            {category}
+            <span aria-hidden="true" className="transition-transform duration-500 group-hover:translate-x-1">&rarr;</span>
+          </Link>
         </div>
       </div>
     </article>

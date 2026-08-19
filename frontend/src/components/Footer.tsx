@@ -115,7 +115,7 @@ export default function Footer() {
         style={{ background: 'linear-gradient(to right, transparent, rgba(161,98,7,0.55) 22%, rgba(161,98,7,0.55) 78%, transparent)' }}
       />
 
-      <div className="mx-auto w-full max-w-[112rem] px-6 py-[9vh] sm:px-10">
+      <div className="mx-auto w-full max-w-[112rem] px-6 py-[4.5vh] sm:px-10">
         <div className="grid gap-x-14 gap-y-14 lg:grid-cols-12">
 
           {/* ── The shop ─────────────────────────────────────────────── */}

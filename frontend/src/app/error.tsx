@@ -107,7 +107,7 @@ export default function RouteError({
 
         {/* The human fallback. A shop with a phone number should say so at the
             exact moment its website has failed. */}
-        <div className="mt-[9vh] border-t border-ink-edge/60 pt-8">
+        <div className="mt-[5vh] border-t border-ink-edge/60 pt-8">
           <dl className="grid gap-x-10 gap-y-7 sm:grid-cols-2">
             <div>
               <dt className="text-rule uppercase text-paper-faint">Speak to us instead</dt>

@@ -146,8 +146,8 @@ export default function BleedRows({
             row.size === 1
               ? 'grid grid-cols-1'
               : row.size === 2
-              ? 'grid grid-cols-1 gap-x-10 gap-y-[7vh] sm:grid-cols-2'
-              : 'grid grid-cols-2 gap-x-8 gap-y-[7vh] lg:grid-cols-3'
+              ? 'grid grid-cols-1 gap-x-10 gap-y-[4vh] sm:grid-cols-2'
+              : 'grid grid-cols-2 gap-x-8 gap-y-[4vh] lg:grid-cols-3'
           }
         >
           {row.slice.map((p, i) => (

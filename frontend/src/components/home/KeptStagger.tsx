@@ -37,7 +37,7 @@ export default function KeptStagger({
   loading: boolean;
 }) {
   return (
-    <section aria-labelledby="kept-heading" className="border-t border-ink-edge py-[12vh]">
+    <section aria-labelledby="kept-heading" className="border-t border-ink-edge py-[6vh]">
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
         <div className="mb-[8vh] flex flex-wrap items-baseline justify-between gap-6">
           <Reveal>

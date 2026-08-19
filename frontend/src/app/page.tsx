@@ -179,7 +179,7 @@ export default function HomePage() {
         {/* Content-height on a phone: the entrance scene does not load there, so
             a reserved 62svh was 400px of nothing above the first words. The
             staged photograph and the reserved height return at `md`. */}
-        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.25rem,4vh,2.5rem)] pt-[6.5rem] sm:px-10 md:sticky md:top-0 md:min-h-[62svh] md:justify-end md:pb-[clamp(2rem,5vh,3.5rem)] md:pt-[clamp(6.5rem,12vh,8rem)]">
+        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.25rem,4vh,2.5rem)] pt-[clamp(1.25rem,4vh,2rem)] sm:px-10 md:sticky md:top-0 md:min-h-[62svh] md:justify-end md:pb-[clamp(2rem,5vh,3.5rem)] md:pt-[clamp(2rem,6vh,4rem)]">
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
@@ -272,7 +272,7 @@ export default function HomePage() {
         * price and Add to bag — so the homepage answers "what do you sell and
         * what does it cost" in one screen instead of six.
         */}
-      <section aria-labelledby="new-heading" className="mx-auto w-full max-w-[112rem] px-6 pb-[7vh] pt-[5vh] sm:px-10">
+      <section aria-labelledby="new-heading" className="mx-auto w-full max-w-[112rem] px-6 pb-[4vh] pt-[5vh] sm:px-10">
         <div className="mb-7 flex flex-wrap items-baseline justify-between gap-4">
           <h2 id="new-heading" className="font-display text-[clamp(1.4rem,2.6vw,2rem)] font-light text-paper">
             New in the shop
@@ -292,39 +292,69 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 pb-[11vh] pt-[7vh]">
-        <div className="mx-auto mb-[4.5vh] w-full max-w-[112rem] px-6 sm:px-10">
-          <Reveal>
-            <h2 id="occasion-heading" className="font-display text-chapter font-light text-paper">
-              The occasion
+      {/**
+        * ═══ The occasion, folded away ═══════════════════════════════════
+        *
+        * Three bands, each with a three-line paragraph, sat open on the
+        * homepage between the products and the rest of the shop. Asked for
+        * directly: make it a dropdown, so a customer who wants it can open it
+        * and everybody else gets past it.
+        *
+        * Native <details>/<summary>. It is keyboard operable, announced as a
+        * disclosure by screen readers, findable by the browser's own in-page
+        * search even while closed in modern browsers, and it costs no
+        * JavaScript — which matters on the page that just had 717KB taken off
+        * it. A hand-built accordion would need state, ARIA, focus handling and
+        * an animation, and would be worse at all four.
+        *
+        * The copy inside is a line each now rather than a paragraph. If
+        * someone has opened a disclosure they are willing to read a little —
+        * not an essay.
+        */}
+      <section aria-labelledby="occasion-heading" className="border-t border-ink-edge/60 py-[5vh]">
+        <details className="group mx-auto w-full max-w-[112rem] px-6 sm:px-10">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright">
+            <h2 id="occasion-heading" className="font-display text-[clamp(1.4rem,2.6vw,2rem)] font-light text-paper">
+              Shop by occasion
             </h2>
-          </Reveal>
-        </div>
+            <span className="flex items-center gap-3 text-rule uppercase text-brass-bright">
+              <span className="hidden sm:inline">Naming day · Wedding · Festival</span>
+              <span
+                aria-hidden="true"
+                className="text-lg leading-none transition-transform duration-300 group-open:rotate-45 motion-reduce:transition-none"
+              >
+                +
+              </span>
+            </span>
+          </summary>
 
-        <OccasionBand
-          index="01"
-          title="The naming day"
-          note="First celebrations"
-          copy="The first photograph anyone will keep. Soft-finished cottons and gentle silks, cut for a child who will be passed between every pair of arms in the room."
-          category="Baby Frocks"
-          align="left"
-        />
-        <OccasionBand
-          index="02"
-          title="The wedding"
-          note="The heirloom piece"
-          copy="Weight, drape and a hem that holds its line through a long evening. These are the pieces that come out of the cupboard again a decade later, for a younger cousin."
-          category="Lehenga"
-          align="right"
-        />
-        <OccasionBand
-          index="03"
-          title="The festival"
-          note="For the photographs"
-          copy="Colour that survives a camera flash and a courtyard full of lamps. Made to be seen across a crowded room, and to still look considered up close."
-          category="Party Wear"
-          align="left"
-        />
+          <div className="pt-[3vh]">
+            <OccasionBand
+              index="01"
+              title="The naming day"
+              note="First celebrations"
+              copy="Soft-finished cottons and gentle silks, every seam finished on the inside."
+              category="Baby Frocks"
+              align="left"
+            />
+            <OccasionBand
+              index="02"
+              title="The wedding"
+              note="The heirloom piece"
+              copy="Weight, drape, and a hem that holds its line through a long evening."
+              category="Lehenga"
+              align="right"
+            />
+            <OccasionBand
+              index="03"
+              title="The festival"
+              note="For the photographs"
+              copy="Colour that survives a camera flash and a courtyard full of lamps."
+              category="Party Wear"
+              align="left"
+            />
+          </div>
+        </details>
       </section>
 
       {/* ═══ III. The heirloom in frame ════════════════════════════════
@@ -338,7 +368,7 @@ export default function HomePage() {
       <MeasureRule />
 
       {/* ═══ V. The makers ═════════════════════════════════════════════ */}
-      <section aria-labelledby="makers-heading" className="border-t border-ink-edge/60 py-[12vh]">
+      <section aria-labelledby="makers-heading" className="border-t border-ink-edge/60 py-[6vh]">
         <div className="mx-auto grid w-full max-w-[112rem] gap-x-16 gap-y-10 px-6 sm:px-10 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Reveal>

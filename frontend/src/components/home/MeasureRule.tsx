@@ -21,7 +21,7 @@ const SIZES = [12, 16, 20, 24, 28, 32, 36, 40];
 
 export default function MeasureRule() {
   return (
-    <section aria-labelledby="measure-heading" className="border-t border-ink-edge py-[12vh]">
+    <section aria-labelledby="measure-heading" className="border-t border-ink-edge py-[6vh]">
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
         <div className="grid gap-x-16 gap-y-10 lg:grid-cols-12">
           <div className="lg:col-span-4">

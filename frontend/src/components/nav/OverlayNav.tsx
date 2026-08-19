@@ -113,32 +113,26 @@ export default function OverlayNav() {
   return (
     <>
       {/* ── Permanent minimal bar ───────────────────────────────────── */}
-      <header className="fixed inset-x-0 top-0 z-40 pointer-events-none">
-        {/**
-          * Nav scrim.
-          *
-          * The bar has no background of its own, so on the homepage the staged
-          * garment showed straight through it — the photograph appeared to
-          * bleed across the top of the page and the wordmark and icons lost
-          * contrast against whatever happened to be behind them.
-          *
-          * A short top-down gradient gives the navigation a guaranteed dark bed
-          * on every route, regardless of what the hero is doing underneath. It
-          * is the standard treatment for an overlay nav sitting on imagery, and
-          * it is why the nav can stay transparent-by-design without ever being
-          * illegible. Non-interactive, and it fades out completely well before
-          * the headline starts.
-          */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-32"
-          style={{
-            background:
-              'linear-gradient(to bottom, rgba(247,234,238,0.92) 0%, rgba(247,234,238,0.72) 38%, rgba(247,234,238,0.32) 68%, rgba(247,234,238,0) 100%)',
-          }}
-        />
+      {/**
+        * A SOLID BAR, IN FLOW — LIKE THE SISTER SHOP'S.
+        *
+        * This was `fixed` and transparent, with a fading scrim underneath it
+        * so the navigation could float over the hero photograph. That is a
+        * lovely idea and it failed on the one page it was designed for: with
+        * the shop relit, the pale scrim over a dark garment left the wordmark,
+        * the icons and "Deliver to Erode" barely readable — the screenshot
+        * showed a header sitting in the middle of a photograph of a frock.
+        *
+        * A transparent header can only be legible if you control what is
+        * behind it, and a shop cannot: the hero is whatever garment is in
+        * stock. So it stops trying. Solid ground, a hairline under it, sticky
+        * rather than fixed so it takes its own space instead of covering the
+        * first thing on every page — which is exactly what Ammalu's rail does
+        * and why that one has never had this problem.
+        */}
+      <header className="sticky inset-x-0 top-0 z-40 border-b border-ink-edge/70 bg-ink/95 backdrop-blur-sm">
 
-        <div className="relative mx-auto flex max-w-[112rem] items-center justify-between px-6 py-6 sm:px-10">
+        <div className="relative mx-auto flex max-w-[112rem] items-center justify-between px-6 py-4 sm:px-10">
           {/**
             * THE WORDMARK HAS TO BE ALLOWED TO SHRINK.
             *
@@ -156,7 +150,7 @@ export default function OverlayNav() {
             */}
           <Link
             href="/"
-            className="pointer-events-auto flex min-w-0 items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-3"
+            className="flex min-w-0 items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-3"
           >
             <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="h-8 w-8 shrink-0 rounded-full sm:h-[34px] sm:w-[34px]" />
             <span className="truncate font-display text-[0.8rem] font-medium uppercase tracking-[0.09em] text-paper sm:text-[0.95rem] sm:tracking-[0.18em]">
@@ -164,7 +158,7 @@ export default function OverlayNav() {
             </span>
           </Link>
 
-          <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {/* Search never leaves the header — see nav/HeaderSearch.tsx. */}
             <HeaderSearch />
 

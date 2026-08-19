@@ -275,29 +275,36 @@ export default function ProductCard({ product }: Props) {
             </div>
           )}
 
-          {/* Badges */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
-            {discount && (
-              <span className="bg-maroon-800 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
-                {discount}% OFF
-              </span>
-            )}
-            {product.is_featured && (
-              <span className="bg-gold-600 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
-                Featured
-              </span>
-            )}
-            {product.is_new_arrival && (
-              <span className="bg-emerald-500 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
-                New Arrival
-              </span>
-            )}
-            {product.stock === 0 && (
-              <span className="bg-gray-700 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
-                Out of Stock
-              </span>
-            )}
-          </div>
+          {/**
+            * ONE BADGE, NOT FOUR.
+            *
+            * There were four, stacked: a maroon discount pill, a gold
+            * "Featured", an emerald "New Arrival", a grey "Out of Stock" —
+            * four colours and four radii piled in the corner of a photograph
+            * of the thing being sold. Most pieces here are featured AND new,
+            * so in practice two or three shouted at once over the garment.
+            * `text-paper` on them also inverted with the relight: they were
+            * dark type on dark fills, which is why the screenshot showed
+            * unreadable blobs.
+            *
+            * A badge is worth having only when it changes a decision. Sold out
+            * changes whether you can buy; a discount changes what you pay.
+            * "Featured" and "New Arrival" change nothing for the customer —
+            * they are the shop talking about itself — and the price row
+            * already shows the saving in figures.
+            *
+            * So: one badge, chosen by what matters most, in the shop's own
+            * colour with white on it at 11.97:1.
+            */}
+          {(product.stock === 0 || discount) && (
+            <span
+              className={`absolute left-0 top-3 z-10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white ${
+                product.stock === 0 ? 'bg-paper-muted' : 'bg-maroon-800'
+              }`}
+            >
+              {product.stock === 0 ? 'Sold out' : `${discount}% off`}
+            </span>
+          )}
 
           {/* Wishlist button */}
           <button
