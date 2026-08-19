@@ -61,19 +61,9 @@ export default function OverlayNav() {
   // strands the visitor on a page they cannot see.
   useEffect(() => { setOpen(false); }, [pathname]);
 
-  // Scroll lock that compensates for the scrollbar's width, so the page
-  // underneath does not jump sideways as the bar is removed.
-  useEffect(() => {
-    if (!open) return;
-    const gap = window.innerWidth - document.documentElement.clientWidth;
-    const prev = { overflow: document.body.style.overflow, pad: document.body.style.paddingRight };
-    document.body.style.overflow = 'hidden';
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.body.style.overflow = prev.overflow;
-      document.body.style.paddingRight = prev.pad;
-    };
-  }, [open]);
+  /* The scroll lock is gone with the takeover. A dropdown does not cover the
+     page, so freezing the page behind it would only trap somebody who opened
+     it by accident. */
 
   const close = useCallback(() => {
     setOpen(false);
@@ -159,8 +149,14 @@ export default function OverlayNav() {
                 characters — and "VIJEY TE…" is a worse mark than no mark at
                 all. The logo is the identity there; the name returns as soon
                 as it can be shown whole. */}
-            <span className="hidden font-display text-[0.8rem] font-medium uppercase tracking-[0.09em] text-paper xs:inline sm:text-[0.95rem] sm:tracking-[0.18em]">
-              {STORE.name}
+            <span className="hidden min-w-0 xs:block">
+              <span className="block truncate font-display text-[0.8rem] font-medium uppercase leading-tight tracking-[0.09em] text-paper sm:text-[0.95rem] sm:tracking-[0.18em]">
+                {STORE.name}
+              </span>
+              {/* The shop's own line, under the mark. */}
+              <span className="mt-0.5 block truncate text-[0.6rem] uppercase tracking-[0.14em] text-brass-bright">
+                {STORE.tagline}
+              </span>
             </span>
             <span className="sr-only">{STORE.name}</span>
           </Link>
@@ -211,7 +207,6 @@ export default function OverlayNav() {
             <DeliverTo />
           </div>
         </div>
-      </header>
 
       {/* ── The Index ───────────────────────────────────────────────── */}
       <div
@@ -227,11 +222,29 @@ export default function OverlayNav() {
         // read as FALSE, leaving the closed overlay focusable by keyboard.
         aria-hidden={!open}
         {...(!open ? { inert: true } : {})}
-        className={`fixed inset-0 z-50 bg-night-deep transition-opacity duration-[520ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] ${
-          open ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        /**
+         * A DROPDOWN, NOT A TAKEOVER.
+         *
+         * This was `fixed inset-0` — the whole screen, with the six category
+         * names set large enough to fill it. That is a lovely gesture for a
+         * shop somebody is browsing and the wrong one for a shop somebody is
+         * buying from: it covers the products you were looking at, it needs a
+         * deliberate Close, and it puts a full screen of chrome between a
+         * customer and a lehenga. Asked for directly — small, a dropdown, and
+         * not this big.
+         *
+         * It hangs off the header now, on the right, at a width that fits its
+         * longest category name and no more. The page stays where it was; a
+         * click outside or Escape dismisses it. The scrim is gone with the
+         * takeover, and so is the scroll lock — there is nothing left to lock.
+         */
+        className={`absolute right-6 top-full z-50 mt-2 w-[min(92vw,22rem)] origin-top-right border border-ink-edge bg-ink-deep transition-all duration-300 ease-out sm:right-10 ${
+          open
+            ? 'pointer-events-auto scale-100 opacity-100'
+            : 'pointer-events-none scale-95 opacity-0'
         }`}
       >
-        <div className="flex h-full flex-col overflow-y-auto px-6 py-6 sm:px-10">
+        <div className="flex max-h-[70vh] flex-col overflow-y-auto p-5">
           <div className="flex items-center justify-between">
             <span className="text-rule uppercase text-paper-muted">Index</span>
             <button
@@ -271,13 +284,13 @@ export default function OverlayNav() {
             * The staggered arrival is unchanged — it is this brand's motion
             * signature and it was the part that was already right.
             */}
-          <nav className="flex flex-1 flex-col justify-center py-10" aria-label="Categories">
-            <ul className="mx-auto w-full max-w-[92rem]">
+          <nav className="mt-4" aria-label="Categories">
+            <ul>
               {CATEGORIES.map((c, i) => (
                 <li key={c.name} className="border-t border-ink-edge last:border-b">
                   <Link
                     href={`/products?category=${encodeURIComponent(c.name)}`}
-                    className="group relative flex items-baseline gap-5 py-5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-9"
+                    className="group relative flex items-baseline gap-4 py-2.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
                     style={{
                       // Staggered arrival, bottom-up — the motion signature for
                       // this brand. Skipped entirely under reduced motion.
@@ -293,7 +306,7 @@ export default function OverlayNav() {
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-display text-[clamp(1.6rem,3.4vw,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-paper transition-colors duration-500 group-hover:text-paper motion-reduce:transition-none">
+                      <span className="block font-display text-[1.05rem] font-light leading-tight text-paper transition-colors duration-300 group-hover:text-brass-bright motion-reduce:transition-none">
                         {c.name}
                       </span>
                       <span className="mt-1.5 block text-caption uppercase text-paper-faint transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
@@ -331,6 +344,8 @@ export default function OverlayNav() {
           </div>
         </div>
       </div>
+      </header>
+
     </>
   );
 }

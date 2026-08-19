@@ -324,7 +324,7 @@ export default function ProductCard({ product }: Props) {
           {(product.stock === 0 || discount) && (
             <span
               className={`absolute left-0 top-3 z-10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white ${
-                product.stock === 0 ? 'bg-paper-muted' : 'bg-maroon-800'
+                product.stock === 0 ? 'bg-paper-muted' : 'bg-maroon-600'
               }`}
             >
               {product.stock === 0 ? 'Sold out' : `${discount}% off`}
@@ -387,7 +387,7 @@ export default function ProductCard({ product }: Props) {
             <button
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="mt-3 flex w-full items-center justify-center gap-2 bg-maroon-800 py-2.5 text-sm font-medium text-white transition-colors duration-300 hover:bg-maroon-900 active:scale-[0.99] disabled:bg-ink-edge disabled:text-paper-faint"
+              className="mt-3 flex w-full items-center justify-center gap-2 bg-maroon-600 py-2.5 text-sm font-medium text-white transition-colors duration-300 hover:bg-maroon-700 active:scale-[0.99] disabled:bg-ink-edge disabled:text-paper-faint"
             >
               <ShoppingCart size={15} />
               {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}

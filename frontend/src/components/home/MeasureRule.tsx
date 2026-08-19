@@ -41,7 +41,7 @@ export default function MeasureRule() {
                 href="/products"
                 className="mt-8 inline-flex items-baseline gap-3 border-b border-ink-edge pb-1.5 text-caption uppercase text-paper transition-colors duration-500 hover:border-maroon-300 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
               >
-                Shop by size
+                See every piece
                 <span aria-hidden="true">→</span>
               </Link>
             </Reveal>
@@ -66,13 +66,28 @@ export default function MeasureRule() {
                   backgroundRepeat: 'repeat-x',
                 }}
               />
+              {/**
+                * THE NUMERALS ARE THE CONTROL.
+                *
+                * They were decoration — a printed scale under a rule — beside a
+                * "Shop by size" link that went to the unfiltered shelf, because
+                * no size filter existed anywhere in the shop. Tapping 24 to see
+                * what comes in 24 is the obvious gesture, and it did nothing.
+                *
+                * Each numeral is a link to the shelf filtered to that size now.
+                * The rule above stays aria-hidden; these carry the same
+                * information in a form a screen reader and a thumb can both use.
+                */}
               <ol className="mt-4 flex justify-between">
                 {SIZES.map((s) => (
-                  <li
-                    key={s}
-                    className="font-display text-[1.05rem] tabular-nums text-paper-muted sm:text-[1.35rem]"
-                  >
-                    {s}
+                  <li key={s}>
+                    <Link
+                      href={`/products?size=${s}`}
+                      aria-label={`See every piece in size ${s}`}
+                      className="block font-display text-[1.05rem] tabular-nums text-paper-muted transition-colors duration-300 hover:text-brass-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright sm:text-[1.35rem]"
+                    >
+                      {s}
+                    </Link>
                   </li>
                 ))}
               </ol>

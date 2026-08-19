@@ -11,6 +11,10 @@ import ProductCard from '@/components/ProductCard';
 import Reveal from '@/components/home/Reveal';
 import { identityFor, CATEGORY_ORDER } from '@/lib/categories';
 
+/* 12 to 40 in twos — the range printed on the homepage rule, kept here as
+   the one list the filter offers so the two cannot disagree. */
+const SIZES = ['12', '14', '16', '18', '20', '22', '24', '26', '28', '30', '32', '34', '36', '38', '40'];
+
 const SORT_OPTIONS = [
   { label: 'Newest first',    value: 'created_at:desc' },
   { label: 'Price: low–high', value: 'price:asc' },
@@ -33,6 +37,7 @@ function ProductsContent() {
     minPrice: searchParams.get('min_price') || '',
     maxPrice: searchParams.get('max_price') || '',
     featured: searchParams.get('featured')  || '',
+    size:     searchParams.get('size')      || '',
     sort:     searchParams.get('sort')      || 'created_at:desc',
   };
 
@@ -52,6 +57,7 @@ function ProductsContent() {
   if (filters.minPrice) params.min_price = Number(filters.minPrice);
   if (filters.maxPrice) params.max_price = Number(filters.maxPrice);
   if (filters.featured) params.featured  = true;
+  if (filters.size)     params.size      = filters.size;
 
   /**
    * One query covers the exact search and the fuzzy fallback, because from the
@@ -260,7 +266,48 @@ function ProductsContent() {
             style={{ gridTemplateRows: filtersOpen ? '1fr' : '0fr', opacity: filtersOpen ? 1 : 0 }}
           >
             <div className="overflow-hidden">
-              <div className="mt-8 grid gap-x-10 gap-y-7 border-t border-ink-edge/60 pt-8 sm:grid-cols-3">
+              <div className="mt-8 grid gap-x-10 gap-y-7 border-t border-ink-edge/60 pt-8 sm:grid-cols-2 lg:grid-cols-4">
+                {/**
+                  * SIZE, WHICH IS THE FILTER THIS SHOP MOST NEEDED AND DID NOT
+                  * HAVE.
+                  *
+                  * Everything here is cut 12 to 40, and a parent is buying for
+                  * one child — so "which of these comes in 24" is the first
+                  * question, ahead of price and ahead of order. There was no
+                  * way to ask it: no control here, no `size` parameter on the
+                  * API, and "Shop by size" on the homepage pointed at the
+                  * unfiltered shelf because there was nothing to point at.
+                  *
+                  * A row of buttons rather than a select: fifteen sizes is
+                  * short enough to show, one tap instead of two, and the
+                  * chosen one is visible without opening anything. It reads
+                  * from and writes to the URL like every other filter, so a
+                  * size-filtered rail can be shared as a link.
+                  */}
+                <div className="sm:col-span-2 lg:col-span-4">
+                  <span className="text-rule uppercase text-paper-faint">Size</span>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {SIZES.map((sz) => {
+                      const on = filters.size === sz;
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setF('size', on ? '' : sz)}
+                          className={`min-w-[3rem] border px-3 py-2 text-sm tabular-nums transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright ${
+                            on
+                              ? 'border-brass bg-maroon-600 text-white'
+                              : 'border-ink-edge text-paper-muted hover:border-brass-bright hover:text-paper'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="sort" className="text-rule uppercase text-paper-faint">Order</label>
                   <select

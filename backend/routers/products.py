@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, String
 from typing import Optional, List
 from database import get_db
 import models, schemas, auth as auth_utils
@@ -27,6 +27,7 @@ def get_products(
     min_price:  Optional[float] = None,
     max_price:  Optional[float] = None,
     featured:   Optional[bool]  = None,
+    size:       Optional[str]   = None,
     sort_by:    str = Query("created_at", pattern="^(price|rating_avg|created_at|name)$"),
     sort_order: str = Query("desc",       pattern="^(asc|desc)$"),
     skip:       int = Query(0,  ge=0),
@@ -58,6 +59,24 @@ def get_products(
         query = query.filter(models.Product.price <= max_price)
     if featured is not None:
         query = query.filter(models.Product.is_featured == featured)
+
+    if size:
+        """
+        Filter by a size the shop actually cuts.
+
+        `size_options` is a JSON array, and the honest way to query one differs
+        per database — this project runs SQLite locally and Postgres in
+        production, and their JSON operators do not agree. Rather than write
+        two dialects and test one, this filters on the SERIALISED text with the
+        quotes included: `"24"` matches the element 24 and cannot match 240,
+        124 or a size inside another word, which a bare LIKE '%24%' would.
+
+        It is not elegant, and it is correct on both engines with no migration.
+        If the size list ever becomes a real table this is the one place that
+        has to change.
+        """
+        needle = f'"{size.strip()}"'
+        query = query.filter(models.Product.size_options.cast(String).ilike(f"%{needle}%"))
 
     sort_col = getattr(models.Product, sort_by, models.Product.created_at)
     query = query.order_by(sort_col.desc() if sort_order == "desc" else sort_col.asc())

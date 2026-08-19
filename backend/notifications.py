@@ -21,6 +21,8 @@ from datetime import datetime, timedelta
 SMTP_EMAIL    = os.getenv("SMTP_EMAIL", "")
 SMTP_PASS     = os.getenv("SMTP_PASSWORD", "")
 STORE_NAME    = "Vijey Textile"
+# Kept beside the name so the mail masthead cannot drift from the site.
+STORE_TAGLINE = "Grand treat for girls"
 STORE_URL     = os.getenv("FRONTEND_URL", "https://vijeytextile.com")
 SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "admin@vijeytextile.com")
 STORE_ADDR    = "Shop Ground Floor No 131, Texvalley Gangapuram"
@@ -166,6 +168,12 @@ _HEADER_HTML = f"""\
                     <p style="margin:0;padding:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;
                               letter-spacing:3px;text-transform:uppercase;color:#2A1F24;
                               line-height:1.1;mso-line-height-rule:exactly;">{STORE_NAME}</p>
+                    <!-- The shop's own line, under the mark — the same one the
+                         header, the footer and the invoice carry. -->
+                    <p style="margin:4px 0 0;padding:0;font-family:Helvetica,Arial,sans-serif;
+                              font-size:10px;letter-spacing:0.14em;text-transform:uppercase;
+                              color:#A21D48;line-height:1.2;
+                              mso-line-height-rule:exactly;">{STORE_TAGLINE}</p>
                   </td>
                 </tr>
               </table>

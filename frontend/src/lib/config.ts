@@ -4,7 +4,11 @@
 
 export const STORE = {
   name:        'Vijey Textile',
-  tagline:     "Luxury Baby, Kids & Girls Fashion",
+  /* The line under the mark, given by the shop. It appears under the wordmark
+     in the header and the footer, on the invoice and at the top of every
+     email — so it lives here once rather than being retyped in four places
+     that would then drift apart. */
+  tagline:     "Grand treat for girls",
 
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 94439 47853',

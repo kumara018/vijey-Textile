@@ -103,6 +103,49 @@ const HELP = [
   { href: '/privacy',             label: 'Privacy policy' },
 ];
 
+
+/* One hairline weight, sized to sit on the first line of the text beside it. */
+const ico = 'mt-0.5 h-4 w-4 shrink-0 text-brass-bright';
+
+function Shop() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
+      <path d="M3 8v8.5h14V8" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M2.5 8 4 3.5h12L17.5 8a2.4 2.4 0 0 1-4.8 0 2.4 2.4 0 0 1-4.9 0 2.4 2.4 0 0 1-4.8 0Z"
+            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M8 16.5v-4h4v4" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Handset() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
+      <path d="M6.4 3.5 8 6.6 6.4 8.3a10 10 0 0 0 5.3 5.3l1.7-1.6 3.1 1.6v2.6c0 .6-.5 1.1-1.1 1.1A13.6 13.6 0 0 1 2.6 3.6c0-.6.5-1.1 1.1-1.1h2.7Z"
+            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Envelope() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
+      <rect x="2.5" y="4.5" width="15" height="11" rx="1" stroke="currentColor" strokeWidth="1.3" />
+      <path d="m3 5.5 7 5 7-5" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Pin() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className={ico}>
+      <path d="M10 18s6-5.3 6-9.4a6 6 0 1 0-12 0C4 12.7 10 18 10 18Z"
+            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <circle cx="10" cy="8.4" r="2.1" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
@@ -124,9 +167,16 @@ export default function Footer() {
               href="/"
               className="inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
             >
-              <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="rounded-full" />
-              <span className="font-display text-[1.05rem] tracking-[0.16em] text-paper uppercase">
-                {STORE.name}
+              <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="shrink-0 rounded-full" />
+              <span>
+                <span className="block font-display text-[1.05rem] uppercase leading-tight tracking-[0.16em] text-paper">
+                  {STORE.name}
+                </span>
+                {/* The same line as the header and the invoice, from one place
+                    in config so the four cannot drift apart. */}
+                <span className="mt-0.5 block text-[0.62rem] uppercase tracking-[0.14em] text-brass-bright">
+                  {STORE.tagline}
+                </span>
               </span>
             </Link>
 
@@ -199,19 +249,45 @@ export default function Footer() {
           {/* ── Reach us ─────────────────────────────────────────────── */}
           <div className="lg:col-span-2">
             <h2 className="text-rule uppercase text-brass-bright">Reach us</h2>
+            {/**
+              * EACH ROW GETS ITS SYMBOL.
+              *
+              * This was four stacked paragraphs of near-identical grey text —
+              * an address, two numbers, two addresses, a link — and a customer
+              * scanning for "how do I phone them" had to read all of it to
+              * find out which was which. A shop mark, a handset, an envelope
+              * and a pin sort that in one glance, before a single word is
+              * read, which is what a footer is for.
+              *
+              * Drawn inline at one hairline weight rather than pulled from an
+              * icon set: four shapes do not justify a dependency, and these
+              * match the weight of the rules and the glass already on the page.
+              *
+              * `aria-hidden` on every one of them. The link text beside each
+              * already says what it is, and a screen reader announcing "phone
+              * icon, phone, +91…" is worse than not having them.
+              */}
             <address className="mt-6 space-y-4 not-italic">
-              <p className="text-paper-faint">
-                {STORE.shopNo}<br />{STORE.area}<br />{STORE.city}
+              <p className="flex gap-3 text-paper-faint">
+                <Shop />
+                <span>{STORE.shopNo}<br />{STORE.area}<br />{STORE.city}</span>
               </p>
-              <p className="flex flex-col gap-1.5">
-                <FooterLink href={CALL_URL}>{STORE.phone1}</FooterLink>
-                <FooterLink href={CALL_URL2}>{STORE.phone2}</FooterLink>
+              <p className="flex gap-3">
+                <Handset />
+                <span className="flex flex-col gap-1.5">
+                  <FooterLink href={CALL_URL}>{STORE.phone1}</FooterLink>
+                  <FooterLink href={CALL_URL2}>{STORE.phone2}</FooterLink>
+                </span>
               </p>
-              <p className="flex flex-col gap-1.5">
-                <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
-                <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
+              <p className="flex gap-3">
+                <Envelope />
+                <span className="flex min-w-0 flex-col gap-1.5">
+                  <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
+                  <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
+                </span>
               </p>
-              <p>
+              <p className="flex gap-3">
+                <Pin />
                 <FooterLink href={STORE.googleMapsUrl} external>Find us on the map</FooterLink>
               </p>
             </address>
