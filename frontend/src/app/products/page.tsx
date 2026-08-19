@@ -7,9 +7,8 @@ import Fuse from 'fuse.js';
 import { productsAPI } from '@/lib/api';
 import { qk } from '@/lib/query';
 import { Product } from '@/types';
-import BleedRows from '@/components/products/BleedRows';
+import ProductCard from '@/components/ProductCard';
 import Reveal from '@/components/home/Reveal';
-import SplitText from '@/components/motion/SplitText';
 import { identityFor, CATEGORY_ORDER } from '@/lib/categories';
 
 const SORT_OPTIONS = [
@@ -159,23 +158,34 @@ function ProductsContent() {
 
   return (
     <div className="text-paper-muted">
-      {/* ═══ Category masthead ═════════════════════════════════════════ */}
-      <section className="border-b border-ink-edge/60 px-6 pb-[7vh] pt-40 sm:px-10">
+      {/**
+        * ═══ Category masthead ═══════════════════════════════════════════
+        *
+        * IT WAS HALF A SCREEN OF TYPE BEFORE A SINGLE GARMENT. A rule-sized
+        * eyebrow, then `text-chapter` — up to 104px — animating in a letter at
+        * a time, then a paragraph under it. On a laptop a customer scrolled
+        * past all of that to reach the products; on a phone, further.
+        *
+        * Shrinking the standfirst made it worse rather than better, and that
+        * is worth recording: once the paragraph was one short line it said
+        * almost exactly what the headline above it said, so the page repeated
+        * itself twice at two different sizes. The fix was not a shorter
+        * paragraph, it was no paragraph.
+        *
+        * The eyebrow carries the character now — it is short by nature — and
+        * the heading is the category's plain NAME at a size a heading needs
+        * rather than a size that makes a point. Amazon puts the category name
+        * and the results on one screen; so does this.
+        */}
+      <section className="border-b border-ink-edge/60 px-6 pb-6 pt-28 sm:px-10">
         <div className="mx-auto w-full max-w-[112rem]">
           <Reveal>
-            <p className="mb-7 text-rule uppercase text-brass-bright">{identity.eyebrow}</p>
+            <p className="mb-2 text-rule uppercase text-brass-bright">{identity.eyebrow}</p>
           </Reveal>
 
-          <SplitText
-            as="h1"
-            text={identity.display}
-            className="block max-w-[20ch] font-display text-chapter font-light text-paper"
-            delay={80}
-          />
-
-          <Reveal delay={220}>
-            <p className="mt-8 max-w-[54ch] text-lede text-paper-muted">{identity.standfirst}</p>
-          </Reveal>
+          <h1 className="font-display text-[clamp(1.6rem,3vw,2.4rem)] font-light leading-tight text-paper">
+            {identity.slug || 'Every piece'}
+          </h1>
 
           {/* Category rail — always visible, so all six entry points are
               reachable from any one of them without opening the Index. */}
@@ -289,7 +299,7 @@ function ProductsContent() {
       </section>
 
       {/* ═══ The rail ══════════════════════════════════════════════════ */}
-      <section aria-label="Pieces" className="px-6 py-[9vh] sm:px-10">
+      <section aria-label="Pieces" className="px-6 pb-[9vh] pt-[3vh] sm:px-10">
         <div className="mx-auto w-full max-w-[112rem]">
           {loading ? (
             <div className="space-y-[7vh]" aria-busy="true">
@@ -337,7 +347,24 @@ function ProductsContent() {
               </button>
             </div>
           ) : (
-            <BleedRows products={products} rhythm={identity.rhythm} />
+            /**
+             * A UNIFORM GRID, NOT AN EDITORIAL RUN.
+             *
+             * BleedRows gave each piece a size of 1, 2 or 3 and alternated them
+             * by category rhythm, so the shelf read like a lookbook: one
+             * garment could take the full width and most of the viewport. Good
+             * to be looked at, poor to be shopped — comparing two lehengas
+             * meant scrolling between them, and each price arrived a screen
+             * after its photograph.
+             *
+             * Four across on a laptop, two on a phone, every card the same
+             * size, each carrying photograph, name, price and Add to bag.
+             */
+            <div className="grid grid-cols-2 gap-x-4 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
           )}
         </div>
       </section>

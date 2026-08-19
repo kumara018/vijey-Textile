@@ -30,13 +30,22 @@ export interface CategoryIdentity {
   rhythm: Rhythm;
 }
 
+/**
+ * SHORT ON PURPOSE. Each standfirst was a two-to-three sentence paragraph —
+ * 120 to 195 characters of prose above a grid of garments. On the listing page
+ * that is a wall of reading between a customer and the thing they came to buy,
+ * and it was named directly: "lot of text is there ... not user friendly".
+ *
+ * One line each now. Where a sentence carried a real fact it is kept; where it
+ * only set a mood it is gone. The garments say the rest.
+ */
 export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   'Baby Frocks': {
     slug: 'Baby Frocks',
     eyebrow: 'First celebrations',
     display: 'The first photograph anyone will keep',
     standfirst:
-      'Soft-finished cottons and gentle silks, cut for a child who will be passed between every pair of arms in the room. Nothing scratches, nothing digs, and every seam is finished on the inside.',
+      'Soft cottons and gentle silks. Every seam finished on the inside.',
     rhythm: 'lead-wide',
   },
   'Chudithar': {
@@ -44,7 +53,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
     eyebrow: 'Everyday grace',
     display: 'For the days that are not occasions',
     standfirst:
-      'The pieces that get worn on a Tuesday. Cut to move in, made to wash well, and quiet enough that nobody asks whether it is new.',
+      'Cut to move in, made to wash well.',
     rhythm: 'lead-pair',
   },
   'Frocks': {
@@ -52,7 +61,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
     eyebrow: 'School to supper',
     display: 'One change of clothes, two halves of a day',
     standfirst:
-      'Sturdy enough for a full day out and finished well enough to sit down to dinner in. The middle ground most children actually live in.',
+      'School to supper — sturdy, and finished well enough to sit down in.',
     rhythm: 'lead-tall',
   },
   'Western Dresses': {
@@ -60,7 +69,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
     eyebrow: 'Modern occasion',
     display: 'Cut clean, worn confidently',
     standfirst:
-      'Simpler lines and a shorter silhouette, for birthdays, school functions and the days a child would rather not be in silk.',
+      'Modern cuts, in the same cloth as everything else here.',
     rhythm: 'lead-pair',
   },
   'Lehenga': {
@@ -68,7 +77,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
     eyebrow: 'The heirloom piece',
     display: 'Weight, drape, and a hem that holds its line',
     standfirst:
-      'These are the pieces that come out of the cupboard again a decade later, for a younger cousin. Real weight in the skirt, zari that survives being folded away, and a fall that reads across a room.',
+      'Weight, drape, and a hem that holds its line through a wedding.',
     rhythm: 'lead-wide',
   },
   'Party Wear': {
@@ -76,7 +85,7 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
     eyebrow: 'For the photographs',
     display: 'Made to be seen across a crowded room',
     standfirst:
-      'Colour that survives a camera flash and a courtyard full of lamps, and still looks considered up close when someone leans in to admire it.',
+      'Colour that survives a camera flash.',
     rhythm: 'lead-tall',
   },
 };
