@@ -123,7 +123,7 @@ export default function HomePage() {
           // (0.62 at 46%, 0.18 at 60%) put a grey wash across its left third —
           // which is a slower, subtler version of the same "dull" complaint.
           background:
-            'linear-gradient(96deg, rgba(11,9,8,0.97) 0%, rgba(11,9,8,0.92) 24%, rgba(11,9,8,0.58) 37%, rgba(11,9,8,0.16) 50%, rgba(11,9,8,0) 62%)',
+            'linear-gradient(96deg, rgba(251,247,248,0.97) 0%, rgba(251,247,248,0.92) 24%, rgba(251,247,248,0.58) 37%, rgba(251,247,248,0.16) 50%, rgba(251,247,248,0) 62%)',
         }}
       />
 
@@ -311,7 +311,7 @@ export default function HomePage() {
               <dl className="mt-12 grid gap-x-10 gap-y-7 sm:grid-cols-2">
                 <div>
                   <dt className="text-rule uppercase text-paper-faint">Find us</dt>
-                  <dd className="mt-2.5 text-white/75">
+                  <dd className="mt-2.5 text-paper-muted">
                     Shop No 131, Ground Floor<br />Texvalley, Gangapuram, Erode
                   </dd>
                 </div>

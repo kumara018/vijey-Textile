@@ -88,7 +88,7 @@ function AccountInner() {
           >
             <span
               className={`block font-display text-[1.3rem] font-light leading-snug transition-colors duration-500 motion-reduce:transition-none ${
-                accent ? 'text-brass-bright' : 'text-paper group-hover:text-white'
+                accent ? 'text-brass-bright' : 'text-paper group-hover:text-paper'
               }`}
             >
               {label}

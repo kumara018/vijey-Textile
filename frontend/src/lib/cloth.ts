@@ -21,6 +21,12 @@
  * plain weave. Set beside its sister these read as two different materials,
  * which is exactly what they are.
  *
+ * RELIT WITH THE SHOP. These were near-black when the shop was a dark room —
+ * correct there, and holes punched in a page once the shop went light. They
+ * are mid-tones now: saturated enough that light ink still reads on them, pale
+ * enough to sit on a near-white counter as cloth rather than as absence. The
+ * sheen survives, because that is what makes silk read as silk.
+ *
  * It stays honest: nobody mistakes it for a photograph, a Lehenga does not
  * look like a Baby Frock, and it costs two CSS gradients and no request.
  */
@@ -35,12 +41,12 @@ export interface Cloth {
   ink: string;
 }
 
-const ROSE: Cloth     = { name: 'Rose pattu',    from: '#7E3A4C', to: '#5C2836', ink: '#F6E4E9' };
-const PEACOCK: Cloth  = { name: 'Peacock',       from: '#1F4E52', to: '#14383B', ink: '#DFF0EF' };
-const TURMERIC: Cloth = { name: 'Turmeric silk', from: '#9A6B16', to: '#714D0E', ink: '#FBF0DA' };
-const SLATE: Cloth    = { name: 'Slate tissue',  from: '#33404F', to: '#232C37', ink: '#E4EAF1' };
-const WINE: Cloth     = { name: 'Wine',          from: '#6B1F32', to: '#4A1322', ink: '#F7E2E7' };
-const EMERALD: Cloth  = { name: 'Emerald',       from: '#1D4B34', to: '#123322', ink: '#DEF0E5' };
+const ROSE: Cloth     = { name: 'Rose pattu',    from: '#C06B87', to: '#A2536D', ink: '#241A1F' };
+const PEACOCK: Cloth  = { name: 'Peacock',       from: '#2F7F86', to: '#22646A', ink: '#FFFFFF' };
+const TURMERIC: Cloth = { name: 'Turmeric silk', from: '#C08A1E', to: '#9C6E12', ink: '#241A1F' };
+const SLATE: Cloth    = { name: 'Slate tissue',  from: '#5C6E82', to: '#48586A', ink: '#FFFFFF' };
+const WINE: Cloth     = { name: 'Wine',          from: '#A83455', to: '#87243F', ink: '#FFFFFF' };
+const EMERALD: Cloth  = { name: 'Emerald',       from: '#3A7F60', to: '#2A644A', ink: '#FFFFFF' };
 
 /**
  * Category to cloth. Keyed loosely on purpose: the admin form lets a

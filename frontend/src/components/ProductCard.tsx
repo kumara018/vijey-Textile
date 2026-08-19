@@ -148,8 +148,8 @@ export default function ProductCard({ product }: Props) {
                 style={{ transformStyle: 'preserve-3d' }}
                 className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center"
               >
-                <Play size={40} className="text-white opacity-80" fill="white" />
-                <span className="absolute bottom-4 text-white text-xs font-medium bg-black/50 px-2 py-0.5 rounded-full">
+                <Play size={40} className="text-paper opacity-80" fill="white" />
+                <span className="absolute bottom-4 text-paper text-xs font-medium bg-black/50 px-2 py-0.5 rounded-full">
                   Watch Video
                 </span>
               </motion.div>
@@ -226,13 +226,13 @@ export default function ProductCard({ product }: Props) {
             <>
               <button
                 onClick={e => { e.preventDefault(); goCard(imgIdx - 1); }}
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/85 shadow flex items-center justify-center text-gray-700 hover:bg-white transition-all z-20"
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-ink-raised shadow flex items-center justify-center text-gray-700 hover:bg-ink-deep transition-all z-20"
               >
                 <ChevronLeft size={14} />
               </button>
               <button
                 onClick={e => { e.preventDefault(); goCard(imgIdx + 1); }}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-white/85 shadow flex items-center justify-center text-gray-700 hover:bg-white transition-all z-20"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-ink-raised shadow flex items-center justify-center text-gray-700 hover:bg-ink-deep transition-all z-20"
               >
                 <ChevronRight size={14} />
               </button>
@@ -247,8 +247,8 @@ export default function ProductCard({ product }: Props) {
                   key={i}
                   className={`rounded-full transition-all duration-300 ${
                     i === imgIdx
-                      ? 'w-4 h-1.5 bg-white shadow'
-                      : 'w-1.5 h-1.5 bg-white/60'
+                      ? 'w-4 h-1.5 bg-ink-deep shadow'
+                      : 'w-1.5 h-1.5 bg-ink-raised'
                   }`}
                 />
               ))}
@@ -258,22 +258,22 @@ export default function ProductCard({ product }: Props) {
           {/* Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
             {discount && (
-              <span className="bg-maroon-800 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-maroon-800 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
                 {discount}% OFF
               </span>
             )}
             {product.is_featured && (
-              <span className="bg-gold-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-gold-600 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
                 Featured
               </span>
             )}
             {product.is_new_arrival && (
-              <span className="bg-emerald-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-emerald-500 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
                 New Arrival
               </span>
             )}
             {product.stock === 0 && (
-              <span className="bg-gray-700 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">
+              <span className="bg-gray-700 text-paper text-[11px] font-bold px-2 py-0.5 rounded-full">
                 Out of Stock
               </span>
             )}
@@ -282,7 +282,7 @@ export default function ProductCard({ product }: Props) {
           {/* Wishlist button */}
           <button
             onClick={handleWishlist}
-            className={`absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-sm transition-all z-10 opacity-0 group-hover:opacity-100 ${isWishlisted ? 'opacity-100' : ''}`}
+            className={`absolute top-2 right-2 p-1.5 bg-ink-deep rounded-full shadow-sm transition-all z-10 opacity-0 group-hover:opacity-100 ${isWishlisted ? 'opacity-100' : ''}`}
             title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
@@ -335,7 +335,7 @@ export default function ProductCard({ product }: Props) {
             <button
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-maroon-800 hover:bg-maroon-900 text-white text-sm font-semibold transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-maroon-800 hover:bg-maroon-900 text-paper text-sm font-semibold transition-all active:scale-95 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
               <ShoppingCart size={15} />
               {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}

@@ -126,7 +126,7 @@ export default function Finder() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+        className="flex h-10 w-10 items-center justify-center rounded-full text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
       >
         <Glass />
       </button>
@@ -143,14 +143,14 @@ export default function Finder() {
               <button
                 type="button"
                 onClick={close}
-                className="rounded-full border border-white/15 px-4 py-2 text-rule uppercase text-white/80 transition-colors hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+                className="rounded-full border border-ink-edge px-4 py-2 text-rule uppercase text-paper transition-colors hover:border-ink-edge hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
               >
                 Close
               </button>
             </div>
 
             {/* The glass sits ON the line, not inside a box. */}
-            <div className="mt-[8vh] flex items-center gap-5 border-b border-white/20 pb-4 focus-within:border-brass-bright">
+            <div className="mt-[8vh] flex items-center gap-5 border-b border-ink-edge pb-4 focus-within:border-brass-bright">
               <span className="shrink-0 text-brass-bright"><Glass size={30} /></span>
               <input
                 ref={input}
@@ -160,21 +160,21 @@ export default function Finder() {
                 placeholder="Lehenga, pattu, a colour…"
                 aria-label="Search for a piece"
                 autoComplete="off"
-                className="w-full bg-transparent font-display text-[clamp(1.6rem,4vw,2.6rem)] font-light text-paper placeholder:text-white/25 focus:outline-none"
+                className="w-full bg-transparent font-display text-[clamp(1.6rem,4vw,2.6rem)] font-light text-paper placeholder:text-paper-faint focus:outline-none"
               />
             </div>
 
             <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
               {q.trim().length < 2 ? (
                 <div>
-                  <p className="text-rule uppercase text-white/35">Or start here</p>
+                  <p className="text-rule uppercase text-paper-faint">Or start here</p>
                   <ul className="mt-6 flex flex-wrap gap-x-8 gap-y-4">
                     {CATEGORY_ORDER.map((name) => (
                       <li key={name}>
                         <Link
                           href={`/products?category=${encodeURIComponent(name)}`}
                           onClick={close}
-                          className="font-display text-[1.5rem] font-light text-white/70 transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none"
+                          className="font-display text-[1.5rem] font-light text-paper-muted transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none"
                         >
                           {name}
                         </Link>
@@ -187,7 +187,7 @@ export default function Finder() {
                   We could not reach the shop just then. Your connection, not your search.
                 </p>
               ) : busy && !results ? (
-                <p className="text-white/40">Looking…</p>
+                <p className="text-paper-muted">Looking…</p>
               ) : results && results.length === 0 ? (
                 <div>
                   <p className="font-display text-[1.6rem] font-light text-paper">
@@ -208,8 +208,8 @@ export default function Finder() {
                           onClick={close}
                           onMouseEnter={() => setActive(i)}
                           aria-current={i === active ? 'true' : undefined}
-                          className={`flex items-center gap-5 border-b border-white/10 px-2 py-4 transition-colors duration-300 ${
-                            i === active ? 'bg-white/[0.06]' : ''
+                          className={`flex items-center gap-5 border-b border-ink-edge px-2 py-4 transition-colors duration-300 ${
+                            i === active ? 'bg-ink-deep/[0.06]' : ''
                           }`}
                         >
                           <span className="h-16 w-14 shrink-0 overflow-hidden bg-ink-raised">

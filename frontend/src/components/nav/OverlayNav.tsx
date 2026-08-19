@@ -134,7 +134,7 @@ export default function OverlayNav() {
           className="pointer-events-none absolute inset-x-0 top-0 h-32"
           style={{
             background:
-              'linear-gradient(to bottom, rgba(20,18,16,0.92) 0%, rgba(20,18,16,0.72) 38%, rgba(20,18,16,0.32) 68%, rgba(20,18,16,0) 100%)',
+              'linear-gradient(to bottom, rgba(251,247,248,0.92) 0%, rgba(251,247,248,0.72) 38%, rgba(251,247,248,0.32) 68%, rgba(251,247,248,0) 100%)',
           }}
         />
 
@@ -144,7 +144,7 @@ export default function OverlayNav() {
             className="pointer-events-auto flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
           >
             <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="rounded-full" />
-            <span className="font-display text-[0.95rem] font-medium tracking-[0.18em] text-white/90 uppercase">
+            <span className="font-display text-[0.95rem] font-medium tracking-[0.18em] text-paper uppercase">
               {STORE.name}
             </span>
           </Link>
@@ -160,7 +160,7 @@ export default function OverlayNav() {
             <Link
               href="/cart"
               aria-label={`Bag${itemCount ? `, ${itemCount} item${itemCount === 1 ? '' : 's'}` : ', empty'}`}
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
             >
               <ShoppingBag size={18} />
               {itemCount > 0 && (
@@ -176,7 +176,7 @@ export default function OverlayNav() {
               onClick={() => setOpen(true)}
               aria-expanded={open}
               aria-haspopup="dialog"
-              className="ml-1 flex items-center gap-2.5 rounded-full border border-white/15 px-4 py-2 text-rule uppercase text-white/80 transition-colors hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+              className="ml-1 flex items-center gap-2.5 rounded-full border border-ink-edge px-4 py-2 text-rule uppercase text-paper transition-colors hover:border-ink-edge hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
             >
               Index
               <span aria-hidden="true" className="flex flex-col gap-[3px]">
@@ -208,11 +208,11 @@ export default function OverlayNav() {
       >
         <div className="flex h-full flex-col overflow-y-auto px-6 py-6 sm:px-10">
           <div className="flex items-center justify-between">
-            <span className="text-rule uppercase text-white/40">Index</span>
+            <span className="text-rule uppercase text-paper-muted">Index</span>
             <button
               type="button"
               onClick={close}
-              className="rounded-full border border-white/15 px-4 py-2 text-rule uppercase text-white/80 transition-colors hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+              className="rounded-full border border-ink-edge px-4 py-2 text-rule uppercase text-paper transition-colors hover:border-ink-edge hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
             >
               Close
             </button>
@@ -249,7 +249,7 @@ export default function OverlayNav() {
           <nav className="flex flex-1 flex-col justify-center py-10" aria-label="Categories">
             <ul className="mx-auto w-full max-w-[92rem]">
               {CATEGORIES.map((c, i) => (
-                <li key={c.name} className="border-t border-white/10 last:border-b">
+                <li key={c.name} className="border-t border-ink-edge last:border-b">
                   <Link
                     href={`/products?category=${encodeURIComponent(c.name)}`}
                     className="group relative flex items-baseline gap-5 py-5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-9"
@@ -264,20 +264,20 @@ export default function OverlayNav() {
                       aria-hidden="true"
                       className="absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-brass-bright transition-transform duration-[620ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] group-hover:scale-x-100 motion-reduce:transition-none"
                     />
-                    <span className="w-8 shrink-0 font-display text-[0.8rem] tabular-nums text-white/30 transition-colors duration-500 group-hover:text-brass-bright motion-reduce:transition-none">
+                    <span className="w-8 shrink-0 font-display text-[0.8rem] tabular-nums text-paper-faint transition-colors duration-500 group-hover:text-brass-bright motion-reduce:transition-none">
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <span className="min-w-0">
-                      <span className="block font-display text-[clamp(1.6rem,3.4vw,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-white/85 transition-colors duration-500 group-hover:text-white motion-reduce:transition-none">
+                      <span className="block font-display text-[clamp(1.6rem,3.4vw,3rem)] font-light leading-[1.05] tracking-[-0.02em] text-paper transition-colors duration-500 group-hover:text-paper motion-reduce:transition-none">
                         {c.name}
                       </span>
-                      <span className="mt-1.5 block text-caption uppercase text-white/30 transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
+                      <span className="mt-1.5 block text-caption uppercase text-paper-faint transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
                         {c.note}
                       </span>
                     </span>
                     <span
                       aria-hidden="true"
-                      className="ml-auto self-center text-lg leading-none text-white/0 transition-all duration-500 group-hover:translate-x-1 group-hover:text-brass-bright motion-reduce:transition-none"
+                      className="ml-auto self-center text-lg leading-none text-paper-faint transition-all duration-500 group-hover:translate-x-1 group-hover:text-brass-bright motion-reduce:transition-none"
                     >
                       &rarr;
                     </span>
@@ -287,20 +287,20 @@ export default function OverlayNav() {
             </ul>
           </nav>
 
-          <div className="mx-auto flex w-full max-w-[92rem] flex-wrap items-center justify-between gap-6 border-t border-white/10 pt-6">
+          <div className="mx-auto flex w-full max-w-[92rem] flex-wrap items-center justify-between gap-6 border-t border-ink-edge pt-6">
             <ul className="flex flex-wrap gap-x-8 gap-y-2">
               {SECONDARY.map((s) => (
                 <li key={s.href}>
                   <Link
                     href={s.href}
-                    className="text-caption uppercase text-white/50 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
+                    className="text-caption uppercase text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
                   >
                     {s.label}
                   </Link>
                 </li>
               ))}
             </ul>
-            <p className="text-caption uppercase text-white/30">
+            <p className="text-caption uppercase text-paper-faint">
               {`${STORE.shopNo}, ${STORE.area} — ${STORE.city}`}
             </p>
           </div>

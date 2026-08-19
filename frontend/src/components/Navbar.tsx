@@ -226,7 +226,7 @@ export default function Navbar() {
 
               {/* Search history dropdown (shown when focused with empty input) */}
               {showHistory && !search.trim() && searchHistory.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-b-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 bg-ink-deep shadow-2xl rounded-b-xl border border-gray-200 z-50 overflow-hidden">
                   <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Recent Searches</span>
                     <button
@@ -259,7 +259,7 @@ export default function Navbar() {
 
               {/* Live search dropdown */}
               {showDrop && searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white shadow-2xl rounded-b-xl border border-gray-100 z-50 overflow-hidden">
+                <div className="absolute top-full left-0 right-0 bg-ink-deep shadow-2xl rounded-b-xl border border-gray-100 z-50 overflow-hidden">
                   {searchResults.map((p: any) => (
                     <button
                       key={p.id}
@@ -305,7 +305,7 @@ export default function Navbar() {
                   </Link>
                   <Link
                     href="/auth/register"
-                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold bg-gold-600 hover:bg-gold-700 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold bg-gold-600 hover:bg-gold-700 text-paper rounded-lg transition-colors"
                   >
                     <User size={15} /> Create Account
                   </Link>
@@ -320,7 +320,7 @@ export default function Navbar() {
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className="flex flex-col items-center px-3 py-1 hover:bg-maroon-50 rounded-lg transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-full bg-gold-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-gold-500 text-paper text-xs font-bold flex items-center justify-center flex-shrink-0">
                       {user.full_name.charAt(0).toUpperCase()}
                     </div>
                     <span className="text-[11px] mt-0.5 hidden sm:block">
@@ -329,12 +329,12 @@ export default function Navbar() {
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-1 w-72 bg-white rounded-xl shadow-xl border border-maroon-200 py-2 text-gray-800 z-50 max-h-[90vh] overflow-y-auto">
+                    <div className="absolute right-0 mt-1 w-72 bg-ink-deep rounded-xl shadow-xl border border-maroon-200 py-2 text-gray-800 z-50 max-h-[90vh] overflow-y-auto">
 
                       {/* ── Current account ── */}
                       <div className="px-4 py-3 border-b border-maroon-200">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-maroon-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-maroon-700 text-paper text-sm font-bold flex items-center justify-center flex-shrink-0">
                             {user.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
@@ -399,7 +399,7 @@ export default function Navbar() {
                             }}
                             className="flex items-center gap-3 flex-1 py-2.5 text-left"
                           >
-                            <div className="w-8 h-8 rounded-full bg-maroon-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-maroon-600 text-paper text-xs font-bold flex items-center justify-center flex-shrink-0">
                               {session.user.full_name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -468,7 +468,7 @@ export default function Navbar() {
                 <div className="relative">
                   <ShoppingCart size={20} />
                   {count > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-gold-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    <span className="absolute -top-2 -right-2 bg-gold-500 text-paper text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                       {count > 99 ? '99+' : count}
                     </span>
                   )}
@@ -514,7 +514,7 @@ export default function Navbar() {
                   <ChevronDown size={14} className={`transition-transform duration-200 ${catMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {catMenuOpen && (
-                  <div className="absolute top-full left-0 w-56 bg-white shadow-xl rounded-b-xl border border-maroon-200 py-2 z-50">
+                  <div className="absolute top-full left-0 w-56 bg-ink-deep shadow-xl rounded-b-xl border border-maroon-200 py-2 z-50">
                     {CATEGORIES.map((cat) => (
                       <button
                         key={cat}
@@ -613,7 +613,7 @@ export default function Navbar() {
                         }}
                         className="flex-1 px-4 py-2.5 rounded-lg hover:bg-maroon-700 text-sm font-medium flex items-center gap-2 text-left"
                       >
-                        <div className="w-6 h-6 rounded-full bg-maroon-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-maroon-500 text-paper text-xs font-bold flex items-center justify-center flex-shrink-0">
                           {session.user.full_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -672,7 +672,7 @@ export default function Navbar() {
       {/* ── Sign-Out Confirmation Modal ── */}
       {showSignOutConfirm && (
         <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" onClick={() => setShowSignOutConfirm(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-ink-deep rounded-2xl shadow-2xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center gap-3 mb-4">
               <div className="w-11 h-11 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
@@ -686,7 +686,7 @@ export default function Navbar() {
 
             {/* Current user card */}
             <div className="bg-maroon-50 border border-maroon-200 rounded-xl p-3 mb-5 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-maroon-700 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-maroon-700 text-paper text-sm font-bold flex items-center justify-center flex-shrink-0">
                 {user?.full_name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

@@ -29,7 +29,7 @@ export default function Loading() {
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(20,18,16,0.92) 0%, rgba(20,18,16,0.84) 55%, rgba(20,18,16,0.92) 100%)',
+            'linear-gradient(180deg, rgba(251,247,248,0.92) 0%, rgba(251,247,248,0.84) 55%, rgba(251,247,248,0.92) 100%)',
         }}
       />
 

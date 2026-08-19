@@ -66,7 +66,7 @@ export default function AccountMenu() {
       <Link
         href="/auth/login"
         aria-label="Sign in"
-        className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
+        className="flex h-10 w-10 items-center justify-center rounded-full text-paper-muted transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300"
       >
         <User size={18} />
       </Link>
@@ -76,7 +76,7 @@ export default function AccountMenu() {
   const first = (user.full_name || '').trim().split(' ')[0] || 'your account';
 
   const item =
-    'block w-full px-5 py-2.5 text-left text-sm text-white/70 transition-colors duration-300 hover:bg-white/[0.06] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-maroon-300';
+    'block w-full px-5 py-2.5 text-left text-sm text-paper-muted transition-colors duration-300 hover:bg-ink-deep/[0.06] hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-maroon-300';
 
   return (
     <div ref={wrap} className="relative">
@@ -88,7 +88,7 @@ export default function AccountMenu() {
         aria-haspopup="menu"
         aria-label={`Account, ${first}`}
         className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-maroon-300 ${
-          open ? 'text-white' : 'text-white/70 hover:text-white'
+          open ? 'text-paper' : 'text-paper-muted hover:text-paper'
         }`}
       >
         <User size={18} />
@@ -98,9 +98,9 @@ export default function AccountMenu() {
         <div
           role="menu"
           aria-label="Your account"
-          className="absolute right-0 top-12 z-50 w-64 border border-white/12 bg-night/95 py-2 backdrop-blur-md"
+          className="absolute right-0 top-12 z-50 w-64 border border-ink-edge bg-night/95 py-2 backdrop-blur-md"
         >
-          <p className="px-5 pb-2 pt-1 text-rule uppercase text-white/35">
+          <p className="px-5 pb-2 pt-1 text-rule uppercase text-paper-faint">
             Hello, {first}
           </p>
 
@@ -121,7 +121,7 @@ export default function AccountMenu() {
             Sign out
           </button>
 
-          <div className="my-2 h-px bg-white/10" />
+          <div className="my-2 h-px bg-ink-raised" />
 
           <Link href="/orders" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Your orders
@@ -141,7 +141,7 @@ export default function AccountMenu() {
 
           {user.is_admin && (
             <>
-              <div className="my-2 h-px bg-white/10" />
+              <div className="my-2 h-px bg-ink-raised" />
               <Link
                 href="/admin"
                 role="menuitem"

@@ -5,6 +5,47 @@ module.exports = {
     extend: {
       colors: {
         /**
+         * THE SHOP, RELIT.
+         *
+         * Sampled from hero-mark-v3.jpg — a brushed-silver VT heart on cerise.
+         * The ground runs #750929 at its deepest to #C22B62 at its brightest;
+         * the mark is #B7B7B5. The previous palette assumed maroon and brass,
+         * which is not what the logo is.
+         *
+         * The token NAMES below are inherited from the dark version and their
+         * values are inverted, so ~900 existing usages flip correctly in one
+         * edit rather than being retyped. `ink` was the dark ground and is now
+         * the light one; `paper` was light type and is now dark type.
+         */
+        ink: {
+          DEFAULT: '#FBF7F8',   // the ground: near-white with a rose cast
+          deep:    '#FFFFFF',   // lifted — a card, a sheet
+          raised:  '#F4EDEF',   // a surface set back
+          edge:    '#E4D6DA',   // hairlines
+        },
+        brass: {
+          DEFAULT: '#A21D48',   // the accent — the logo's own cerise. AAA on shell.
+          bright:  '#C22B62',   // hover, active, the brightest part of the mark
+          dim:     '#750929',   // pressed, and the deepest corner of the logo
+        },
+        paper: {
+          DEFAULT: '#2A1F24',   // type — near-black leaning plum, not a neutral
+          muted:   '#6B5A60',   // secondary type
+          faint:   '#8D7A81',   // annotations only; 3.78:1 is large-text contrast
+        },
+        night: {
+          DEFAULT: '#FBF7F8',
+          deep:    '#FFFFFF',
+          raised:  '#F4EDEF',
+          edge:    '#E4D6DA',
+        },
+        /* The other half of the logo. Never type — 1.89:1 on the ground — so
+           it is a rule, a border, a metallic edge, and nothing else. */
+        steel: {
+          DEFAULT: '#B7B7B5',
+          soft:    '#D3D3D1',
+        },
+        /**
          * The approved system. Warm near-black ground, muted gold as the only
          * accent, real off-white for type.
          *
@@ -32,12 +73,6 @@ module.exports = {
          * recess below it is near-black. Same hue family, same approved
          * identity, roughly double the contrast range to spend.
          */
-        ink: {
-          DEFAULT: '#121010',   // warm near-black ground
-          deep:    '#0B0908',   // recessed
-          raised:  '#1C1917',   // lifted surfaces
-          edge:    '#332D2A',   // hairlines
-        },
         /**
          * The approved accent, named `brass` rather than `gold` because a
          * legacy `gold` scale already exists further down this same object.
@@ -45,26 +80,10 @@ module.exports = {
          * replaces the earlier, so `text-gold-bright` was resolving to nothing
          * at all and `border-gold` to the old blush tan.
          */
-        brass: {
-          DEFAULT: '#A16207',   // the only accent
-          bright:  '#C4841A',   // hover / specular
-          dim:     '#6B420A',   // rules, dividers
-        },
-        paper: {
-          DEFAULT: '#FAFAF9',   // type
-          muted:   '#D6D3D1',   // secondary type
-          faint:   '#A8A29E',   // tertiary
-        },
         // `night` is an alias kept for the pages that still use it (the body
         // ground is `bg-night`). It must track `ink` exactly — two names for
         // one ground that drift apart is how half a site ends up a shade
         // lighter than the other half.
-        night: {
-          DEFAULT: '#121010',
-          deep:    '#0B0908',
-          raised:  '#1C1917',
-          edge:    '#332D2A',
-        },
         // Vijey Textile — "Wine & Steel" palette, matched to the logo's own color
         maroon: {
           50:  '#fcfbfb',

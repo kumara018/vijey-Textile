@@ -17,7 +17,7 @@ function fmt(iso?: string) {
 export default function DeviceLimitModal({ sessions, loading, onPick, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-ink-deep rounded-2xl max-w-md w-full p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
         <h3 className="text-lg font-bold text-maroon-900 mb-1">Too many devices signed in</h3>
         <p className="text-sm text-gray-500 mb-5">
           You&apos;re signed in on 4 devices already — that&apos;s the max allowed. Choose one to sign out of to continue here.

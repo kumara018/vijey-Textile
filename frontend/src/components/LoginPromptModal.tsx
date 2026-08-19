@@ -34,7 +34,7 @@ export default function LoginPromptModal() {
 
       {/* Modal */}
       <div
-        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 animate-[fadeInUp_0.2s_ease]"
+        className="relative bg-ink-deep rounded-2xl shadow-2xl w-full max-w-sm p-8 animate-[fadeInUp_0.2s_ease]"
         onClick={e => e.stopPropagation()}
       >
         {/* Close button */}
@@ -75,7 +75,7 @@ export default function LoginPromptModal() {
           <Link
             href="/auth/login"
             onClick={close}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-maroon-800 hover:bg-maroon-900 text-white font-semibold text-sm transition-colors"
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-maroon-800 hover:bg-maroon-900 text-paper font-semibold text-sm transition-colors"
           >
             <LogIn size={17} /> Sign In
           </Link>

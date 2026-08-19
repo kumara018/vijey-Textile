@@ -21,17 +21,17 @@ const SIZES = [12, 16, 20, 24, 28, 32, 36, 40];
 
 export default function MeasureRule() {
   return (
-    <section aria-labelledby="measure-heading" className="border-t border-white/8 py-[12vh]">
+    <section aria-labelledby="measure-heading" className="border-t border-ink-edge py-[12vh]">
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
         <div className="grid gap-x-16 gap-y-10 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Reveal>
-              <h2 id="measure-heading" className="font-display text-chapter font-light text-white">
+              <h2 id="measure-heading" className="font-display text-chapter font-light text-paper">
                 Twelve to forty
               </h2>
             </Reveal>
             <Reveal delay={120}>
-              <p className="mt-6 max-w-[38ch] text-lede text-white/55">
+              <p className="mt-6 max-w-[38ch] text-lede text-paper-muted">
                 Every piece is cut across the full range. A younger sister and an older
                 cousin can wear the same design to the same wedding.
               </p>
@@ -39,7 +39,7 @@ export default function MeasureRule() {
             <Reveal delay={200}>
               <Link
                 href="/products"
-                className="mt-8 inline-flex items-baseline gap-3 border-b border-white/20 pb-1.5 text-caption uppercase text-white/80 transition-colors duration-500 hover:border-maroon-300 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
+                className="mt-8 inline-flex items-baseline gap-3 border-b border-ink-edge pb-1.5 text-caption uppercase text-paper transition-colors duration-500 hover:border-maroon-300 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
               >
                 Shop by size
                 <span aria-hidden="true">→</span>
@@ -70,13 +70,13 @@ export default function MeasureRule() {
                 {SIZES.map((s) => (
                   <li
                     key={s}
-                    className="font-display text-[1.05rem] tabular-nums text-white/45 sm:text-[1.35rem]"
+                    className="font-display text-[1.05rem] tabular-nums text-paper-muted sm:text-[1.35rem]"
                   >
                     {s}
                   </li>
                 ))}
               </ol>
-              <p className="mt-8 text-rule uppercase text-white/30">
+              <p className="mt-8 text-rule uppercase text-paper-faint">
                 Measured across the chest, in inches
               </p>
             </Reveal>

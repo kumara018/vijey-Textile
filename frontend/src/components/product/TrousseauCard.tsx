@@ -67,7 +67,7 @@ export default function TrousseauCard({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <span className="text-rule uppercase text-white/20">No photograph</span>
+            <span className="text-rule uppercase text-paper-faint">No photograph</span>
           </div>
         )}
 
@@ -92,18 +92,18 @@ export default function TrousseauCard({
 
       {/* Title above the rule, price below it. */}
       <h3
-        className={`mt-5 font-display font-light text-white/90 transition-colors duration-500 group-hover:text-white ${
+        className={`mt-5 font-display font-light text-paper transition-colors duration-500 group-hover:text-paper ${
           large ? 'text-[1.5rem] leading-tight sm:text-[1.85rem]' : 'text-[1.15rem] leading-snug'
         }`}
       >
         {product.name}
       </h3>
 
-      <div className="mt-3 border-t border-white/12 pt-3">
-        <p className="flex items-baseline gap-3 text-caption uppercase text-white/55">
-          <span className="tabular-nums text-white/85">{inr.format(product.price)}</span>
+      <div className="mt-3 border-t border-ink-edge pt-3">
+        <p className="flex items-baseline gap-3 text-caption uppercase text-paper-muted">
+          <span className="tabular-nums text-paper">{inr.format(product.price)}</span>
           {discounted && (
-            <span className="tabular-nums text-white/30 line-through">
+            <span className="tabular-nums text-paper-faint line-through">
               {inr.format(product.compare_price as number)}
             </span>
           )}

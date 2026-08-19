@@ -123,8 +123,8 @@ export default function SoundToggle() {
       aria-label={on ? 'Mute ambient sound' : 'Play ambient sound'}
       title={on ? 'Mute ambient sound' : 'Play ambient sound'}
       className="fixed bottom-5 left-5 z-30 flex h-11 w-11 items-center justify-center rounded-full
-                 border border-white/15 bg-black/55 text-white/85 backdrop-blur-sm
-                 transition-colors hover:bg-black/75 hover:text-white
+                 border border-ink-edge bg-black/55 text-paper backdrop-blur-sm
+                 transition-colors hover:bg-black/75 hover:text-paper
                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
                  focus-visible:outline-white/70"
     >
