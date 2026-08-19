@@ -142,14 +142,19 @@ export default function HomePage() {
         * `overflow-hidden` on the sticky frame is load-bearing: media is
         * clipped to the frame, so nothing bleeds into the sections below.
         */}
-      {/* THE HERO IS A BAND NOW, NOT TWO SCREENS.
-          It was `h-[190svh]` — a customer scrolled nearly two full screens of
-          photograph and sentence before reaching anything they could buy. The
-          owner's words were "product should be visible in homepage mainly not
-          down", and they are describing this. 64svh keeps the staged garment
-          and the scroll effect while putting real stock above the fold on a
-          laptop and one short flick away on a phone. */}
-      <section data-hero-section="" className="relative h-auto md:h-[64svh]">
+      {/* THE HERO IS AS TALL AS WHAT IS IN IT, AND NOTHING MORE.
+          It went 190svh -> 64svh when the staged garment was removed, but the
+          RESERVED height stayed behind after the thing it was reserved for had
+          gone. Measured at 1440x860: header 110 + hero 550, so the first
+          product landed at y=779 — the very bottom edge of the window, and
+          below the fold on any real laptop. The headline is about 200px of
+          that 550. The other 350 was empty by construction: a fixed box with
+          `justify-end` pins the type to the bottom and leaves the surplus
+          above it, which is exactly the space that kept getting flagged.
+          Nothing measures this box any more — the scene never mounts, since
+          sceneForPath returns 'plain' on every route — so there is nothing
+          left to reserve height for. Content height plus real padding. */}
+      <section data-hero-section="" className="relative h-auto">
         {/**
           * `min-h` rather than `h`, and this is not a cosmetic preference.
           *
@@ -165,10 +170,11 @@ export default function HomePage() {
           * nothing changes at all — the content is shorter than the viewport
           * and the minimum is what applies.
           */}
-        {/* Content-height on a phone: the entrance scene does not load there, so
-            a reserved 62svh was 400px of nothing above the first words. The
-            staged photograph and the reserved height return at `md`. */}
-        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.25rem,4vh,2.5rem)] pt-[clamp(1.25rem,4vh,2rem)] sm:px-10 md:sticky md:top-0 md:min-h-[62svh] md:justify-end md:pb-[clamp(2rem,5vh,3.5rem)] md:pt-[clamp(2rem,6vh,4rem)]">
+        {/* `sticky` went with the reserved height. It existed so the staged
+            garment could hold still while the page scrolled over it; with the
+            garment gone it only pinned an empty band to the top of the
+            window. */}
+        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.5rem,4vh,2.5rem)] pt-[clamp(1.5rem,4vh,2rem)] sm:px-10 md:pb-[clamp(2.25rem,5vh,3.25rem)] md:pt-[clamp(2.25rem,5vh,3.25rem)]">
           <PleatFall />
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
