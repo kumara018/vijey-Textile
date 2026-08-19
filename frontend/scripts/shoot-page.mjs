@@ -92,6 +92,12 @@ try {
   const t = await target();
   cdp = await connect(t.webSocketDebuggerUrl);
   await cdp.send('Runtime.enable');
+
+  /* Exact viewport: `--window-size` loses ~22px to the window frame, which
+     silently shifts every breakpoint test into the band below the one named. */
+  await cdp.send('Emulation.setDeviceMetricsOverride', {
+    width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: WIDTH < 768,
+  });
   await cdp.send('Page.enable');
   await cdp.send('Log.enable');
 

@@ -124,6 +124,19 @@ async function main() {
     });
 
     await send('Page.enable');
+
+    /**
+     * SET THE VIEWPORT EXACTLY, NOT VIA THE WINDOW.
+     *
+     * `--window-size=768,1024` gives an inner width of 746 — the frame eats
+     * 22px — so every "tablet portrait" run was really 746px and landed in the
+     * MOBILE band. A responsive check that silently tests a different
+     * breakpoint than the one it names is worse than no check: it reported a
+     * layout as broken at `md` when `md` was never active.
+     */
+    await send('Emulation.setDeviceMetricsOverride', {
+      width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: WIDTH < 768,
+    });
     await send('Runtime.enable');
 
     /* Seed the token on the target origin before the app ever boots. A blank

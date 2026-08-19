@@ -154,7 +154,22 @@ export default function HomePage() {
         * clipped to the frame, so nothing bleeds into the sections below.
         */}
       <section data-hero-section="" className="relative h-[190svh]">
-        <div className="sticky top-0 flex h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(3.5rem,12vh,8rem)] pt-[clamp(6.5rem,15vh,10rem)] sm:px-10">
+        {/**
+          * `min-h` rather than `h`, and this is not a cosmetic preference.
+          *
+          * A fixed `h-[100svh]` with `justify-end` overflows UPWARD the moment
+          * the copy is taller than the viewport — and on a phone held sideways
+          * (844×390) it always is. The eyebrow then rendered straight through
+          * the wordmark in the fixed header: not a spacing bug, a box too
+          * small for what was inside it, pushing its own contents out of the
+          * top while the padding sat below them doing nothing.
+          *
+          * With `min-h` the section grows instead of overflowing, so the top
+          * padding actually holds and the header stays clear. On a tall screen
+          * nothing changes at all — the content is shorter than the viewport
+          * and the minimum is what applies.
+          */}
+        <div className="sticky top-0 flex min-h-[100svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(3.5rem,12vh,8rem)] pt-[clamp(6.5rem,15vh,10rem)] sm:px-10">
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
