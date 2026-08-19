@@ -146,7 +146,7 @@ export default function HeaderSearch() {
             placeholder="Lehenga, pattu, a colour…"
             aria-label="Search the shop"
             autoComplete="off"
-            className="w-[13rem] bg-transparent text-caption uppercase text-paper placeholder:text-paper-faint focus:outline-none sm:w-[17rem]"
+            className="w-[8.5rem] bg-transparent text-caption uppercase text-paper placeholder:text-paper-faint focus:outline-none sm:w-[17rem]"
           />
         </div>
       )}

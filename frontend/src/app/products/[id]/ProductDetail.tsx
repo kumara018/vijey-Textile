@@ -270,12 +270,6 @@ export default function ProductDetail({ id }: { id: number }) {
                 style={boltGround(clothFor(product.category), product.id)}
                 className="flex h-full w-full flex-col justify-between p-8"
               >
-                <span
-                  className="text-rule uppercase"
-                  style={{ color: clothFor(product.category).ink, opacity: 0.66 }}
-                >
-                  {clothFor(product.category).name}
-                </span>
                 <span className="block">
                   <span
                     aria-hidden="true"

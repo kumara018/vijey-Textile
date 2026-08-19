@@ -41,8 +41,23 @@ export interface Cloth {
   ink: string;
 }
 
-const ROSE: Cloth     = { name: 'Rose pattu',    from: '#C06B87', to: '#A2536D', ink: '#241A1F' };
-const PEACOCK: Cloth  = { name: 'Peacock',       from: '#2F7F86', to: '#22646A', ink: '#FFFFFF' };
+/**
+ * ONE QUIET CLOTH, NOT SIX COLOURED ONES.
+ *
+ * This was six saturated bolts — rose, peacock, turmeric, slate, wine,
+ * emerald — one per category, so an unphotographed piece showed as the silk it
+ * would be cut from. It was honest and it was rejected on sight: "that dark
+ * colours rose, green, yellow and don't want this type". On a shelf where most
+ * stock is unphotographed, six strong colours stop reading as cloth and start
+ * reading as a paint chart, and they shout over the pieces that DO have
+ * photographs beside them.
+ *
+ * So the placeholder gets out of the way. One tone off the shop's own ground,
+ * a half-step darker so the plate still has an edge, with the weave kept
+ * because that is what stops it looking like a loading error. A photograph is
+ * the point; a placeholder's only job is to hold the space without competing.
+ */
+const CALICO: Cloth = { name: 'Unphotographed', from: '#EFE1E6', to: '#E6D3DA', ink: '#5A4A51' };
 const TURMERIC: Cloth = { name: 'Turmeric silk', from: '#C08A1E', to: '#9C6E12', ink: '#241A1F' };
 const SLATE: Cloth    = { name: 'Slate tissue',  from: '#5C6E82', to: '#48586A', ink: '#FFFFFF' };
 const WINE: Cloth     = { name: 'Wine',          from: '#A83455', to: '#87243F', ink: '#FFFFFF' };
@@ -53,27 +68,18 @@ const EMERALD: Cloth  = { name: 'Emerald',       from: '#3A7F60', to: '#2A644A',
  * shopkeeper type a category, so this has to survive "Party Wear",
  * "party wear" and "Party-Wear" without a migration.
  */
-const BY_CATEGORY: Record<string, Cloth> = {
-  'baby frocks': ROSE,
-  'baby frock': ROSE,
-  chudithar: PEACOCK,
-  frocks: TURMERIC,
-  frock: TURMERIC,
-  'western dresses': SLATE,
-  'western dress': SLATE,
-  lehenga: WINE,
-  'party wear': EMERALD,
-  'party wears': EMERALD,
-};
+
 
 /**
  * The cloth for a category. Anything unrecognised gets slate — the most
  * neutral of the six, so a category nobody planned for still looks deliberate
  * rather than defaulting to the loudest bolt in the room.
  */
-export function clothFor(category?: string | null): Cloth {
-  if (!category) return SLATE;
-  return BY_CATEGORY[category.trim().toLowerCase().replace(/[-_]+/g, ' ')] ?? SLATE;
+export function clothFor(_category?: string | null): Cloth {
+  /* The category no longer changes the cloth. The parameter stays so call
+     sites do not churn, and so a per-category treatment can return without
+     touching six files. */
+  return CALICO;
 }
 
 /**
@@ -127,6 +133,9 @@ function shift(hex: string, seed: number): string {
  * would drag the type written on the cloth along with it.
  */
 export function boltGround(cloth: Cloth, seed?: number): React.CSSProperties {
+  /* A gentle per-piece shift so a row of unphotographed pieces is not one flat
+     band — but on a near-neutral it reads as a fold in the cloth rather than
+     as six different colours. */
   const from = seed ? shift(cloth.from, seed) : cloth.from;
   const to = seed ? shift(cloth.to, seed) : cloth.to;
   return {

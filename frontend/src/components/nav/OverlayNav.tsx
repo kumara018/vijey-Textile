@@ -139,17 +139,32 @@ export default function OverlayNav() {
         />
 
         <div className="relative mx-auto flex max-w-[112rem] items-center justify-between px-6 py-6 sm:px-10">
+          {/**
+            * THE WORDMARK HAS TO BE ALLOWED TO SHRINK.
+            *
+            * It was set at 0.95rem with 0.18em of letter-spacing and no width
+            * control at all. On a 390px phone "VIJEY TEXTILE" is simply wider
+            * than the space left beside four controls, so it wrapped to two
+            * lines and the search glass rendered ON TOP of it — the header was
+            * unusable on the device most customers hold.
+            *
+            * `min-w-0` lets the group shrink (a flex item defaults to
+            * min-width:auto and refuses to), `truncate` gives it somewhere to
+            * go if it still cannot fit, and the tracking and size step up only
+            * once there is room. The actions are `shrink-0` so they are never
+            * the thing that gives.
+            */}
           <Link
             href="/"
-            className="pointer-events-auto flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300"
+            className="pointer-events-auto flex min-w-0 items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-maroon-300 sm:gap-3"
           >
-            <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="rounded-full" />
-            <span className="font-display text-[0.95rem] font-medium tracking-[0.18em] text-paper uppercase">
+            <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="h-8 w-8 shrink-0 rounded-full sm:h-[34px] sm:w-[34px]" />
+            <span className="truncate font-display text-[0.8rem] font-medium uppercase tracking-[0.09em] text-paper sm:text-[0.95rem] sm:tracking-[0.18em]">
               {STORE.name}
             </span>
           </Link>
 
-          <div className="pointer-events-auto flex items-center gap-1 sm:gap-3">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-1 sm:gap-3">
             {/* Search never leaves the header — see nav/HeaderSearch.tsx. */}
             <HeaderSearch />
 

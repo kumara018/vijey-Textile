@@ -70,14 +70,6 @@ function Tile({ product, size, index }: { product: Product; size: 1 | 2 | 3; ind
             style={boltGround(clothFor(product.category), product.id)}
             className="flex h-full w-full flex-col justify-between p-6"
           >
-            {/* Right-aligned: the REDUCED badge occupies the top-left corner,
-                and two labels stacked there read as one confused label. */}
-            <span
-              className="self-end text-rule uppercase"
-              style={{ color: clothFor(product.category).ink, opacity: 0.66 }}
-            >
-              {clothFor(product.category).name}
-            </span>
             <span className="text-rule uppercase" style={{ color: clothFor(product.category).ink, opacity: 0.5 }}>
               Not yet photographed
             </span>

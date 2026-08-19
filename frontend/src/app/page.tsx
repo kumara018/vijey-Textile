@@ -160,7 +160,7 @@ export default function HomePage() {
           down", and they are describing this. 64svh keeps the staged garment
           and the scroll effect while putting real stock above the fold on a
           laptop and one short flick away on a phone. */}
-      <section data-hero-section="" className="relative h-[64svh]">
+      <section data-hero-section="" className="relative h-auto md:h-[64svh]">
         {/**
           * `min-h` rather than `h`, and this is not a cosmetic preference.
           *
@@ -176,7 +176,10 @@ export default function HomePage() {
           * nothing changes at all — the content is shorter than the viewport
           * and the minimum is what applies.
           */}
-        <div className="sticky top-0 flex min-h-[62svh] flex-col justify-end overflow-hidden px-6 pb-[clamp(2rem,5vh,3.5rem)] pt-[clamp(6.5rem,12vh,8rem)] sm:px-10">
+        {/* Content-height on a phone: the entrance scene does not load there, so
+            a reserved 62svh was 400px of nothing above the first words. The
+            staged photograph and the reserved height return at `md`. */}
+        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.25rem,4vh,2.5rem)] pt-[6.5rem] sm:px-10 md:sticky md:top-0 md:min-h-[62svh] md:justify-end md:pb-[clamp(2rem,5vh,3.5rem)] md:pt-[clamp(6.5rem,12vh,8rem)]">
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}
