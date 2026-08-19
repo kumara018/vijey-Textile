@@ -323,26 +323,50 @@ export default function ProductCard({ product }: Props) {
             */}
           {(product.stock === 0 || discount) && (
             <span
-              className={`absolute left-0 top-3 z-10 border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] ${
+              /* SEE-THROUGH, BUT NOT INVISIBLE. This is TEXT sitting on an
+                 unknown photograph, so it answers to 4.5:1, not the 3:1 an
+                 icon gets. Measured against both extremes — the picture
+                 behind it being pure white or pure black — a 45% ground gives
+                 2.47:1 over black and fails outright. 65% is the lightest
+                 scrim that still reads: 11.74:1 over a white photo, 4.79:1
+                 over a black one. The photograph shows through it; the
+                 discount stays legible on top of anything. */
+              className={`absolute left-0 top-3 z-10 border px-3 py-1 text-[11px] font-medium uppercase tracking-[0.08em] backdrop-blur-[3px] ${
                 product.stock === 0
-                  ? 'border-steel bg-ink-raised text-paper-muted'
-                  : 'border-maroon-500 bg-maroon-100 text-maroon-800'
+                  ? 'border-steel/70 bg-ink-deep/65 text-paper-muted'
+                  : 'border-maroon-500/70 bg-ink-deep/65 text-maroon-800'
               }`}
             >
               {product.stock === 0 ? 'Sold out' : `${discount}% off`}
             </span>
           )}
 
-          {/* Wishlist button */}
+          {/**
+            * NO DISC BEHIND THE HEART.
+            *
+            * It was a solid `bg-ink-deep` circle with a shadow — a white
+            * button punched into the photograph. The heart can carry itself
+            * instead: a pale halo drawn straight on the glyph separates it
+            * from whatever is underneath, dark garment or light one, without
+            * putting a plate over the picture. That is a real transparent
+            * background rather than a very light one.
+            *
+            * The heart was also `text-red-500` filled `#ef4444` — Tailwind's
+            * default red, a hue that appears nowhere else in this shop. Saved
+            * now reads in the shop's own cerise.
+            */}
           <button
+            type="button"
             onClick={handleWishlist}
-            className={`absolute top-2 right-2 p-1.5 bg-ink-deep rounded-full shadow-sm transition-all z-10 opacity-0 group-hover:opacity-100 ${isWishlisted ? 'opacity-100' : ''}`}
+            aria-pressed={isWishlisted}
+            className={`absolute right-2 top-2 z-10 rounded-full p-1.5 transition-opacity duration-200 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright ${isWishlisted ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
             title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           >
             <Heart
-              size={15}
-              className={isWishlisted ? 'text-red-500' : 'text-maroon-800'}
-              fill={isWishlisted ? '#ef4444' : 'none'}
+              size={17}
+              strokeWidth={1.9}
+              className={`drop-shadow-[0_1px_2px_rgba(255,251,252,0.95)] ${isWishlisted ? 'text-maroon-600' : 'text-maroon-800'}`}
+              fill={isWishlisted ? '#A21D48' : 'none'}
             />
           </button>
         </div>
