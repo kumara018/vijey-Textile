@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { detectCapabilities } from './core/capabilities';
@@ -30,10 +30,58 @@ const SceneRouter = dynamic(() => import('./SceneRouter'), { ssr: false });
  */
 export default function ThreeProvider() {
   const pathname = usePathname();
+  /* The one route that draws. Kept beside `sceneForPath` in spirit: if a
+     second scene ever returns, this is the single line that has to change. */
+  const showsScene = pathname === '/';
   const { profile } = useDeliveryTier();
   const setCapabilities = useSceneStore((s) => s.setCapabilities);
   const goToScene = useSceneStore((s) => s.goToScene);
   const capabilities = useSceneStore((s) => s.capabilities);
+  /**
+   * ON A PHONE THE SCENE IS NOT WORTH ITS WEIGHT, SO IT IS NOT LOADED.
+   *
+   * Gating the canvas to the homepage took every other route from 730KB of
+   * JavaScript to about 320KB. The homepage still paid the full 717KB of
+   * three.js, and that is the page the shop most needs to be fast — it is
+   * where a customer decides whether to stay.
+   *
+   * The trade is easy once it is stated plainly. On a phone on mobile data,
+   * three quarters of a megabyte buys an atmospheric background BEHIND the
+   * products somebody came to look at, and costs seconds of a locked main
+   * thread before the page answers a tap. On a laptop on wifi the same code is
+   * a rounding error and the room is worth having. So it loads on a wide
+   * screen with memory to spare, and nowhere else.
+   *
+   *   `< 1024px`  — phones and small tablets, where the complaint came from
+   *   `<= 4GB`    — the mid-range Android this shop's customers actually hold
+   *   reducedMotion — already honoured everywhere else; honoured here too
+   *
+   * And even then it waits for an idle moment, so the products and the
+   * Add-to-bag buttons are interactive BEFORE a single byte of 3D is fetched.
+   * The scene is the last thing to arrive, which is the correct order of
+   * priorities and the opposite of what was happening.
+   */
+  const [idle, setIdle] = useState(false);
+  useEffect(() => {
+    if (!showsScene) return;
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(() => setIdle(true), { timeout: 2500 });
+      return () => (window as unknown as { cancelIdleCallback?: (h: number) => void }).cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(() => setIdle(true), 1200);
+    return () => clearTimeout(t);
+  }, [showsScene]);
+
+  const bigEnough =
+    typeof window !== 'undefined' && window.innerWidth >= 1024;
+  const sceneWorthLoading =
+    idle &&
+    bigEnough &&
+    !!capabilities &&
+    !capabilities.reducedMotion &&
+    (capabilities.deviceMemoryGb === null || capabilities.deviceMemoryGb > 4);
+
 
   // ── Capability detection, exactly once ──────────────────────────────
   useEffect(() => {
@@ -207,6 +255,33 @@ export default function ThreeProvider() {
    * false below the `rich` rung and this returns null there, leaving
    * SequenceHero's poster as a still, which never shakes because it never moves.
    */
+
+  /**
+   * THE CANVAS ONLY MOUNTS WHERE IT DRAWS, AND THAT IS THE WHOLE SPEED FIX.
+   *
+   * MEASURED, NOT GUESSED: every page of this shop was shipping 730KB of
+   * JavaScript, and 717KB of it was three.js in two chunks. The scene has only
+   * drawn on the homepage for a while now — every other route resolves to the
+   * quiet ground and renders nothing — but the CODE still arrived everywhere,
+   * because `dynamic()` does not defer anything on its own. It splits the
+   * chunk; the download starts the moment the component is rendered. Rendering
+   * CanvasHost unconditionally meant fetching, parsing and executing an entire
+   * 3D engine on the bag, the checkout, the account, the shelf — pages that
+   * never draw a single triangle.
+   *
+   * On a mid-range Android that is not a slow first paint, it is a locked main
+   * thread: three quarters of a megabyte of JavaScript has to be parsed and
+   * compiled before the page will answer a tap. That is what "the website is
+   * very slow" and "lagging or stucking" describe, and no amount of design
+   * work fixes it.
+   *
+   * Gating the render on the route means the chunk is only ever requested on
+   * the homepage. Everything the store does — capability detection, the
+   * route→scene map, the scroll reset — stays above, because it is cheap and
+   * some of it is needed to decide there is nothing to draw.
+   */
+  if (!showsScene || !sceneWorthLoading) return null;
+
   return (
     <CanvasHost>
       <SceneRouter />
