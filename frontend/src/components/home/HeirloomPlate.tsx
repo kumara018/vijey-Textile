@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import Reveal from './Reveal';
+import { mediaUrl } from '@/lib/media';
 import type { Product } from '@/types';
 
 const inr = new Intl.NumberFormat('en-IN', {
@@ -31,10 +32,26 @@ export default function HeirloomPlate({
   return (
     <section
       aria-labelledby="heirloom-heading"
-      className="relative flex min-h-[100svh] items-center border-t border-ink-edge"
+      /**
+       * IT SHOWS THE PHOTOGRAPH ITSELF NOW.
+       *
+       * This reserved a full viewport (`min-h-[100svh]`) and put only type in
+       * it, because the garment was staged in the 3D scene BEHIND the markup.
+       * That was true when the scene ran everywhere. It no longer runs on
+       * phones at all, and on desktop it waits for an idle callback — so this
+       * section became what the screenshot showed: a whole empty screen with a
+       * name and a price floating in it.
+       *
+       * A homepage section whose entire subject lives in an optional
+       * background is a section that breaks the moment the background becomes
+       * optional. So the piece is rendered here, as an ordinary image, in the
+       * markup that names it. The scene still adds depth behind it where it
+       * runs; nothing depends on it any more.
+       */
+      className="relative border-t border-ink-edge"
     >
       <div className="mx-auto w-full max-w-[112rem] px-6 py-[6vh] sm:px-10">
-        <div className="grid gap-x-16 lg:grid-cols-12">
+        <div className="grid items-center gap-x-16 gap-y-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <Reveal>
               <p className="mb-7 text-rule uppercase text-maroon-300/70">In frame</p>
@@ -118,6 +135,22 @@ export default function HeirloomPlate({
                   </Link>
                 </Reveal>
               </>
+            )}
+          </div>
+
+          {/* The piece, actually visible. `object-cover` on a 4/5 plate so it
+              reads the same as every card on the site. */}
+          <div className="lg:col-span-6 lg:col-start-7">
+            {product?.images?.[0] ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaUrl(product.images[0])}
+                alt={product.name}
+                loading="lazy"
+                className="aspect-[4/5] w-full object-cover"
+              />
+            ) : (
+              <div className="aspect-[4/5] w-full bg-ink-raised" />
             )}
           </div>
         </div>

@@ -213,7 +213,10 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
 }
 
 /* ── Invoice: the one place the palette inverts ───────────────────────
-   On screen the invoice belongs to the site — off-white on warm
+   On screen the invoice belongs to the site — dark ink on the shop's
+   ground. In print it is one ink on white, and the accent is the shop's
+   cerise rather than the brass this used to carry.
+   Previously: off-white on warm
    near-black. On paper it must not: printing #1C1917 across A4 floods
    a page with toner, bleeds through cheap stock, and prints grey text
    on grey. This is a document people print for their records and for
@@ -246,11 +249,11 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
   .invoice .text-paper        { color: #1C1917 !important; }
   .invoice .text-paper-muted  { color: #44403C !important; }
   .invoice .text-paper-faint  { color: #78716C !important; }
-  .invoice .text-brass-bright { color: #A16207 !important; }
+  .invoice .text-brass-bright { color: #86173A !important; }
   .invoice .border-ink-edge,
   .invoice .border-ink-edge\/60,
   .invoice .border-ink-edge\/40 { border-color: #D6D3D1 !important; }
-  .invoice .border-brass\/60    { border-color: #A16207 !important; }
+  .invoice .border-brass\/60    { border-color: #86173A !important; }
 
   /* A row split across a page break is unreadable on a printed invoice. */
   .invoice tr,

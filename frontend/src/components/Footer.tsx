@@ -131,8 +131,13 @@ export default function Footer() {
             </Link>
 
             <p className="mt-7 max-w-[34ch] text-paper-faint">
-              A family shop on the ground floor at Texvalley, Gangapuram. Chosen by hand,
-              checked by hand, packed by someone who answers the phone.
+              {/* A footer is scanned, not read. The paragraph that stood here
+                  said the shop is family-run, hand-checked and answers the
+                  phone — all true, and none of it is what somebody scrolling
+                  to the bottom of a page is looking for. They want a link, an
+                  address or a number. The sentence lives on the homepage,
+                  where there is room to say it properly. */}
+              Ground floor, Texvalley, Gangapuram, Erode.
             </p>
 
             <div className="mt-9 flex items-center gap-3">
