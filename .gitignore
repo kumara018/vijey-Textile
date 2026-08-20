@@ -45,3 +45,8 @@ frontend/tsconfig.tsbuildinfo
 # Offline hero render intermediates — 500MB+ of lossless PNG.
 # Only the encoded tier ladder under public/hero/<tier>/ is shipped.
 frontend/public/hero/raw/
+
+# The filled-in production environment and any database dump —
+# these hold live secrets and customer data and must never be committed.
+deploy/.env
+backend/backups/

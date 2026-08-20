@@ -1,0 +1,28 @@
+# HTTPS, obtained and renewed automatically.
+#
+# Replace api.vijeytextile.com with the subdomain you point at the VM's public
+# IP. Caddy reads this name, asks Let's Encrypt for a certificate on first
+# start, and renews it forever after. There is no cron job to forget.
+#
+# The certificate only issues once DNS actually resolves to this machine, so
+# create the A record BEFORE starting the stack.
+
+api.vijeytextile.com {
+	# The API is the only thing behind this name.
+	reverse_proxy api:8000
+
+	# Compress responses. The product list is JSON and compresses well, which
+	# matters on the mobile connections most customers are using.
+	encode zstd gzip
+
+	# Caddy sets HSTS itself. The rest of the security headers come from the
+	# app, so they are not duplicated here — one source of truth.
+	header {
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

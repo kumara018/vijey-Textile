@@ -1,0 +1,69 @@
+# The whole backend, as two containers.
+#
+# WHY COMPOSE AND NOT "just run the image". A shop's API needs HTTPS, and a
+# certificate that expires is the classic way a self-hosted service quietly
+# dies six months after someone set it up. Caddy obtains and RENEWS the
+# certificate on its own, so the thing most likely to rot is the thing nobody
+# has to remember.
+#
+# `restart: unless-stopped` on both means a reboot, an OOM kill or a crash
+# brings them back without anyone logging in. Combined with the health check
+# below, the machine looks after itself.
+#
+#   docker compose up -d          start
+#   docker compose logs -f api    watch
+#   docker compose pull && docker compose up -d    update after a git push
+#
+# Env comes from ./.env — see .env.example. Nothing secret lives in this file,
+# so it is safe in the repository.
+
+services:
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: shop-api:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Caddy talks to this over the private network; only Caddy is public.
+      PORT: 8000
+    expose:
+      - "8000"
+    healthcheck:
+      # The app's own endpoint, so "healthy" means the app answered — not
+      # merely that a process is running.
+      test: ["CMD", "python", "-c",
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      # Generous: the first boot runs migrations and can take a while.
+      start_period: 90s
+    logging:
+      # Without this, container logs grow until they fill the disk — the second
+      # classic way a long-running VM dies.
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates persist across restarts. Without this Caddy re-requests
+      # them on every boot and will hit Let's Encrypt's rate limit.
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  caddy_data:
+  caddy_config:
