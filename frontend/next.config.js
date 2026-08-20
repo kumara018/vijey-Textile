@@ -14,7 +14,13 @@ const RENDER_URL = 'https://vijey-textile.onrender.com';
  * `rzp_live_…` — a Razorpay key ID pasted into the wrong box. The CSP is built
  * from that variable, so the shipped policy read:
  *
- *   connect-src 'self' rzp_live_SsLbC32qlV5uSG http://localhost:8000 …
+ *   connect-src 'self' <api> http://localhost:8000 razorpay nominatim …
+ *     nominatim.openstreetmap.org is checkout's reverse geocoder — it turns
+ *     the coordinates from "Use my current location" into a street, city,
+ *     state and pincode. Without it in this list the browser BLOCKS that
+ *     request, so the feature found the customer and then failed with
+ *     "could not turn that into an address" — the same shape of bug as
+ *     geolocation=() in Permissions-Policy: our own header saying no.
  *
  * and the browser blocked every single call to the Render backend, because the
  * origin the code actually calls was not on the list. img-src too, so product
@@ -175,7 +181,7 @@ const nextConfig = {
       "img-src 'self' data: blob: " + api + " " + local + " " + media + " https://*.razorpay.com",
       "media-src 'self' data: blob: " + media,
       "font-src 'self' data:",
-      "connect-src 'self' " + api + " " + local + " https://*.razorpay.com https://lumberjack.razorpay.com",
+      "connect-src 'self' " + api + " " + local + " https://*.razorpay.com https://lumberjack.razorpay.com https://nominatim.openstreetmap.org",
       "frame-src https://api.razorpay.com https://*.razorpay.com",
       "worker-src 'self' blob:",
       "upgrade-insecure-requests",
