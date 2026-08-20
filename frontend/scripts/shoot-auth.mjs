@@ -45,12 +45,26 @@ const CLICK = arg('click', '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const res = await fetch(`${API}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ identifier: IDENT, password: PASSWORD }),
-  });
-  const body = await res.json();
+  /* THE SIGN-IN MUST NOT BE ABLE TO KILL THE RUN.
+     The surrounding code already treats a REJECTED login as non-fatal —
+     public pages photograph fine signed out. But a network-level failure was
+     not caught at all: `API` defaults to http://localhost:8000, so with no
+     local backend running this threw "fetch failed" and the process died
+     before Chrome ever launched. Every screenshot and every measurement in a
+     sweep came back empty, which reads like the pages are broken rather than
+     like the tool never started. A dead backend is a reason to shoot signed
+     out, not a reason to report nothing. */
+  let body = null;
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: IDENT, password: PASSWORD }),
+    });
+    body = await res.json();
+  } catch (err) {
+    console.log(`  no backend at ${API} (${err.message}) — continuing signed out`);
+  }
   /* A failed sign-in is not always fatal. Public pages — the shelf, a piece,
      search — photograph perfectly well signed out, and refusing to run because
      the auth rate limiter (correctly) throttled a scripted login would mean the
