@@ -50,3 +50,4 @@ frontend/public/hero/raw/
 # these hold live secrets and customer data and must never be committed.
 deploy/.env
 backend/backups/
+deploy/backups/

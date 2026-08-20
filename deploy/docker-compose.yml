@@ -64,6 +64,37 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # A nightly database dump, so "we have a backup" is not a thing anyone has to
+  # remember. Neon's free tier has no automatic backups, and a manual script is
+  # a script that does not get run.
+  #
+  # Same image as the API, so it shares the dependencies and needs no build of
+  # its own. --keep 14 holds a fortnight and prunes the rest, because a backup
+  # that fills the disk takes the shop down to protect data that was never at
+  # risk.
+  #
+  # Copy ./backups off the machine periodically: a backup on the same disk as
+  # the database's only client survives a bad deploy, not a lost machine.
+  backup:
+    image: shop-api:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - api
+    volumes:
+      - ./backups:/app/backups
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          echo "[backup] $(date -Iseconds) starting"
+          python scripts/backup_db.py --out /app/backups --keep 14 || echo "[backup] FAILED"
+          sleep 86400
+        done
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 volumes:
   caddy_data:
   caddy_config:

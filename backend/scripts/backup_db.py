@@ -55,6 +55,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Back up every table to JSON.")
     ap.add_argument("--out", default="backups", help="directory to write into")
     ap.add_argument("--url", default=os.getenv("DATABASE_URL"), help="database URL")
+    ap.add_argument(
+        "--keep", type=int, default=0,
+        help="delete all but the newest N backups after writing (0 = keep all)",
+    )
     args = ap.parse_args()
 
     url = args.url
@@ -91,7 +95,14 @@ def main() -> int:
 
     size_mb = path.stat().st_size / 1_048_576
     print(f"\n  {len(tables)} tables, {total} rows -> {path}  ({size_mb:.2f} MB)")
-    print("  Keep this somewhere that is NOT the host you are migrating away from.")
+    # Retention. Without this a nightly backup eventually fills the disk,
+    # which would take the shop down to protect data that was never at risk.
+    if args.keep > 0:
+        for stale in sorted(out_dir.glob("backup-*.json"), reverse=True)[args.keep:]:
+            stale.unlink()
+            print(f"  pruned {stale.name}")
+
+    print("  Keep a copy somewhere that is NOT this machine.")
     return 0
 
 
