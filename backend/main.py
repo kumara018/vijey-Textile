@@ -14,6 +14,13 @@ load_dotenv()
 from logging_setup import configure_logging as _cfg_log  # noqa: E402
 _cfg_log(os.getenv("LOG_LEVEL", "INFO"))
 
+# Before anything reads a secret. Refuses to boot a real deployment that is
+# missing SECRET_KEY or ADMIN_PASSWORD, or that would silently run the shop off
+# a throwaway SQLite file — every env var here has a fallback, and three of
+# those fallbacks are strings committed to this repository.
+import startup_checks  # noqa: E402
+startup_checks.run()
+
 from database import engine, Base, SessionLocal
 import models
 import rate_limit
