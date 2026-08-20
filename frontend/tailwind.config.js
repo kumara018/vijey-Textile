@@ -28,18 +28,16 @@ module.exports = {
          * the light one; `paper` was light type and is now dark type.
          */
         ink: {
-          /* SANDALWOOD. The shop asked for the colour of the cloth it sells
-             rather than a pink shell, and specifically for it NOT to be too
-             light. Measured: this ground sits at 72% lightness against the
-             84.8% it replaces and the sister shop's 92.7%, so the two shops
-             read as different rooms at a glance rather than two tints of
-             off-white. Every tone below was tuned until it cleared AA on all
-             three surfaces — a deeper ground was tried and rejected because
-             muted type fell to 4.29:1 on it. */
-          DEFAULT: '#E8DCC0',   // the ground
-          deep:    '#F3EBD9',   // lifted — cards, the footer, menus
-          raised:  '#DCCDAB',   // set back — inputs, wells
-          edge:    '#C3B189',   // hairlines
+          /* SANDALWOOD — corrected. The first attempt at this was #E8DCC0,
+             which measures hue 42 degrees at 46.5% saturation: that is
+             objectively yellow, and it was called out as looking like light
+             yellow rather than sandal. Real sandalwood is a warm GREY-brown
+             near hue 32 with about 31% saturation, which is what these are.
+             Tuned until every tone clears AA on all three surfaces. */
+          DEFAULT: '#DACBB9',   // the ground   hue 32.7  sat 30.8%
+          deep:    '#E8DDD0',   // lifted       hue 32.5  sat 34.3%
+          raised:  '#CDBCA8',   // set back     hue 32.4  sat 27.0%
+          edge:    '#B5A18A',   // hairlines    hue 32.1  sat 22.5%
         },
         brass: {
           DEFAULT: '#A21D48',   // the accent — the logo's own cerise. AAA on shell.
@@ -47,15 +45,15 @@ module.exports = {
           dim:     '#750929',   // pressed, and the deepest corner of the logo
         },
         paper: {
-          DEFAULT: '#2E2418',   // type — warm near-black, 11.17:1 on the ground
-          muted:   '#5C4D3A',   // secondary — 5.99 / 6.87 / 5.18, AA on all three
-          faint:   '#74644B',   // annotations — 4.21:1, up from 3.78 before
+          DEFAULT: '#2B2118',   // type   9.92 / 11.76 / 8.52 : 1
+          muted:   '#584A39',   // second 5.39 /  6.39 / 4.63 : 1
+          faint:   '#665742',   // annotations only
         },
         night: {
-          DEFAULT: '#E8DCC0',
-          deep:    '#F3EBD9',
-          raised:  '#DCCDAB',
-          edge:    '#C3B189',
+          DEFAULT: '#DACBB9',
+          deep:    '#E8DDD0',
+          raised:  '#CDBCA8',
+          edge:    '#B5A18A',
         },
         /* The other half of the logo. Never type — 1.89:1 on the ground — so
            it is a rule, a border, a metallic edge, and nothing else. */
@@ -113,9 +111,9 @@ module.exports = {
          * all rather than hunting each one.
          */
         maroon: {
-          50:  '#FFF5F8',
-          100: '#FDE7EE',
-          200: '#F7C9D8',
+          50:  '#F2EAE1',
+          100: '#E8DDD0',
+          200: '#CDBCA8',
           300: '#EFA0BA',
           400: '#E06A90',
           500: '#C22B62',

@@ -24,11 +24,11 @@
   --primary: #c58059;
   --primary-dark: #845033;
   --gold: #d49c7d;
-  --bg: #E8DCC0;   /* shell — sampled from the logo's ground, lightened */
-  --card: #F3EBD9;
-  --border: #C3B189;
-  --text: #2E2418; /* near-black leaning plum, to match the mark */
-  --muted: #5C4D3A;
+  --bg: #DACBB9;   /* shell — sampled from the logo's ground, lightened */
+  --card: #E8DDD0;
+  --border: #B5A18A;
+  --text: #2B2118; /* near-black leaning plum, to match the mark */
+  --muted: #584A39;
 }
 
 * { box-sizing: border-box; }
@@ -93,7 +93,7 @@ body {
   }
 
   .card {
-    @apply bg-white rounded-2xl shadow-sm border border-maroon-200 overflow-hidden;
+    @apply bg-ink-deep rounded-2xl shadow-sm border border-ink-edge overflow-hidden;
   }
 
   .section-title {
@@ -119,8 +119,8 @@ body {
 .star-empty  { color: #d1d5db; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #DCCDAB; }
-::-webkit-scrollbar-thumb { background: #B29B72; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #CDBCA8; }
+::-webkit-scrollbar-thumb { background: #A88F74; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #A21D48; }
 
 /* ── Capture mode ─────────────────────────────────────────────────────
@@ -260,31 +260,4 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
   .invoice dl { break-inside: avoid; }
 
   @page { margin: 16mm; }
-}
-/* ── The silk fall (components/home/SilkFall.tsx) ─────────────────────────
-   The turn, in three dimensions. Each panel rocks a few degrees around its
-   own vertical axis and drifts a little in depth, so the light band running
-   down it slides as it moves — which is the whole reason silk is worth
-   looking at.
-
-   `transform` only, and the transform keeps the panel's own --z and --turn as
-   its base so nine panels can share one keyframe set without collapsing onto
-   the same position. Compositor-only: this never touches layout, so it cannot
-   stutter a scroll. */
-@keyframes silk-turn {
-  0%   { transform: translateZ(var(--z)) rotateY(var(--turn)) scaleY(1); }
-  50%  { transform: translateZ(calc(var(--z) + 26px)) rotateY(calc(var(--turn) * 0.55)) scaleY(1.035); }
-  100% { transform: translateZ(var(--z)) rotateY(var(--turn)) scaleY(1); }
-}
-.silk-panel {
-  transform-origin: 50% 0;
-  will-change: transform;
-  animation-name: silk-turn;
-  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
-  animation-iteration-count: infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* The depth stays; only the movement goes. A still projection is still a
-     three-dimensional image. */
-  .silk-panel { animation: none; }
 }

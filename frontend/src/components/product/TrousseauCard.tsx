@@ -79,7 +79,7 @@ export default function TrousseauCard({
           className="pointer-events-none absolute inset-0 opacity-0 motion-safe:transition-opacity motion-safe:duration-700 motion-safe:group-hover:opacity-100"
           style={{
             background:
-              'linear-gradient(105deg, transparent 32%, rgba(227,191,203,0.16) 47%, rgba(255,242,246,0.26) 52%, rgba(197,128,89,0.12) 58%, transparent 74%)',
+              'linear-gradient(105deg, transparent 32%, rgba(181,161,138,0.16) 47%, rgba(232,221,208,0.26) 52%, rgba(168,143,116,0.12) 58%, transparent 74%)',
           }}
         />
 

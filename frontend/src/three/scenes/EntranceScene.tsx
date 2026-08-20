@@ -277,7 +277,7 @@ function GarmentPlate({
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
     grad.addColorStop(0, 'rgba(184,116,16,0.62)');
     grad.addColorStop(0.5, 'rgba(122,74,12,0.26)');
-    grad.addColorStop(1, 'rgba(247,234,238,0)');
+    grad.addColorStop(1, 'rgba(218,203,185,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, 256, 256);
     const t = new THREE.CanvasTexture(c);

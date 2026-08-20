@@ -116,7 +116,7 @@ function CheckoutInner() {
       (err) => {
         toast.error(
           err.code === err.PERMISSION_DENIED
-            ? 'Location permission is off for this site. Allow it in your browser, then try again.'
+            ? 'Could not read your location. Check that location is on for this browser AND in your device settings, then try again.'
             : err.code === err.POSITION_UNAVAILABLE
             ? 'Your device could not get a location fix. Please type the address instead.'
             : 'Finding your location took too long. Try again, or type the address.',

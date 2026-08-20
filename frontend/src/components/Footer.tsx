@@ -158,7 +158,7 @@ export default function Footer() {
       {/**
         * THE GROUND, WHICH WAS A FLAT SHEET OF NEAR-WHITE.
         *
-        * `bg-ink-deep` is #F3EBD9. On a page whose body is #E8DCC0 that is
+        * `bg-ink-deep` is #E8DDD0. On a page whose body is #DACBB9 that is
         * almost the same colour, so the footer did not read as a place — it
         * read as the page running out. The sister shop anchors its footer with
         * a dark ground; doing that here would just make the two shops look
@@ -180,9 +180,9 @@ export default function Footer() {
         className="pointer-events-none absolute inset-0"
         style={{
           backgroundImage: [
-            'radial-gradient(120% 90% at 50% 0%, rgba(232,220,192,0.9) 0%, rgba(220,205,171,0.55) 45%, rgba(220,205,171,0) 100%)',
-            'repeating-linear-gradient(90deg, rgba(195,177,137,0.22) 0 1px, transparent 1px 7px)',
-            'repeating-linear-gradient(0deg,  rgba(195,177,137,0.16) 0 1px, transparent 1px 7px)',
+            'radial-gradient(120% 90% at 50% 0%, rgba(218,203,185,0.9) 0%, rgba(205,188,168,0.55) 45%, rgba(205,188,168,0) 100%)',
+            'repeating-linear-gradient(90deg, rgba(181,161,138,0.22) 0 1px, transparent 1px 7px)',
+            'repeating-linear-gradient(0deg,  rgba(181,161,138,0.16) 0 1px, transparent 1px 7px)',
           ].join(','),
         }}
       />
