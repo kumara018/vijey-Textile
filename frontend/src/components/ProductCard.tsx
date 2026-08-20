@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { qk } from '@/lib/query';
 import { mediaUrl } from '@/lib/media';
 import { clothFor, boltGround } from '@/lib/cloth';
 import Link from 'next/link';
@@ -23,6 +25,30 @@ export default function ProductCard({ product }: Props) {
   const [toggling, setToggling] = useState(false);
 
   // ── Mini carousel state ──────────────────────────────────────────────────────
+
+  /**
+   * TAPPING A PIECE SHOULD NOT SHOW AN EMPTY SCREEN.
+   *
+   * The detail route is a server shell around a client component that fetches
+   * on mount, so the old sequence was: navigate, paint a skeleton, download
+   * the route JS, fire the request, wait for Render, paint. One to two seconds
+   * of nothing on every product a customer opens.
+   *
+   * None of that request was necessary. The list endpoint and the detail
+   * endpoint return the SAME schema — `List[ProductOut]` and `ProductOut` —
+   * so this card is already holding, in full, the exact object the detail page
+   * is about to ask the server for. Seeding it into the detail cache means the
+   * page has real data before it mounts and paints immediately.
+   *
+   * `old ?? product` never overwrites a fresher copy, and staleTime is 30s, so
+   * a piece opened later still refetches normally. This trades no correctness
+   * for the whole wait.
+   */
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    queryClient.setQueryData(qk.products.detail(product.id), (old: unknown) => old ?? product);
+  }, [product, queryClient]);
+
   const images = (product.images || []).filter(Boolean);
   const hasVideo = Boolean(product.video_url);
   const totalSlides = images.length + (hasVideo ? 1 : 0);
