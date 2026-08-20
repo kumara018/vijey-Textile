@@ -103,7 +103,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   which is what a phone reports in desktop-site mode — that is
                   a 56px black strip directly under the header and another
                   across the bottom of the product grid, on a shop whose ground
-                  is #F7EAEE. Measured, not guessed: the strip was reported as
+                  is #E8DCC0. Measured, not guessed: the strip was reported as
                   a dark gap under the header, and an earlier black band at the
                   foot of /products was misread as a screenshot artefact
                   because the overlay is pointer-events-none and
@@ -133,15 +133,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 toastOptions={{
                   duration: 3000,
                   style: {
-                    background: '#FFFBFC',
-                    color: '#2A1F24',
-                    border: '1px solid #DCC3CB',
+                    background: '#F3EBD9',
+                    color: '#2E2418',
+                    border: '1px solid #C3B189',
                     borderRadius: '2px',
                     padding: '12px 16px',
                     boxShadow: '0 4px 20px rgba(42,31,36,0.10)',
                   },
-                  success: { iconTheme: { primary: '#A21D48', secondary: '#FFFBFC' } },
-                  error:   { iconTheme: { primary: '#94402E', secondary: '#FFFBFC' } },
+                  success: { iconTheme: { primary: '#A21D48', secondary: '#F3EBD9' } },
+                  error:   { iconTheme: { primary: '#94402E', secondary: '#F3EBD9' } },
                 }}
               />
             </LoginPromptProvider>

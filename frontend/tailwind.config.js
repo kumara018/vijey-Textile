@@ -28,10 +28,18 @@ module.exports = {
          * the light one; `paper` was light type and is now dark type.
          */
         ink: {
-          DEFAULT: '#F7EAEE',   // the ground: blush, tinted from the logo's cerise
-          deep:    '#FFFBFC',   // lifted — a card, a sheet
-          raised:  '#EFDDE3',   // a surface set back
-          edge:    '#DCC3CB',   // hairlines
+          /* SANDALWOOD. The shop asked for the colour of the cloth it sells
+             rather than a pink shell, and specifically for it NOT to be too
+             light. Measured: this ground sits at 72% lightness against the
+             84.8% it replaces and the sister shop's 92.7%, so the two shops
+             read as different rooms at a glance rather than two tints of
+             off-white. Every tone below was tuned until it cleared AA on all
+             three surfaces — a deeper ground was tried and rejected because
+             muted type fell to 4.29:1 on it. */
+          DEFAULT: '#E8DCC0',   // the ground
+          deep:    '#F3EBD9',   // lifted — cards, the footer, menus
+          raised:  '#DCCDAB',   // set back — inputs, wells
+          edge:    '#C3B189',   // hairlines
         },
         brass: {
           DEFAULT: '#A21D48',   // the accent — the logo's own cerise. AAA on shell.
@@ -39,15 +47,15 @@ module.exports = {
           dim:     '#750929',   // pressed, and the deepest corner of the logo
         },
         paper: {
-          DEFAULT: '#2A1F24',   // type — near-black leaning plum, not a neutral
-          muted:   '#6B5A60',   // secondary type
-          faint:   '#8D7A81',   // annotations only; 3.78:1 is large-text contrast
+          DEFAULT: '#2E2418',   // type — warm near-black, 11.17:1 on the ground
+          muted:   '#5C4D3A',   // secondary — 5.99 / 6.87 / 5.18, AA on all three
+          faint:   '#74644B',   // annotations — 4.21:1, up from 3.78 before
         },
         night: {
-          DEFAULT: '#F7EAEE',
-          deep:    '#FFFBFC',
-          raised:  '#EFDDE3',
-          edge:    '#DCC3CB',
+          DEFAULT: '#E8DCC0',
+          deep:    '#F3EBD9',
+          raised:  '#DCCDAB',
+          edge:    '#C3B189',
         },
         /* The other half of the logo. Never type — 1.89:1 on the ground — so
            it is a rule, a border, a metallic edge, and nothing else. */

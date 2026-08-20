@@ -24,11 +24,11 @@
   --primary: #c58059;
   --primary-dark: #845033;
   --gold: #d49c7d;
-  --bg: #F7EAEE;   /* shell — sampled from the logo's ground, lightened */
-  --card: #fffdfa;
-  --border: #e3bfcb;
-  --text: #2A1F24; /* near-black leaning plum, to match the mark */
-  --muted: #7a6c5c;
+  --bg: #E8DCC0;   /* shell — sampled from the logo's ground, lightened */
+  --card: #F3EBD9;
+  --border: #C3B189;
+  --text: #2E2418; /* near-black leaning plum, to match the mark */
+  --muted: #5C4D3A;
 }
 
 * { box-sizing: border-box; }
@@ -119,8 +119,8 @@ body {
 .star-empty  { color: #d1d5db; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #EFDDE3; }
-::-webkit-scrollbar-thumb { background: #C9A9B4; border-radius: 3px; }
+::-webkit-scrollbar-track { background: #DCCDAB; }
+::-webkit-scrollbar-thumb { background: #B29B72; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #A21D48; }
 
 /* ── Capture mode ─────────────────────────────────────────────────────

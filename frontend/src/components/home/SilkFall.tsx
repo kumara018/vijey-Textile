@@ -78,11 +78,11 @@ export default function SilkFall({ className = '' }: { className?: string }) {
                made of the palette rather than of grey. */
             background: `linear-gradient(
               to right,
-              rgba(220,195,203,0) 0%,
-              rgba(220,195,203,0.85) 18%,
-              rgba(255,251,252,0.95) ${p.sheen}%,
-              rgba(220,195,203,0.85) 82%,
-              rgba(220,195,203,0) 100%
+              rgba(195,177,137,0) 0%,
+              rgba(195,177,137,0.85) 18%,
+              rgba(243,235,217,0.95) ${p.sheen}%,
+              rgba(195,177,137,0.85) 82%,
+              rgba(195,177,137,0) 100%
             )`,
             transform: `translateZ(${p.z}px) rotateY(${p.turn}deg)`,
             animationDuration: `${p.seconds}s`,
