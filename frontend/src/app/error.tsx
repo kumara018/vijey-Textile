@@ -62,7 +62,7 @@ export default function RouteError({
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(218,203,185,0.94) 0%, rgba(218,203,185,0.86) 55%, rgba(218,203,185,0.94) 100%)',
+            'linear-gradient(180deg, rgba(247,241,232,0.94) 0%, rgba(247,241,232,0.86) 55%, rgba(247,241,232,0.94) 100%)',
         }}
       />
 

@@ -98,9 +98,22 @@ const nextConfig = {
    *   perfect policy nobody ships.
    *
    * Permissions-Policy
-   *   Nothing on this site needs the camera, the microphone or geolocation, so
-   *   they are switched off. If a dependency ever asks, it fails loudly instead
-   *   of silently prompting a customer.
+   *   The camera and the microphone stay switched off — nothing here needs
+   *   them, and if a dependency ever asks it should fail loudly rather than
+   *   silently prompt a customer.
+   *
+   *   GEOLOCATION IS NOW `self`, AND THE `()` IT REPLACES WAS A REAL BUG.
+   *   An empty allowlist denies the feature to EVERY origin including this
+   *   one, so the browser refused the API outright and handed back
+   *   PERMISSION_DENIED — no matter what the customer had allowed for the
+   *   site. Checkout's "Use my current location" therefore reported "location
+   *   permission is off" to people whose permission was on, and no amount of
+   *   changing browser or OS settings could have fixed it, because the site
+   *   was the thing saying no.
+   *
+   *   The comment above was accurate when it was written; checkout grew a
+   *   geolocation feature afterwards and this header was never revisited.
+   *   `self` allows this origin only — no third-party frame can use it.
    */
   async headers() {
     /**
@@ -177,7 +190,7 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self), interest-cohort=()' },
           { key: 'X-DNS-Prefetch-Control', value: 'on' },
         ],
       },

@@ -59,7 +59,7 @@ export default function MeasureRule() {
                     // Minor ticks, every 1/40th.
                     'repeating-linear-gradient(90deg, rgba(255,255,255,0.16) 0 1px, transparent 1px 2.5%)',
                     // Major ticks at each labelled size.
-                    'repeating-linear-gradient(90deg, rgba(181,161,138,0.55) 0 1px, transparent 1px 12.5%)',
+                    'repeating-linear-gradient(90deg, rgba(198,183,161,0.55) 0 1px, transparent 1px 12.5%)',
                   ].join(','),
                   backgroundSize: '100% 40%, 100% 100%',
                   backgroundPosition: '0 100%, 0 100%',

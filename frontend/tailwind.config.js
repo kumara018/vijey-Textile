@@ -28,16 +28,17 @@ module.exports = {
          * the light one; `paper` was light type and is now dark type.
          */
         ink: {
-          /* SANDALWOOD — corrected. The first attempt at this was #E8DCC0,
-             which measures hue 42 degrees at 46.5% saturation: that is
-             objectively yellow, and it was called out as looking like light
-             yellow rather than sandal. Real sandalwood is a warm GREY-brown
-             near hue 32 with about 31% saturation, which is what these are.
-             Tuned until every tone clears AA on all three surfaces. */
-          DEFAULT: '#DACBB9',   // the ground   hue 32.7  sat 30.8%
-          deep:    '#E8DDD0',   // lifted       hue 32.5  sat 34.3%
-          raised:  '#CDBCA8',   // set back     hue 32.4  sat 27.0%
-          edge:    '#B5A18A',   // hairlines    hue 32.1  sat 22.5%
+          /* WARM WHITE AND SANDAL — a combination, not one tone.
+             The previous pass painted the whole shop a single mid sandal and
+             it read as dull, correctly: with every surface the same value
+             there is nothing for the eye to step between. The reference the
+             owner gave is a warm-white garment against sandal, so that is what
+             this is. The page is warm white, the bands and wells are sandal,
+             and there are 12.5 points of lightness between them. */
+          DEFAULT: '#F7F1E8',   // the page — warm white, 93.9%
+          deep:    '#FFFCF6',   // lifted — cards, menus, the footer, 98.2%
+          raised:  '#DFD2C0',   // SANDAL — section bands, inputs, wells, 81.4%
+          edge:    '#C6B7A1',   // hairlines, 70.4%
         },
         brass: {
           DEFAULT: '#A21D48',   // the accent — the logo's own cerise. AAA on shell.
@@ -45,15 +46,15 @@ module.exports = {
           dim:     '#750929',   // pressed, and the deepest corner of the logo
         },
         paper: {
-          DEFAULT: '#2B2118',   // type   9.92 / 11.76 / 8.52 : 1
-          muted:   '#584A39',   // second 5.39 /  6.39 / 4.63 : 1
-          faint:   '#665742',   // annotations only
+          DEFAULT: '#2B2118',   // type  14.03 / 15.38 / 10.59 : 1
+          muted:   '#584A39',   // second 7.62 /  8.36 /  5.75 : 1
+          faint:   '#64553F',   // annotations, clears AA on the sandal band
         },
         night: {
-          DEFAULT: '#DACBB9',
-          deep:    '#E8DDD0',
-          raised:  '#CDBCA8',
-          edge:    '#B5A18A',
+          DEFAULT: '#F7F1E8',
+          deep:    '#FFFCF6',
+          raised:  '#DFD2C0',
+          edge:    '#C6B7A1',
         },
         /* The other half of the logo. Never type — 1.89:1 on the ground — so
            it is a rule, a border, a metallic edge, and nothing else. */
@@ -111,9 +112,9 @@ module.exports = {
          * all rather than hunting each one.
          */
         maroon: {
-          50:  '#F2EAE1',
-          100: '#E8DDD0',
-          200: '#CDBCA8',
+          50:  '#FBF7F1',
+          100: '#F3EDE4',
+          200: '#DFD2C0',
           300: '#EFA0BA',
           400: '#E06A90',
           500: '#C22B62',

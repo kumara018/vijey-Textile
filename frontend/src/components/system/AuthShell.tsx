@@ -43,7 +43,7 @@ export default function AuthShell({
         className="pointer-events-none absolute inset-0 z-0"
         style={{
           background:
-            'radial-gradient(120% 90% at 50% 40%, rgba(218,203,185,0.90) 0%, rgba(218,203,185,0.96) 55%, rgba(218,203,185,0.99) 100%)',
+            'radial-gradient(120% 90% at 50% 40%, rgba(247,241,232,0.90) 0%, rgba(247,241,232,0.96) 55%, rgba(247,241,232,0.99) 100%)',
         }}
       />
 

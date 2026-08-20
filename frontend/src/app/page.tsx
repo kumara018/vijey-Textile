@@ -8,6 +8,7 @@ import { useHeroStore } from '@/store/useHeroStore';
 import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
 import { HERO_FIXTURE } from '@/lib/heroFixture';
 import type { Product } from '@/types';
+import BoltDrift from '@/components/home/BoltDrift';
 import Reveal from '@/components/home/Reveal';
 import OccasionBand from '@/components/home/OccasionBand';
 import MeasureRule from '@/components/home/MeasureRule';
@@ -174,13 +175,7 @@ export default function HomePage() {
             garment gone it only pinned an empty band to the top of the
             window. */}
         <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.5rem,4vh,2.5rem)] pt-[clamp(1.5rem,4vh,2rem)] sm:px-10 md:pb-[clamp(2.25rem,5vh,3.25rem)] md:pt-[clamp(2.25rem,5vh,3.25rem)]">
-          {/* NO MOTIF BEHIND THE OPENING.
-          Three were tried here — eighteen flat pleats, then nine panels in
-          real CSS 3D — and each was rejected. The note each time was the
-          same in substance: it reads as decoration over the shop rather than
-          as the shop. So the opening is now the sandalwood ground, the line,
-          and the way in. Nothing else competes with it, and nothing animates
-          behind the first thing a customer reads. */}
+          <BoltDrift />
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}

@@ -24,9 +24,9 @@
   --primary: #c58059;
   --primary-dark: #845033;
   --gold: #d49c7d;
-  --bg: #DACBB9;   /* shell — sampled from the logo's ground, lightened */
-  --card: #E8DDD0;
-  --border: #B5A18A;
+  --bg: #F7F1E8;   /* shell — sampled from the logo's ground, lightened */
+  --card: #FFFCF6;
+  --border: #C6B7A1;
   --text: #2B2118; /* near-black leaning plum, to match the mark */
   --muted: #584A39;
 }
@@ -119,7 +119,7 @@ body {
 .star-empty  { color: #d1d5db; }
 
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #CDBCA8; }
+::-webkit-scrollbar-track { background: #DFD2C0; }
 ::-webkit-scrollbar-thumb { background: #A88F74; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #A21D48; }
 
@@ -260,4 +260,29 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
   .invoice dl { break-inside: avoid; }
 
   @page { margin: 16mm; }
+}
+
+/* ── The bolt drift (components/home/BoltDrift.tsx) ───────────────────────
+   Cloth on a counter settles; it does not slide. Each bolt breathes a few
+   pixels in depth around its own resting --z and --turn, so the stack shifts
+   the way a pile does when someone walks past it — and because the transform
+   keeps each bolt's own base values, six can share one keyframe set without
+   collapsing onto the same position.
+
+   `transform` only: composited on the GPU, never touches layout, cannot
+   stutter a scroll. */
+@keyframes bolt-settle {
+  0%   { transform: translateZ(var(--z)) rotateY(var(--turn)); }
+  50%  { transform: translateZ(calc(var(--z) + 18px)) rotateY(calc(var(--turn) * 0.7)); }
+  100% { transform: translateZ(var(--z)) rotateY(var(--turn)); }
+}
+.bolt-drift {
+  will-change: transform;
+  animation-name: bolt-settle;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* The stack stays; only the settling stops. */
+  .bolt-drift { animation: none; }
 }

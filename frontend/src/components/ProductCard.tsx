@@ -391,7 +391,7 @@ export default function ProductCard({ product }: Props) {
             <Heart
               size={17}
               strokeWidth={1.9}
-              className={`drop-shadow-[0_1px_2px_rgba(232,221,208,0.95)] ${isWishlisted ? 'text-maroon-600' : 'text-maroon-800'}`}
+              className={`drop-shadow-[0_1px_2px_rgba(255,252,246,0.95)] ${isWishlisted ? 'text-maroon-600' : 'text-maroon-800'}`}
               fill={isWishlisted ? '#A21D48' : 'none'}
             />
           </button>
