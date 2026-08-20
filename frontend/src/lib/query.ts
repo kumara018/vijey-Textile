@@ -25,15 +25,28 @@ import {
  * A 4xx is an answer, not a failure to deliver one. Retrying a 401, 403 or 404
  * cannot change the outcome and — on the 401 path specifically — would fire
  * the interceptor's /api/auth/me re-check several times over.
+ *
+ * 502, 503 and 504 ARE WORTH WAITING OUT, and get their own budget. Those are
+ * the codes a sleeping Render instance returns while it wakes, and a cold
+ * start there takes thirty to sixty seconds. The old budget was three attempts
+ * ending ~4.2s in — every one of them lands inside the cold start, so the
+ * customer was shown a failure for a server that was simply not up yet. Eight
+ * attempts reach roughly 65s, which outlasts it.
+ *
+ * This matters more than it looks: on the free tier the instance sleeps after
+ * 15 minutes idle, so the FIRST visitor after a quiet spell is the one who
+ * meets it. Being patient for them is the difference between a shop that
+ * looks broken and one that takes a moment to open.
  */
 function retryPolicy(failureCount: number, error: unknown): boolean {
   const status = (error as AxiosError)?.response?.status;
   if (status && status >= 400 && status < 500) return false;
-  return failureCount < 3;
+  const waking = !status || status === 502 || status === 503 || status === 504;
+  return failureCount < (waking ? 8 : 3);
 }
 
 /**
- * Exponential backoff with jitter: ~600ms, ~1.2s, ~2.4s.
+ * Exponential backoff with jitter, capped at 15s a step.
  *
  * Flat retries are the wrong shape for this backend. It sleeps on Render's
  * free tier, and a cold start takes tens of seconds — three attempts 600ms
@@ -49,7 +62,7 @@ function retryPolicy(failureCount: number, error: unknown): boolean {
 function retryDelay(attemptIndex: number): number {
   const base = 600 * 2 ** attemptIndex;
   const jitter = base * 0.25 * (Math.random() * 2 - 1);
-  return Math.min(base + jitter, 8000);
+  return Math.min(base + jitter, 15000);
 }
 
 export function createQueryClient(): QueryClient {
