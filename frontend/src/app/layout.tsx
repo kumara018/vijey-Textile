@@ -14,7 +14,7 @@ import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
 import CaptureMode from '@/components/CaptureMode';
 import ErrorReporting from '@/components/ErrorReporting';
-import { Toaster } from 'react-hot-toast';
+import SiteToaster from '@/components/system/SiteToaster';
 import { STORE } from '@/lib/config';
 
 export const metadata: Metadata = {
@@ -119,31 +119,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   Both components stay in the tree, unmounted, so either is one
                   line to restore. */}
               <LoginPromptModal />
-              <Toaster
-                position="top-right"
-                /* The toast is the most-seen surface on the site after the
-                   header — it fires on every add-to-cart — and it was still
-                   dressed in colours from the old system: a PURPLE success
-                   tick (#7c3aed), a foreign red (#c62828), pure white on a
-                   warm-black that appears nowhere else, and a tan border.
-                   On the relit shop that purple was the single most
-                   off-palette pixel a customer saw, and they saw it constantly.
-                   Ground, type and rule now come from the palette, and the tick
-                   is the shop's own cerise. */
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    background: '#FFFCF6',
-                    color: '#2B2118',
-                    border: '1px solid #C6B7A1',
-                    borderRadius: '2px',
-                    padding: '12px 16px',
-                    boxShadow: '0 4px 20px rgba(43,33,24,0.10)',
-                  },
-                  success: { iconTheme: { primary: '#A21D48', secondary: '#FFFCF6' } },
-                  error:   { iconTheme: { primary: '#94402E', secondary: '#FFFCF6' } },
-                }}
-              />
+              <SiteToaster />
             </LoginPromptProvider>
             </WishlistProvider>
           </CartProvider>

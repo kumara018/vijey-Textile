@@ -58,6 +58,13 @@ module.exports = {
         },
         /* The other half of the logo. Never type — 1.89:1 on the ground — so
            it is a rule, a border, a metallic edge, and nothing else. */
+        /* The failure tone. Deliberately a warm BRICK rather than a red:
+           this shop's accent is already a red-family cerise, so a signal
+           colour has to sit far enough from it to be told apart at a glance.
+           #8A3A28 measures 7.55:1 on the lifted surface against the cerise's
+           7.31:1, so the two read as different hues at the same weight
+           rather than as two shades of one. */
+        critical: '#8A3A28',
         steel: {
           DEFAULT: '#B7B7B5',
           soft:    '#D3D3D1',
