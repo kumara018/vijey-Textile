@@ -10,6 +10,7 @@ import { shippingAddressSchema } from '@/lib/schemas';
 import { STORE } from '@/lib/config';
 import type { OrderCreatePayload, PaymentDetailsPayload } from '@/lib/contracts';
 import PageShell from '@/components/system/PageShell';
+import toast from 'react-hot-toast';
 import PageHeader from '@/components/system/PageHeader';
 import { Field } from '@/components/system/Field';
 import { ActionButton, ActionLink } from '@/components/system/Action';
@@ -84,6 +85,47 @@ function CheckoutInner() {
   const router = useRouter();
 
   const [addr, setAddr] = useState<Addr>(EMPTY);
+  const [gpsLoading, setGpsLoading] = useState(false);
+
+  /** Fill the address from the device's position. Nothing is locked after. */
+  const detectLocation = () => {
+    if (!navigator.geolocation) { toast.error('This browser cannot find your location. Please type the address.'); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+          );
+          if (!res.ok) throw new Error(String(res.status));
+          const data = await res.json();
+          const a = data.address || {};
+          setAddr((prev) => ({
+            ...prev,
+            address_line1: [a.road, a.neighbourhood, a.suburb].filter(Boolean).join(', ') || prev.address_line1,
+            city:    a.city || a.town || a.village || a.county || prev.city,
+            state:   a.state || prev.state,
+            pincode: a.postcode || prev.pincode,
+          }));
+          toast.success('Address filled in — please check it');
+        } catch {
+          toast.error('Found you, but could not turn that into an address. Please type it.');
+        } finally { setGpsLoading(false); }
+      },
+      (err) => {
+        toast.error(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission is off for this site. Allow it in your browser, then try again.'
+            : err.code === err.POSITION_UNAVAILABLE
+            ? 'Your device could not get a location fix. Please type the address instead.'
+            : 'Finding your location took too long. Try again, or type the address.',
+        );
+        setGpsLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 300000 },
+    );
+  };
   const [errors, setErrors] = useState<Partial<Record<keyof Addr, string>>>({});
   const [openBox, setOpenBox] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -292,7 +334,7 @@ function CheckoutInner() {
   if (cartLoading) {
     return (
       <PageShell rhythm="tight">
-        <PageHeader eyebrow="Checkout" title="Where it goes, and how you pay" />
+        <PageHeader eyebrow="Checkout" title="Where it goes, and how you pay" scale="doc" />
         <Skeleton label="Loading checkout">
           <div className="grid gap-x-16 gap-y-10 lg:grid-cols-12">
             <div className="space-y-7 lg:col-span-7">
@@ -312,7 +354,8 @@ function CheckoutInner() {
       <PageHeader
         eyebrow="Checkout"
         title="Where it goes, and how you pay"
-        standfirst="Payment is handled by Razorpay. We never see or store your card details."
+        standfirst="Payment is handled by Razorpay. We never see your card details."
+        scale="doc"
       />
 
       <Announce message={announcement} />
@@ -331,10 +374,37 @@ function CheckoutInner() {
             <section aria-labelledby="delivery-heading">
               <div className="flex items-baseline gap-5">
                 <span className="text-rule tabular-nums text-brass-bright">01</span>
-                <h2 id="delivery-heading" className="font-display text-band font-light text-paper">
+                <h2 id="delivery-heading" className="font-display text-doc-head font-normal text-paper">
                   Where it goes
                 </h2>
               </div>
+
+              {/**
+                * FILL THE ADDRESS FROM THE PHONE, RATHER THAN TYPING IT.
+                *
+                * Eight fields is the longest piece of work between a customer
+                * deciding to buy and actually buying, and on a phone it is all
+                * thumb-typing. One tap fills the street, city, state and
+                * pincode from the device's own position; the customer still
+                * checks and corrects it, which is why nothing is locked.
+                *
+                * The failure messages say which failure it was. The sister
+                * shop reported "Location access denied" for every error
+                * including timeouts, so somebody who HAD granted permission
+                * was sent to look through browser settings for a problem that
+                * was not there. Each code gets its own sentence here.
+                */}
+              <button
+                type="button"
+                onClick={detectLocation}
+                disabled={gpsLoading}
+                className="mt-8 flex w-full items-center justify-center gap-2.5 border border-dashed border-maroon-500 bg-ink-deep/60 py-3 text-caption uppercase text-maroon-800 transition-colors duration-300 hover:bg-ink-deep disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+              >
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+                  <path d="M17.5 2.5 2.5 8.6l6.4 2.5 2.5 6.4 6.1-15Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+                </svg>
+                {gpsLoading ? 'Finding you…' : 'Use my current location'}
+              </button>
 
               <div className="mt-8 grid gap-7 sm:grid-cols-2">
                 <div className="sm:col-span-2">
@@ -373,7 +443,7 @@ function CheckoutInner() {
             <section aria-labelledby="pay-heading" className="mt-[7vh] border-t border-ink-edge/60 pt-10">
               <div className="flex items-baseline gap-5">
                 <span className="text-rule tabular-nums text-brass-bright">02</span>
-                <h2 id="pay-heading" className="font-display text-band font-light text-paper">
+                <h2 id="pay-heading" className="font-display text-doc-head font-normal text-paper">
                   How you pay
                 </h2>
               </div>
