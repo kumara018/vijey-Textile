@@ -225,10 +225,10 @@ export default function Footer() {
           *     broke the header wordmark. Without this the other two fixes
           *     only move the overflow point.
           */}
-        <div className="grid gap-x-8 gap-y-14 lg:grid-cols-12 xl:gap-x-14">
+        <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 min-[900px]:grid-cols-12 xl:gap-x-14">
 
           {/* ── The shop ─────────────────────────────────────────────── */}
-          <div className="min-w-0 lg:col-span-4">
+          <div className="min-w-0 min-[900px]:col-span-3">
             <Link
               href="/"
               /* Raised by the measured cap-height difference. `leading-none`
@@ -306,7 +306,7 @@ export default function Footer() {
           </div>
 
           {/* ── Shop by piece ────────────────────────────────────────── */}
-          <nav aria-labelledby="footer-shop" className="min-w-0 lg:col-span-2">
+          <nav aria-labelledby="footer-shop" className="min-w-0 min-[900px]:col-span-2">
             <h2 id="footer-shop" className="text-rule uppercase text-brass-bright">The pieces</h2>
             <ul className="mt-6 space-y-1.5">
               {CATEGORIES.map((c) => (
@@ -318,7 +318,7 @@ export default function Footer() {
           </nav>
 
           {/* ── Help and policies ────────────────────────────────────── */}
-          <nav aria-labelledby="footer-help" className="min-w-0 lg:col-span-3">
+          <nav aria-labelledby="footer-help" className="min-w-0 min-[900px]:col-span-3">
             <h2 id="footer-help" className="text-rule uppercase text-brass-bright">Help &amp; policies</h2>
             <ul className="mt-6 space-y-1.5">
               {HELP.map((l) => (
@@ -328,7 +328,7 @@ export default function Footer() {
           </nav>
 
           {/* ── Reach us ─────────────────────────────────────────────── */}
-          <div className="min-w-0 lg:col-span-3">
+          <div className="min-w-0 min-[900px]:col-span-4">
             <h2 className="text-rule uppercase text-brass-bright">Reach us</h2>
             {/**
               * EACH ROW GETS ITS SYMBOL.
