@@ -210,7 +210,7 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
                   setRejected((prev) => (prev.includes(src) ? prev : [...prev, src]));
                 }
               }}
-              className="absolute inset-0 h-full w-full object-contain object-right transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
+              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
               style={{ opacity: isCurrent ? 1 : 0 }}
             />
           );

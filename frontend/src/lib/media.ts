@@ -59,11 +59,15 @@ export function mediaUrl(path?: string | null): string {
  * does today and gets a sharper picture; a desktop pays about 80KB more for a
  * photograph that is no longer visibly stretched.
  *
- * `c_fit`, NOT `c_fill`. Fill crops to the requested shape, which is how the
- * opening ended up showing a torso and a pair of hands instead of a garment.
- * Fit scales the whole frame to fit inside the width and crops nothing, so
- * what arrives is the entire photograph — the piece, whole, exactly as it was
- * shot. `g_auto` goes with it, since there is no longer a crop to place.
+ * `c_fill` with `g_auto`. The opening is a wide band, so a portrait
+ * photograph has to be cropped to fill it — that is the composition the shop
+ * asked for and kept. `g_auto` picks the region worth keeping rather than
+ * taking the middle by default, so the crop is less likely to land across a
+ * garment.
+ *
+ * `c_fit` was tried instead, which crops nothing and shows the whole frame.
+ * It works, but it leaves the picture boxed into a narrow strip at one side
+ * of the band rather than filling it, and that was not what was wanted.
  *
  * Upscaling cannot invent detail. This makes the stretch look as good as a
  * stretch can; real hero photographs at 1200px+ would still be better, which
@@ -78,7 +82,7 @@ export function heroImageUrl(url: string, width: number): string {
   if (/\/image\/upload\/[a-z]_/.test(url)) return url;  // already transformed
   const head = url.slice(0, i + marker.length);
   const tail = url.slice(i + marker.length);
-  return `${head}f_auto,q_auto,w_${width},c_fit,e_sharpen:60/${tail}`;
+  return `${head}f_auto,q_auto,w_${width},c_fill,g_auto,e_sharpen:60/${tail}`;
 }
 
 /** The widths the opening offers the browser to choose between. */
