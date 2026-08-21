@@ -234,7 +234,7 @@ export default function HeaderSearch() {
                     <li key={p.id}>
                       <Link
                         href={`/products/${p.id}`}
-                        onClick={close}
+                        onClick={() => { record(q); close(); }}
                         onMouseEnter={() => setActive(i)}
                         aria-current={i === active ? 'true' : undefined}
                         className={`flex items-center gap-4 px-4 py-3 transition-colors duration-300 ${

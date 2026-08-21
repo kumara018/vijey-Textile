@@ -8,7 +8,7 @@ import { useHeroStore } from '@/store/useHeroStore';
 import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
 import { HERO_FIXTURE } from '@/lib/heroFixture';
 import type { Product } from '@/types';
-import BoltDrift from '@/components/home/BoltDrift';
+import GarmentSlide from '@/components/home/GarmentSlide';
 import Reveal from '@/components/home/Reveal';
 import OccasionBand from '@/components/home/OccasionBand';
 import MeasureRule from '@/components/home/MeasureRule';
@@ -175,7 +175,7 @@ export default function HomePage() {
             garment gone it only pinned an empty band to the top of the
             window. */}
         <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.5rem,4vh,2.5rem)] pt-[clamp(1.5rem,4vh,2rem)] sm:px-10 md:pb-[clamp(2.25rem,5vh,3.25rem)] md:pt-[clamp(2.25rem,5vh,3.25rem)]">
-          <BoltDrift />
+          <GarmentSlide products={[...featuredItems, ...recentItems]} />
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
               drawn; if it never does, this is the hero and it is a still. */}

@@ -262,27 +262,3 @@ html[data-capture='1'] [data-nextjs-dev-tools-button] {
   @page { margin: 16mm; }
 }
 
-/* ── The bolt drift (components/home/BoltDrift.tsx) ───────────────────────
-   Cloth on a counter settles; it does not slide. Each bolt breathes a few
-   pixels in depth around its own resting --z and --turn, so the stack shifts
-   the way a pile does when someone walks past it — and because the transform
-   keeps each bolt's own base values, six can share one keyframe set without
-   collapsing onto the same position.
-
-   `transform` only: composited on the GPU, never touches layout, cannot
-   stutter a scroll. */
-@keyframes bolt-settle {
-  0%   { transform: translateZ(var(--z)) rotateY(var(--turn)); }
-  50%  { transform: translateZ(calc(var(--z) + 18px)) rotateY(calc(var(--turn) * 0.7)); }
-  100% { transform: translateZ(var(--z)) rotateY(var(--turn)); }
-}
-.bolt-drift {
-  will-change: transform;
-  animation-name: bolt-settle;
-  animation-timing-function: cubic-bezier(0.45, 0, 0.55, 1);
-  animation-iteration-count: infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  /* The stack stays; only the settling stops. */
-  .bolt-drift { animation: none; }
-}
