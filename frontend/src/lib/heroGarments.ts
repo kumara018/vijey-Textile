@@ -31,9 +31,28 @@
  * plenty; anything larger is bandwidth a customer on a phone pays for and
  * cannot see.
  *
- * WHILE THIS IS EMPTY the opening falls back to the featured products, so the
- * space is never blank. That fallback is a stopgap, not the intent — the
- * featured shots are catalogue photographs and some of them have children in
- * them.
+ * THIS LIST IS NOW THE OPENING. While it has entries the product fallback is
+ * not used at all, so what shows here is exactly what is listed and in this
+ * order — nothing arrives because a piece happened to be marked featured.
+ *
+ * Cloudinary URLs are fine to list directly; they are already the canonical
+ * address of that image. To swap one, replace the line. To reorder, move it.
+ * To go back to picking automatically from featured products, empty the array.
  */
-export const HERO_GARMENTS: string[] = [];
+export const HERO_GARMENTS: string[] = [
+  // Leghenga 24NJA — the SEATED shot, not the standing one.
+  //
+  // The opening used to take each product's FIRST image, and for this piece
+  // that is the standing photograph. The one that was asked for is the second
+  // in the same product's gallery: seated on the bench, the tiered skirt open
+  // so the floral border reads, the palace arches behind. Same garment, better
+  // picture, and there was no way to say "the second image of this product"
+  // except by naming it here.
+  'https://res.cloudinary.com/dovkyontt/image/upload/v1787054336/vijeytextile/products/snlcmdum0d8zqkgnz8s1.jpg',
+
+  // Multi colour Top and pant set
+  'https://res.cloudinary.com/dovkyontt/image/upload/v1786527625/vijeytextile/products/oehrqs7lbrsoif0lfjg3.jpg',
+
+  // Aari Pattu knots model frock
+  'https://res.cloudinary.com/dovkyontt/image/upload/v1786526535/vijeytextile/products/t6jrzmdfyp8pms3hjdw2.jpg',
+];

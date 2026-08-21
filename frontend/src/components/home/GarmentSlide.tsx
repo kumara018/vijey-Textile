@@ -210,7 +210,7 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
                   setRejected((prev) => (prev.includes(src) ? prev : [...prev, src]));
                 }
               }}
-              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
+              className="absolute inset-0 h-full w-full object-contain object-right transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
               style={{ opacity: isCurrent ? 1 : 0 }}
             />
           );
@@ -218,19 +218,19 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
       </div>
 
       {/**
-        * The wash. The opening line sits over this, and type on a photograph
-        * is the classic way a headline becomes unreadable — it depends
-        * entirely on which garment happens to be showing.
+        * A short wash at the left edge only.
         *
-        * Opaque at the left where the words are, clearing toward the right
-        * where the garment is meant to be seen. So the line keeps its contrast
-        * against the shop's own ground whatever is behind it.
+        * It used to run most of the way across, because the photograph filled
+        * the whole band and the headline sat on top of it. The garment is held
+        * to the right now and never reaches the words, so a full-width wash
+        * would only be greying out a picture for no reason. What is left just
+        * softens the join where the image meets the ground.
         */}
       <div
-        className="absolute inset-0"
+        className="absolute inset-y-0 left-0 w-1/2"
         style={{
           background:
-            'linear-gradient(90deg, rgba(247,241,232,0.97) 0%, rgba(247,241,232,0.93) 30%, rgba(247,241,232,0.55) 58%, rgba(247,241,232,0.15) 100%)',
+            'linear-gradient(90deg, rgba(247,241,232,1) 0%, rgba(247,241,232,1) 55%, rgba(247,241,232,0) 100%)',
         }}
       />
     </div>
