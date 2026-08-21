@@ -83,9 +83,24 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
    * checks below run on load, because a file's real dimensions are not
    * knowable until it arrives, and a failing image is simply never shown.
    */
+  /**
+   * DE-DUPLICATED, WHICH IS NOT DEFENSIVE TIDYING — IT WAS A REAL FAULT.
+   *
+   * The opening is handed [...featured, ...recent], and a piece that is both
+   * featured AND recent appears in both. Measured against the live shop: the
+   * combined list is ELEVEN entries holding SIX products, so five of them are
+   * in the rotation twice. The same photograph therefore came round twice in a
+   * row, which is what "this image is blinking two times" was describing — not
+   * a rendering fault at all, the same picture crossfading into itself.
+   *
+   * Keyed on the resolved URL rather than the product id, so two products
+   * sharing a photograph also collapse to one slide.
+   */
   const sources: string[] = HERO_GARMENTS.length > 0
-    ? HERO_GARMENTS
-    : products.filter((p) => p.images?.[0]).slice(0, 6).map((p) => mediaUrl(p.images[0]));
+    ? Array.from(new Set(HERO_GARMENTS))
+    : Array.from(new Set(
+        products.filter((p) => p.images?.[0]).map((p) => mediaUrl(p.images[0])),
+      )).slice(0, 6);
 
   /**
    * A picture that cannot carry this frame is dropped once it loads.
