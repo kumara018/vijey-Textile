@@ -134,10 +134,31 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
       <div className="absolute inset-0">
+        {/**
+          * EVERY SLIDE STAYS MOUNTED, AND ONLY OPACITY MOVES.
+          *
+          * This used to mount just the current slide and the next one, to keep
+          * at most two photographs in memory. It produced exactly the blink
+          * that was reported, and the reason is worth writing down: when the
+          * index advanced, the OUTGOING image was unmounted in the same render
+          * that the incoming one began fading in. So the old picture did not
+          * fade — it was cut, instantly, and the ground flashed through the
+          * gap before the new one had any opacity. Two visible steps where
+          * there should have been one.
+          *
+          * It also made the wrap from the last slide to the first feel unlike
+          * the others, because a different pair was being swapped at the
+          * boundary. With every slide mounted there is no boundary: going from
+          * the last to the first is the same crossfade as any other, so the
+          * rotation has no beginning and no end.
+          *
+          * The cost is three photographs held instead of two. At 27-91KB of
+          * WebP that is a fair price for a transition that does not flicker,
+          * and the ones that are not showing are lazy so nothing is fetched
+          * before it is needed.
+          */}
         {usable.map((src, i) => {
           const isCurrent = i === index;
-          const isNext = i === (index + 1) % usable.length;
-          if (!isCurrent && !isNext) return null;
           return (
             <img
               key={src}
@@ -156,6 +177,7 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
               sizes="100vw"
               alt=""
               loading={i === 0 ? 'eager' : 'lazy'}
+              fetchPriority={i === 0 ? 'high' : 'auto'}
               decoding="async"
               onLoad={(e) => {
                 const img = e.currentTarget;
