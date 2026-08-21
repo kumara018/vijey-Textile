@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { mediaUrl } from '@/lib/media';
 import { HERO_GARMENTS } from '@/lib/heroGarments';
+import type { Product } from '@/types';
 
 /**
  * The opening: whole garments, turning slowly, in a frame shaped like a
@@ -42,37 +44,50 @@ const HOLD_MS = 4200;
 /** Below this a photograph is visibly soft across a full-bleed opening. */
 const MIN_WIDTH = 900;
 
-export default function GarmentSlide() {
+/** Above this a picture is too square to be one garment — likely a collage. */
+const MAX_RATIO = 0.95;
+
+export default function GarmentSlide({ products }: { products: Product[] }) {
   /**
-   * ONLY THE SHOP'S OWN HERO PHOTOGRAPHS. There used to be a fallback to
-   * featured products, on the reasoning that an empty space is worse than an
-   * imperfect picture. That was wrong, and shipping it proved it: the
-   * catalogue shots are framed for a grid at thumbnail size, so at full-bleed
-   * one came through as a four-photo collage tiled across the opening and
-   * another as a soft close-up of a bow. Both looked like a mistake, because
-   * both were.
+   * The shop's own hero photographs first; product images after.
    *
-   * An opening with no photograph is the sandalwood ground, the line and the
-   * way in — which is a composition the shop already approved. An opening with
-   * the wrong photograph is a broken shopfront. So when the list is empty this
-   * renders nothing at all and the ground shows through.
+   * The fallback was removed for a while because at full-bleed it produced two
+   * genuinely bad frames: one product image is a four-photo collage, which
+   * tiled across the opening, and another is a soft close-up, which went
+   * blurry stretched to 1900px. Removing it fixed those and took the sliding
+   * garments away with them, which was too blunt — the feature was wanted, the
+   * two bad pictures were not.
+   *
+   * So the pictures are filtered instead of the feature being dropped. Both
+   * checks below run on load, because a file's real dimensions are not
+   * knowable until it arrives, and a failing image is simply never shown.
    */
-  const sources: string[] = HERO_GARMENTS;
+  const sources: string[] = HERO_GARMENTS.length > 0
+    ? HERO_GARMENTS
+    : products.filter((p) => p.images?.[0]).slice(0, 6).map((p) => mediaUrl(p.images[0]));
 
   /**
-   * A picture too small for this frame is dropped once it loads.
+   * A picture that cannot carry this frame is dropped once it loads.
    *
-   * The opening is close to 1900px wide on a desktop. A 600px photograph
-   * stretched across that is soft, and soft on the first thing a customer sees
-   * reads as a cheap shop. There is no way to know a file's real size before
-   * it arrives, so this checks on load and removes anything under the bar —
-   * the slide simply never appears rather than appearing blurred.
+   * TWO WAYS A PICTURE FAILS HERE, and both were seen in production:
+   *
+   *   TOO SMALL. The opening is close to 1900px wide. A 600px photograph
+   *   stretched across it is soft, and soft on the first thing a customer sees
+   *   reads as a cheap shop.
+   *
+   *   TOO SQUARE. A collage of four photographs is roughly 1:1; a photograph
+   *   of a single garment is roughly 3:4. Anything approaching square is
+   *   almost certainly not one piece, and it tiled across the opening exactly
+   *   as you would expect.
+   *
+   * Neither is knowable before the file arrives, so both are checked on load
+   * and a failing image is removed from the rotation rather than shown badly.
    */
-  const [tooSmall, setTooSmall] = useState<string[]>([]);
+  const [rejected, setRejected] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const [onScreen, setOnScreen] = useState(false);
   const host = useRef<HTMLDivElement>(null);
-  const usableCount = sources.filter((src) => !tooSmall.includes(src)).length;
+  const usableCount = sources.filter((src) => !rejected.includes(src)).length;
 
   useEffect(() => {
     const el = host.current;
@@ -89,7 +104,7 @@ export default function GarmentSlide() {
     return () => clearInterval(t);
   }, [usableCount, onScreen]);
 
-  const usable = sources.filter((src) => !tooSmall.includes(src));
+  const usable = sources.filter((src) => !rejected.includes(src));
   if (usable.length === 0) return null;
 
   return (
@@ -112,8 +127,13 @@ export default function GarmentSlide() {
               decoding="async"
               onLoad={(e) => {
                 const img = e.currentTarget;
-                if (img.naturalWidth > 0 && img.naturalWidth < MIN_WIDTH) {
-                  setTooSmall((prev) => (prev.includes(src) ? prev : [...prev, src]));
+                if (!img.naturalWidth) return;
+                const ratio = img.naturalWidth / img.naturalHeight;
+                // Too small to stretch across the opening without going soft,
+                // or too square to be a single garment shot — a collage of
+                // four photographs is roughly 1:1, a garment is roughly 3:4.
+                if (img.naturalWidth < MIN_WIDTH || ratio > MAX_RATIO) {
+                  setRejected((prev) => (prev.includes(src) ? prev : [...prev, src]));
                 }
               }}
               className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
