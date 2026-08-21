@@ -9,25 +9,18 @@ import type { Product } from '@/types';
  * The opening: whole garments, turning slowly, in a frame shaped like a
  * garment.
  *
- * WHY THE FIRST VERSION SHOWED HALF A DRESS. It filled the hero edge to edge
- * with `object-cover`. The hero is a wide, short band — roughly 1900 by 540 —
- * and a photograph of a garment is portrait, taller than it is wide. Covering
- * a landscape box with a portrait image can only work by cropping the top and
- * bottom away, so what survived was a middle slice: a torso, a pair of hands,
- * half a skirt. Every piece looked cut in half because every piece WAS cut in
- * half.
+ * FULL-BLEED, WHICH IS WHAT WAS ASKED FOR. It briefly became a small 3:4
+ * panel at the right instead, on the reasoning that a wide band crops a
+ * portrait photograph to a middle slice — which it does. But a garment
+ * filling the opening reads as a shopfront, and a postcard floating in a
+ * corner does not, and the shop's judgement on that is the one that counts.
  *
- * There is no setting on `object-fit` that fixes that while keeping the image
- * full-bleed. `contain` would show the whole garment floating in a wide empty
- * band with bars either side, which is worse. The frame has to change shape,
- * not the fit.
- *
- * SO THE FRAME IS PORTRAIT. The garment now stands in a 3:4 panel on the right
- * of the opening, beside the line rather than behind it — the proportion a
- * garment photograph is actually taken in, so the whole piece fits with
- * nothing cropped. It also means the headline sits on the shop's own ground
- * again instead of over a photograph, which is why it stays readable whatever
- * is showing.
+ * The crop is therefore a real constraint rather than a bug: `object-cover`
+ * on a band this wide will always cut the top and bottom off a portrait
+ * photograph. The way to control WHAT it cuts is the photograph itself —
+ * `public/hero/` and `lib/heroGarments.ts` exist for that, and the guidance
+ * there says to leave room around the piece so the crop lands on background
+ * rather than through the garment.
  *
  * WHERE THE PICTURES COME FROM. `lib/heroGarments.ts` first — images the shop
  * puts in `public/hero/`, chosen deliberately for the opening. If that list is
@@ -79,10 +72,9 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
     <div
       ref={host}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-y-0 right-0 hidden w-[38%] max-w-[30rem] items-center justify-end pr-6 md:flex lg:pr-10"
+      className="pointer-events-none absolute inset-0 overflow-hidden"
     >
-      {/* 3:4 — the proportion a garment is photographed in, so it fits whole. */}
-      <div className="relative aspect-[3/4] h-[min(84%,30rem)] overflow-hidden border border-ink-edge/50 bg-ink-raised">
+      <div className="absolute inset-0">
         {sources.map((src, i) => {
           const isCurrent = i === index;
           const isNext = i === (index + 1) % sources.length;
@@ -100,6 +92,23 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
           );
         })}
       </div>
+
+      {/**
+        * The wash. The opening line sits over this, and type on a photograph
+        * is the classic way a headline becomes unreadable — it depends
+        * entirely on which garment happens to be showing.
+        *
+        * Opaque at the left where the words are, clearing toward the right
+        * where the garment is meant to be seen. So the line keeps its contrast
+        * against the shop's own ground whatever is behind it.
+        */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(247,241,232,0.97) 0%, rgba(247,241,232,0.93) 30%, rgba(247,241,232,0.55) 58%, rgba(247,241,232,0.15) 100%)',
+        }}
+      />
     </div>
   );
 }

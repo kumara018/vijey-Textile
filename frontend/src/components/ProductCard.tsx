@@ -205,24 +205,29 @@ export default function ProductCard({ product }: Props) {
         {/* ── Image / Carousel ───────────────────────────────────────────────── */}
         <div
           className="relative aspect-[3/4] overflow-hidden bg-ink-raised"
-          style={{ perspective: 1200 }}
           onMouseEnter={() => setHovering(true)}
           onMouseLeave={handleMouseLeave}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
-          {/* Slide content — cross-fades with a subtle 3D coverflow tilt
-              instead of hard-cutting, so both auto-advance and manual swipe
-              feel smooth and give the gallery some depth. */}
+          {/* THE COVERFLOW IS GONE.
+              Every slide change ran rotateY(-14deg) with a scale, so a
+              photograph swung in edge-on and settled. On a plate showing a
+              garment that is the one thing that must not happen: the piece is
+              tilted and foreshortened for the first half-second of every
+              rotation, so the colour, the drape and the hem are all read off a
+              skewed image. It is also the 2007 iTunes effect, and it was
+              called out as "3D" more than once.
+              A crossfade instead. Opacity only, so nothing is ever shown at an
+              angle and the transition is composited rather than transformed. */}
           <AnimatePresence mode="sync" initial={false}>
             {isVideoSlide ? (
               <motion.div
                 key="video"
-                initial={{ opacity: 0, rotateY: -14, scale: 0.94 }}
-                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}
-                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                style={{ transformStyle: 'preserve-3d' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 0.61, 0.24, 1] }}
                 className="absolute inset-0 bg-gray-900 rounded-lg flex items-center justify-center"
               >
                 <Play size={40} className="text-paper opacity-80" fill="white" />
@@ -238,11 +243,10 @@ export default function ProductCard({ product }: Props) {
                 onError={() =>
                   setFailedImages((prev) => (prev.includes(currentImg) ? prev : [...prev, currentImg]))
                 }
-                initial={{ opacity: 0, rotateY: -14, scale: 0.94 }}
-                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                exit={{ opacity: 0, rotateY: 14, scale: 0.94 }}
-                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                style={{ transformStyle: 'preserve-3d' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5, ease: [0.22, 0.61, 0.24, 1] }}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] group-hover:scale-[1.04] motion-reduce:transition-none"
               />
             ) : (

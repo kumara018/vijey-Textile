@@ -174,7 +174,7 @@ export default function HomePage() {
             garment could hold still while the page scrolled over it; with the
             garment gone it only pinned an empty band to the top of the
             window. */}
-        <div className="flex flex-col justify-start overflow-hidden px-6 pb-[clamp(1.5rem,4vh,2.5rem)] pt-[clamp(1.5rem,4vh,2rem)] sm:px-10 md:pb-[clamp(2.25rem,5vh,3.25rem)] md:pt-[clamp(2.25rem,5vh,3.25rem)]">
+        <div className="relative flex flex-col justify-center overflow-hidden px-6 pb-[clamp(1.5rem,4vh,2.5rem)] pt-[clamp(1.5rem,4vh,2rem)] sm:px-10 md:min-h-[min(24rem,64svh)] md:pb-[clamp(2.25rem,5vh,3.25rem)] md:pt-[clamp(2.25rem,5vh,3.25rem)]">
           <GarmentSlide products={[...featuredItems, ...recentItems]} />
           {/* The graded ground and the poster underlay. The live scene behind
               this cross-fades in over it once it genuinely has the garment
