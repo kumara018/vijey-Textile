@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { mediaUrl } from '@/lib/media';
 import { HERO_GARMENTS } from '@/lib/heroGarments';
-import type { Product } from '@/types';
 
 /**
  * The opening: whole garments, turning slowly, in a frame shaped like a
@@ -41,15 +39,40 @@ import type { Product } from '@/types';
 
 const HOLD_MS = 4200;
 
-export default function GarmentSlide({ products }: { products: Product[] }) {
-  /** The shop's own hero photographs win; products are the fallback. */
-  const sources: string[] = HERO_GARMENTS.length > 0
-    ? HERO_GARMENTS
-    : products.filter((p) => p.images?.[0]).slice(0, 5).map((p) => mediaUrl(p.images[0]));
+/** Below this a photograph is visibly soft across a full-bleed opening. */
+const MIN_WIDTH = 900;
 
+export default function GarmentSlide() {
+  /**
+   * ONLY THE SHOP'S OWN HERO PHOTOGRAPHS. There used to be a fallback to
+   * featured products, on the reasoning that an empty space is worse than an
+   * imperfect picture. That was wrong, and shipping it proved it: the
+   * catalogue shots are framed for a grid at thumbnail size, so at full-bleed
+   * one came through as a four-photo collage tiled across the opening and
+   * another as a soft close-up of a bow. Both looked like a mistake, because
+   * both were.
+   *
+   * An opening with no photograph is the sandalwood ground, the line and the
+   * way in — which is a composition the shop already approved. An opening with
+   * the wrong photograph is a broken shopfront. So when the list is empty this
+   * renders nothing at all and the ground shows through.
+   */
+  const sources: string[] = HERO_GARMENTS;
+
+  /**
+   * A picture too small for this frame is dropped once it loads.
+   *
+   * The opening is close to 1900px wide on a desktop. A 600px photograph
+   * stretched across that is soft, and soft on the first thing a customer sees
+   * reads as a cheap shop. There is no way to know a file's real size before
+   * it arrives, so this checks on load and removes anything under the bar —
+   * the slide simply never appears rather than appearing blurred.
+   */
+  const [tooSmall, setTooSmall] = useState<string[]>([]);
   const [index, setIndex] = useState(0);
   const [onScreen, setOnScreen] = useState(false);
   const host = useRef<HTMLDivElement>(null);
+  const usableCount = sources.filter((src) => !tooSmall.includes(src)).length;
 
   useEffect(() => {
     const el = host.current;
@@ -60,13 +83,14 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
   }, []);
 
   useEffect(() => {
-    if (sources.length <= 1 || !onScreen) return;
+    if (usableCount <= 1 || !onScreen) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % sources.length), HOLD_MS);
+    const t = setInterval(() => setIndex((i) => (i + 1) % usableCount), HOLD_MS);
     return () => clearInterval(t);
-  }, [sources.length, onScreen]);
+  }, [usableCount, onScreen]);
 
-  if (sources.length === 0) return null;
+  const usable = sources.filter((src) => !tooSmall.includes(src));
+  if (usable.length === 0) return null;
 
   return (
     <div
@@ -75,9 +99,9 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
       className="pointer-events-none absolute inset-0 overflow-hidden"
     >
       <div className="absolute inset-0">
-        {sources.map((src, i) => {
+        {usable.map((src, i) => {
           const isCurrent = i === index;
-          const isNext = i === (index + 1) % sources.length;
+          const isNext = i === (index + 1) % usable.length;
           if (!isCurrent && !isNext) return null;
           return (
             <img
@@ -86,6 +110,12 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
               alt=""
               loading={i === 0 ? 'eager' : 'lazy'}
               decoding="async"
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth > 0 && img.naturalWidth < MIN_WIDTH) {
+                  setTooSmall((prev) => (prev.includes(src) ? prev : [...prev, src]));
+                }
+              }}
               className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
               style={{ opacity: isCurrent ? 1 : 0 }}
             />
