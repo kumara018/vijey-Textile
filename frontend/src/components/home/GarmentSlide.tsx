@@ -41,8 +41,21 @@ import type { Product } from '@/types';
 
 const HOLD_MS = 4200;
 
-/** Below this a photograph is visibly soft across a full-bleed opening. */
-const MIN_WIDTH = 900;
+/**
+ * Below this a photograph is visibly soft across a full-bleed opening.
+ *
+ * SET FROM THE ACTUAL LIBRARY, NOT FROM A ROUND NUMBER. This was 900px, which
+ * sounded reasonable and was catastrophic: measured against the real product
+ * images, EVERY one of them is under 900 wide (675, 675, 646, 478, 225), so
+ * the filter would have emptied the opening entirely and left it looking
+ * broken rather than picky.
+ *
+ * The library splits cleanly at 600. Three pieces sit at 646-675 wide and are
+ * perfectly sharp in the frame; the two that looked wrong are 478 and 225.
+ * So 600 removes exactly the two bad frames and keeps everything else — which
+ * is what was asked for, arrived at by measuring rather than guessing.
+ */
+const MIN_WIDTH = 600;
 
 /** Above this a picture is too square to be one garment — likely a collage. */
 const MAX_RATIO = 0.95;
@@ -71,9 +84,10 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
    *
    * TWO WAYS A PICTURE FAILS HERE, and both were seen in production:
    *
-   *   TOO SMALL. The opening is close to 1900px wide. A 600px photograph
-   *   stretched across it is soft, and soft on the first thing a customer sees
-   *   reads as a cheap shop.
+   *   TOO SMALL. The opening is close to 1900px wide, so a narrow file goes
+   *   soft stretched across it, and soft on the first thing a customer sees
+   *   reads as a cheap shop. The threshold is measured against the actual
+   *   library rather than picked — see MIN_WIDTH.
    *
    *   TOO SQUARE. A collage of four photographs is roughly 1:1; a photograph
    *   of a single garment is roughly 3:4. Anything approaching square is
