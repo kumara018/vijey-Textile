@@ -1,0 +1,21 @@
+# One Caddy, two shops. A separate certificate is obtained and renewed for each
+# hostname automatically; they are independent.
+#
+# Create BOTH A records pointing at this machine's public IP before starting,
+# or the certificate for whichever name does not resolve will fail to issue.
+
+api.vijeytextile.com {
+	reverse_proxy vijey-api:8000
+	encode zstd gzip
+	header { -Server }
+	log { output stdout
+	      format console }
+}
+
+api.ammalutex.com {
+	reverse_proxy ammalu-api:8000
+	encode zstd gzip
+	header { -Server }
+	log { output stdout
+	      format console }
+}

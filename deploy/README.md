@@ -3,6 +3,11 @@
 Two containers on one always-free virtual machine: the API, and Caddy in front
 of it for automatic HTTPS. Nothing here has an hour cap or a trial clock.
 
+> **Only got one VM?** Oracle's ARM capacity is often unavailable and one
+> instance is easier to secure than two. This stack binds ports 80 and 443, so
+> two copies cannot share a machine — use `both-shops/` instead, which puts one
+> Caddy in front of both APIs. Two VMs is still preferable when you can get them.
+
 **Docker and Oracle are not alternatives.** Docker packages the app; Oracle is
 the machine it runs on. The Dockerfile runs *on* Oracle.
 
