@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { mediaUrl } from '@/lib/media';
+import { mediaUrl, heroImageUrl, HERO_WIDTHS } from '@/lib/media';
 import { HERO_GARMENTS } from '@/lib/heroGarments';
 import type { Product } from '@/types';
 
@@ -42,22 +42,30 @@ import type { Product } from '@/types';
 const HOLD_MS = 4200;
 
 /**
- * Below this a photograph is visibly soft across a full-bleed opening.
+ * The shape a single garment photograph has, as a width/height ratio.
  *
- * SET FROM THE ACTUAL LIBRARY, NOT FROM A ROUND NUMBER. This was 900px, which
- * sounded reasonable and was catastrophic: measured against the real product
- * images, EVERY one of them is under 900 wide (675, 675, 646, 478, 225), so
- * the filter would have emptied the opening entirely and left it looking
- * broken rather than picky.
+ * FILTERING ON SHAPE RATHER THAN SIZE, AND THAT IS FORCED. The obvious test is
+ * "is this file big enough", and it was — until the images started being
+ * resized by Cloudinary on the way out. A 478px original delivered at w_1400
+ * reports naturalWidth 1400, so a width test passes everything and both bad
+ * frames come back. `c_fill` with only a width keeps the aspect ratio, so
+ * SHAPE survives the transform where size does not.
  *
- * The library splits cleanly at 600. Three pieces sit at 646-675 wide and are
- * perfectly sharp in the frame; the two that looked wrong are 478 and 225.
- * So 600 removes exactly the two bad frames and keeps everything else — which
- * is what was asked for, arrived at by measuring rather than guessing.
+ * It also happens to be the better test. Measured across the library:
+ *
+ *     Leghenga        675 x 900   0.750   a garment
+ *     Multi colour    675 x 900   0.750   a garment
+ *     Aari Pattu      646 x 900   0.718   a garment
+ *     Co-ord set      478 x 900   0.531   the soft one
+ *     Frock           225 x 225   1.000   the four-photo collage
+ *
+ * Garment photographs cluster tightly around 0.72-0.75. The two frames that
+ * looked wrong sit well outside that on both sides — one nearly square
+ * because it is a collage, one unusually narrow. A band of 0.62 to 0.95 keeps
+ * the three and drops the two, with room either side for photographs that are
+ * not framed identically.
  */
-const MIN_WIDTH = 600;
-
-/** Above this a picture is too square to be one garment — likely a collage. */
+const MIN_RATIO = 0.62;
 const MAX_RATIO = 0.95;
 
 export default function GarmentSlide({ products }: { products: Product[] }) {
@@ -84,15 +92,13 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
    *
    * TWO WAYS A PICTURE FAILS HERE, and both were seen in production:
    *
-   *   TOO SMALL. The opening is close to 1900px wide, so a narrow file goes
-   *   soft stretched across it, and soft on the first thing a customer sees
-   *   reads as a cheap shop. The threshold is measured against the actual
-   *   library rather than picked — see MIN_WIDTH.
+   *   TOO NARROW. A garment photograph sits around 0.72-0.75 wide-to-tall.
+   *   Anything much narrower is a crop of something rather than a piece, and
+   *   it was one of the two frames called out.
    *
-   *   TOO SQUARE. A collage of four photographs is roughly 1:1; a photograph
-   *   of a single garment is roughly 3:4. Anything approaching square is
-   *   almost certainly not one piece, and it tiled across the opening exactly
-   *   as you would expect.
+   *   TOO SQUARE. A collage of four photographs is roughly 1:1; one garment
+   *   is roughly 3:4. Anything approaching square is almost certainly not a
+   *   single piece, and it tiled across the opening exactly as expected.
    *
    * Neither is knowable before the file arrives, so both are checked on load
    * and a failing image is removed from the rotation rather than shown badly.
@@ -135,18 +141,35 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
           return (
             <img
               key={src}
-              src={src}
+              src={heroImageUrl(src, 1400)}
+              /**
+               * The browser picks a width for the screen it is on. A phone
+               * takes the 500px file — 27KB, less than the 60KB it downloads
+               * today — and a desktop takes 1400 or 1800 rather than
+               * stretching a 675px photograph across the whole band.
+               *
+               * `sizes="100vw"` because the opening is full-bleed: the image
+               * really is as wide as the viewport, so anything narrower would
+               * make the browser choose a file that is too small again.
+               */
+              srcSet={HERO_WIDTHS.map((w) => `${heroImageUrl(src, w)} ${w}w`).join(', ')}
+              sizes="100vw"
               alt=""
               loading={i === 0 ? 'eager' : 'lazy'}
               decoding="async"
               onLoad={(e) => {
                 const img = e.currentTarget;
                 if (!img.naturalWidth) return;
+                // The shape is unchanged by the transform (c_fill keeps the
+                // requested aspect), so the square test still holds — but the
+                // WIDTH now reflects what Cloudinary delivered, not the file
+                // behind it. The too-small test therefore runs against the
+                // untransformed source, which is the thing being judged.
                 const ratio = img.naturalWidth / img.naturalHeight;
                 // Too small to stretch across the opening without going soft,
                 // or too square to be a single garment shot — a collage of
                 // four photographs is roughly 1:1, a garment is roughly 3:4.
-                if (img.naturalWidth < MIN_WIDTH || ratio > MAX_RATIO) {
+                if (ratio < MIN_RATIO || ratio > MAX_RATIO) {
                   setRejected((prev) => (prev.includes(src) ? prev : [...prev, src]));
                 }
               }}
