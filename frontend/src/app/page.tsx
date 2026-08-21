@@ -188,7 +188,24 @@ export default function HomePage() {
 
           <div className="relative z-10 mx-auto w-full max-w-[112rem]">
           <Reveal>
-            <p className="mb-[clamp(1rem,2.6vh,2rem)] text-rule uppercase text-brass-bright">
+            {/* DEEPER THAN THE USUAL ACCENT, because this line is the only
+                small text on the site that sits ON a photograph. Everywhere
+                else the eyebrow is `brass-bright` against the shop's ground,
+                where it measures 4.90:1 and is fine. Here it lands on a lit
+                garment photograph and drops to 4.06:1 — under the 4.5 small
+                text needs — so on a phone, where the line runs most of the
+                way across the picture, it was washing out over the brightest
+                part of the frame. maroon-700 measures 7.06:1 on the same
+                backdrop and still reads as the shop's cerise.
+                Fixed on the type rather than by dimming the photograph: the
+                picture is the thing being sold.
+
+                IT ALSO WRAPS TO TWO LINES ON A PHONE. Held to 15 characters
+                it breaks after "ERODE" and stays inside the part of the band
+                the wash keeps opaque, instead of running out across the
+                brightest part of the picture. Released at sm and above, where
+                one line fits in the clear left third with room to spare. */}
+            <p className="mb-[clamp(1rem,2.6vh,2rem)] max-w-[15ch] text-rule uppercase text-maroon-700 sm:max-w-none">
               Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
             </p>
 

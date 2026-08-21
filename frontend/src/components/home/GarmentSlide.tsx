@@ -218,19 +218,15 @@ export default function GarmentSlide({ products }: { products: Product[] }) {
       </div>
 
       {/**
-        * A short wash at the left edge only.
-        *
-        * It used to run most of the way across, because the photograph filled
-        * the whole band and the headline sat on top of it. The garment is held
-        * to the right now and never reaches the words, so a full-width wash
-        * would only be greying out a picture for no reason. What is left just
-        * softens the join where the image meets the ground.
+        * One wash, opaque where the words are and clearing across the piece.
+        * The picture is deliberately NOT dimmed further on a phone: legibility
+        * there is solved on the type instead, so the garment keeps its light.
         */}
       <div
-        className="absolute inset-y-0 left-0 w-1/2"
+        className="absolute inset-0"
         style={{
           background:
-            'linear-gradient(90deg, rgba(247,241,232,1) 0%, rgba(247,241,232,1) 55%, rgba(247,241,232,0) 100%)',
+            'linear-gradient(90deg, rgba(247,241,232,0.97) 0%, rgba(247,241,232,0.93) 30%, rgba(247,241,232,0.55) 58%, rgba(247,241,232,0.15) 100%)',
         }}
       />
     </div>
