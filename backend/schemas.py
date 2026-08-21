@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator, Field
 from typing import Optional, List, Any
 from datetime import datetime
 import re
@@ -544,11 +544,29 @@ class PaymentDetails(BaseModel):
         return self
 
 
+class BuyNowItem(BaseModel):
+    """One piece, bought directly, without going through the bag.
+
+    "Buy it now" used to add the piece to the cart and then send the customer
+    to checkout — and checkout orders the WHOLE cart and empties it. So buying
+    one thing ordered everything the customer had been saving, and cleared the
+    bag. This carries the single piece instead, so the bag is neither read nor
+    touched.
+    """
+    product_id: int
+    quantity:   int = Field(default=1, ge=1, le=99)
+    size:       Optional[str] = None
+    color:      Optional[str] = None
+
+
 class OrderCreate(BaseModel):
     shipping_address:  ShippingAddress
     payment:           PaymentDetails
     notes:             Optional[str] = None
     open_box_delivery: bool = False    # customer can request open-box inspection
+    # When present the order is built from this ONE piece and the cart is left
+    # exactly as it was. When absent, behaviour is unchanged: the whole cart.
+    buy_now:           Optional[BuyNowItem] = None
 
 
 class CancelOrderPayload(BaseModel):

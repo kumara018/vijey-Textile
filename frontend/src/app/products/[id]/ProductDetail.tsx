@@ -137,14 +137,40 @@ export default function ProductDetail({ id }: { id: number }) {
    * it is why every shop worth copying puts a second, quieter button beside
    * the first.
    *
-   * It reuses `add` rather than a separate path: the same validation, the same
-   * stock error, the same cart. The only difference is where you end up. That
-   * matters — a buy button that skipped the cart would need its own copy of
-   * every rule, and the two would drift.
+   * IT NO LONGER GOES THROUGH THE BAG, and that was a real bug rather than a
+   * preference. It used to call `add()` and then send the customer to
+   * checkout — but checkout orders the WHOLE bag and empties it. So clicking
+   * buy on one frock ordered every piece the customer had been saving, and
+   * cleared the bag on the way out.
+   *
+   * It now carries just this piece to checkout, in sessionStorage rather than
+   * the URL so a size and colour cannot be tampered with by editing the
+   * address bar, and so a refresh keeps working. The backend takes the same
+   * single piece as `buy_now` and leaves the cart untouched — the validation,
+   * the stock check, the pricing and the refund-on-failure path are all the
+   * same code the bag order uses, so the two cannot drift.
+   *
+   * sessionStorage, not localStorage: an abandoned direct purchase should not
+   * still be waiting in a new tab tomorrow.
    */
-  const buyNow = async () => {
-    const ok = await add();
-    if (ok) router.push('/checkout');
+  const buyNow = () => {
+    if (!product) return;
+    if (product.size_options?.length > 0 && !size) {
+      setFormError('Choose a size first.');
+      return;
+    }
+    if (product.colors?.length > 0 && !colour) {
+      setFormError('Choose a colour first.');
+      return;
+    }
+    setFormError('');
+    sessionStorage.setItem('buyNow', JSON.stringify({
+      product_id: product.id,
+      quantity,
+      size: size || null,
+      color: colour || null,
+    }));
+    router.push('/checkout?buy=1');
   };
 
   const keep = async () => {

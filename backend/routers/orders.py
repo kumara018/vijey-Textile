@@ -1,6 +1,7 @@
 import random
 import string
 import os
+from types import SimpleNamespace
 import hmac
 import hashlib
 from datetime import datetime, timedelta, timezone
@@ -86,16 +87,50 @@ def place_order(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    cart_items = (
-        db.query(models.CartItem)
-        .filter(models.CartItem.user_id == current_user.id)
-        .all()
-    )
-    if not cart_items:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Your cart is empty. Please add items before placing an order.",
+    # ── WHAT IS BEING BOUGHT: one piece, or the whole bag ────────────────
+    #
+    # "Buy it now" used to add the piece to the cart and then come here, and
+    # this endpoint orders EVERYTHING in the cart and deletes it. So a customer
+    # who clicked buy on one frock got an order for every piece they had been
+    # saving, and an emptied bag. That is the bug; this is the fix.
+    #
+    # The single piece is wrapped in a plain object carrying exactly the four
+    # attributes the pricing loop below reads — product, quantity, size, colour
+    # — so that loop, the stock checks, the snapshot and the refund-on-failure
+    # path are all reused unchanged. Deliberately NOT a transient CartItem:
+    # assigning `.product` on one associates it with a persistent Product, and
+    # SQLAlchemy would cascade it into the session and write a real cart row on
+    # commit. A SimpleNamespace cannot.
+    buying_now = payload.buy_now is not None
+    if buying_now:
+        product = (
+            db.query(models.Product)
+            .filter(models.Product.id == payload.buy_now.product_id)
+            .first()
         )
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="That piece is no longer available.",
+            )
+        cart_items = [SimpleNamespace(
+            product=product,
+            product_id=product.id,
+            quantity=payload.buy_now.quantity,
+            size=payload.buy_now.size,
+            color=payload.buy_now.color,
+        )]
+    else:
+        cart_items = (
+            db.query(models.CartItem)
+            .filter(models.CartItem.user_id == current_user.id)
+            .all()
+        )
+        if not cart_items:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Your cart is empty. Please add items before placing an order.",
+            )
 
     # ── VERIFY FIRST. NOTHING ELSE HAPPENS BEFORE THIS. ─────────────────
     #
@@ -198,9 +233,12 @@ def place_order(
     for item in cart_items:
         item.product.stock -= item.quantity
 
-    db.query(models.CartItem).filter(
-        models.CartItem.user_id == current_user.id
-    ).delete()
+    # Only a bag order empties the bag. A direct purchase must leave whatever
+    # the customer was still saving exactly where it was.
+    if not buying_now:
+        db.query(models.CartItem).filter(
+            models.CartItem.user_id == current_user.id
+        ).delete()
 
     db.commit()
     db.refresh(order)

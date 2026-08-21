@@ -119,6 +119,59 @@ class TestOrders:
         after = db.query(models.Product).get(product.id).stock
         assert after == before - 2, f"stock went {before} -> {after}, expected {before - 2}"
 
+
+    def test_buy_now_orders_only_that_piece_and_leaves_the_bag_alone(
+        self, client, make_user, product, db
+    ):
+        """
+        The bug this exists for: "Buy it now" added the piece to the cart and
+        then came here, and this endpoint orders the WHOLE cart and deletes it.
+        So clicking buy on one frock ordered every piece the customer had been
+        saving AND emptied their bag.
+
+        Two things must hold. The order contains only the piece that was
+        bought, and the bag is exactly as it was afterwards.
+        """
+        import models
+        _, headers = make_user()
+
+        # Something already saved for later — this must survive untouched.
+        self._stocked_cart(client, headers, product, qty=3)
+        bag_before = client.get("/api/cart/", headers=headers).json()
+        saved_qty = sum(i["quantity"] for i in bag_before)
+        assert saved_qty == 3
+
+        body = order_body("9000000123")
+        body["buy_now"] = {"product_id": product.id, "quantity": 1}
+
+        r = client.post("/api/orders/", headers=headers, json=body)
+        assert r.status_code == 201, r.text
+        order = r.json()
+
+        # One piece at 1000, not the three sitting in the bag.
+        assert order["subtotal"] == 1000.0, order
+
+        bag_after = client.get("/api/cart/", headers=headers).json()
+        assert sum(i["quantity"] for i in bag_after) == saved_qty, (
+            "buying one piece emptied or changed the bag"
+        )
+
+    def test_buy_now_still_refuses_a_forged_signature(self, client, make_user, product):
+        """The direct path must not become a way around payment verification."""
+        _, headers = make_user()
+        body = order_body("9000000124", valid_signature=False)
+        body["buy_now"] = {"product_id": product.id, "quantity": 1}
+        r = client.post("/api/orders/", headers=headers, json=body)
+        assert r.status_code == 400, r.text
+
+    def test_buy_now_respects_stock(self, client, make_user, product, db):
+        """A direct purchase cannot outrun the stock check either."""
+        _, headers = make_user()
+        body = order_body("9000000125")
+        body["buy_now"] = {"product_id": product.id, "quantity": product.stock + 5}
+        r = client.post("/api/orders/", headers=headers, json=body)
+        assert r.status_code == 400, r.text
+
     def test_forged_payment_signature_is_refused(self, client, make_user, product, db):
         """
         The highest-consequence test here: a wrong signature must not buy goods.

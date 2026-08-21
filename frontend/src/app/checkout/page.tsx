@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import api, { ordersAPI } from '@/lib/api';
+import api, { ordersAPI, productsAPI } from '@/lib/api';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { shippingAddressSchema } from '@/lib/schemas';
 import { STORE } from '@/lib/config';
-import type { OrderCreatePayload, PaymentDetailsPayload } from '@/lib/contracts';
+import type { Product } from '@/types';
+import type { OrderCreatePayload, PaymentDetailsPayload, BuyNowItemPayload } from '@/lib/contracts';
 import PageShell from '@/components/system/PageShell';
 import toast from 'react-hot-toast';
 import PageHeader from '@/components/system/PageHeader';
@@ -83,6 +84,7 @@ function CheckoutInner() {
   const { items, total, loading: cartLoading, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [addr, setAddr] = useState<Addr>(EMPTY);
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -137,18 +139,57 @@ function CheckoutInner() {
   const formRef = useRef<HTMLFormElement>(null);
   const outcomeRef = useRef<HTMLDivElement>(null);
 
+  /**
+   * A DIRECT PURCHASE SHOWS ONE PIECE, NOT THE WHOLE BAG.
+   *
+   * "Buy it now" used to add the piece to the bag and come here, and this page
+   * orders everything in the bag and empties it — so buying one frock ordered
+   * every piece the customer had saved. The product page now hands the single
+   * piece over in sessionStorage instead, and this reads it.
+   *
+   * Read once into state rather than on every render: sessionStorage is
+   * synchronous and would otherwise be hit on each pass, and the value must
+   * not change underneath a checkout that is already in progress.
+   */
+  const [buyNow, setBuyNow] = useState<BuyNowItemPayload | null>(null);
+  const [buyNowProduct, setBuyNowProduct] = useState<Product | null>(null);
+  const isDirect = buyNow !== null;
+
+  useEffect(() => {
+    if (searchParams.get('buy') !== '1') return;
+    try {
+      const raw = sessionStorage.getItem('buyNow');
+      if (!raw) { router.replace('/cart'); return; }
+      const parsed = JSON.parse(raw) as BuyNowItemPayload;
+      if (!parsed?.product_id) { router.replace('/cart'); return; }
+      setBuyNow(parsed);
+      productsAPI.getOne(parsed.product_id)
+        .then((r) => setBuyNowProduct(r.data))
+        .catch(() => router.replace('/cart'));
+    } catch {
+      router.replace('/cart');
+    }
+  }, [searchParams, router]);
+
   const shipping = STORE.shippingFee;
-  const grandTotal = total + shipping;
+  // The direct purchase is priced from the piece itself; the bag total is
+  // irrelevant to it and must not leak in.
+  const subtotal = isDirect
+    ? (buyNowProduct ? buyNowProduct.price * (buyNow?.quantity ?? 1) : 0)
+    : total;
+  const grandTotal = subtotal + shipping;
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/auth/login');
   }, [user, authLoading, router]);
 
-  // Empty bag → back to the bag. Never fires once an order has been placed.
+  // Empty bag → back to the bag. Never fires once an order has been placed,
+  // and never for a direct purchase, which deliberately has nothing in the bag.
   useEffect(() => {
-    if (cartLoading || orderPlacedRef.current) return;
+    if (cartLoading || orderPlacedRef.current || isDirect) return;
+    if (searchParams.get('buy') === '1') return;   // still loading the piece
     if (items.length === 0) router.replace('/cart');
-  }, [items.length, cartLoading, router]);
+  }, [items.length, cartLoading, router, isDirect, searchParams]);
 
   useEffect(() => {
     if (user) {
@@ -234,6 +275,9 @@ function CheckoutInner() {
       },
       payment: { method: 'razorpay', ...proof },
       open_box_delivery: openBox,
+      // Present only for a direct purchase. The backend then builds the order
+      // from this one piece and leaves the bag exactly as it was.
+      ...(buyNow ? { buy_now: buyNow } : {}),
     };
 
     try {
@@ -241,7 +285,12 @@ function CheckoutInner() {
       // Set BEFORE clearing: clearCart empties items, and the empty-bag guard
       // would otherwise redirect to /cart in the same tick.
       orderPlacedRef.current = true;
-      await clearCart();
+      if (isDirect) {
+        // Nothing of the bag was ordered, so nothing of it may be cleared.
+        sessionStorage.removeItem('buyNow');
+      } else {
+        await clearCart();
+      }
       router.push(`/orders/${res.data.id}?new=1`);
     } catch (err: any) {
       // Money has left the customer's account and there is no order. This is
@@ -486,6 +535,31 @@ function CheckoutInner() {
           <div className="border-t border-ink-edge/60 pt-8 lg:sticky lg:top-28">
             <h2 id="order-heading" className="text-rule uppercase text-paper-faint">Your order</h2>
 
+            {/* A direct purchase lists the ONE piece being bought. Showing the
+                bag here would be worse than the bug it replaces: the customer
+                would see items they are not paying for. */}
+            {isDirect ? (
+              <ul className="mt-7 space-y-5">
+                <li className="flex justify-between gap-5 text-sm">
+                  <span className="min-w-0 text-paper-muted">
+                    {buyNowProduct ? (
+                      <Link href={`/products/${buyNowProduct.id}`} className="text-paper underline-offset-4 hover:underline">
+                        {buyNowProduct.name}
+                      </Link>
+                    ) : (
+                      <span className="text-paper">Loading…</span>
+                    )}
+                    <span className="mt-0.5 block text-xs text-paper-faint">
+                      {[buyNow?.size && `Size ${buyNow.size}`, buyNow?.color, `×${buyNow?.quantity ?? 1}`]
+                        .filter(Boolean).join(' · ')}
+                    </span>
+                  </span>
+                  <span className="shrink-0 tabular-nums text-paper">
+                    {buyNowProduct ? money(buyNowProduct.price * (buyNow?.quantity ?? 1)) : '—'}
+                  </span>
+                </li>
+              </ul>
+            ) : (
             <ul className="mt-7 space-y-5">
               {items.map((item) => (
                 <li key={item.id} className="flex justify-between gap-5 text-sm">
@@ -504,11 +578,12 @@ function CheckoutInner() {
                 </li>
               ))}
             </ul>
+            )}
 
             <dl className="mt-8 space-y-3 border-t border-ink-edge/60 pt-6 text-sm">
               <div className="flex justify-between gap-6">
                 <dt className="text-paper-muted">Subtotal</dt>
-                <dd className="tabular-nums text-paper">{money(total)}</dd>
+                <dd className="tabular-nums text-paper">{money(subtotal)}</dd>
               </div>
               <div className="flex justify-between gap-6">
                 <dt className="text-paper-muted">Shipping</dt>

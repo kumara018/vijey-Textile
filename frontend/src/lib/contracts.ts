@@ -124,11 +124,25 @@ export interface PaymentDetailsPayload {
 }
 
 /** schemas.py:446 OrderCreate */
+/** schemas.py BuyNowItem — one piece bought without going through the bag. */
+export interface BuyNowItemPayload {
+  product_id: number;
+  quantity: number;
+  size?: string | null;
+  color?: string | null;
+}
+
 export interface OrderCreatePayload {
   shipping_address: ShippingAddressPayload;
   payment: PaymentDetailsPayload;
   notes?: string | null;
   open_box_delivery?: boolean;
+  /**
+   * When present the order is built from this ONE piece and the cart is left
+   * untouched. When absent the whole cart is ordered and emptied, which is the
+   * behaviour "Buy it now" was wrongly getting.
+   */
+  buy_now?: BuyNowItemPayload;
 }
 
 /** schemas.py:453 CancelOrderPayload */
