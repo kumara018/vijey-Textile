@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isMoneyAtRisk, type Outcome } from '@/app/checkout/PaymentOutcome';
 import { sceneForPath, isRestrained } from '@/store/useSceneStore';
+import { nextHistory, withoutTerm, LIMIT } from '../searchHistory';
 
 /**
  * Tests for the logic where being wrong costs money or misleads a customer.
@@ -120,5 +121,54 @@ describe('isRestrained — where the effects budget is capped regardless of devi
     expect(isRestrained('gallery')).toBe(false);
     expect(isRestrained('chamber')).toBe(false);
     expect(isRestrained('vault')).toBe(false);
+  });
+});
+
+// ── Search history ──────────────────────────────────────────────────────────
+//
+// The list rules only. Storage and React are not tested here — this suite runs
+// in Node without jsdom on purpose, and these are the parts where a mistake
+// would actually be felt: a duplicate that never collapses, a repeat that does
+// not resurface, or a list that grows until it stops being a shortcut.
+
+describe('search history', () => {
+  it('puts the newest term first', () => {
+    expect(nextHistory(['lehenga'], 'pattu')).toEqual(['pattu', 'lehenga']);
+  });
+
+  it('collapses a repeat rather than storing it twice, and resurfaces it', () => {
+    // Searching a thing again is the strongest signal it is still wanted.
+    expect(nextHistory(['lehenga', 'pattu'], 'lehenga')).toEqual(['lehenga', 'pattu']);
+  });
+
+  it('treats a repeat as the same term regardless of case', () => {
+    // Otherwise "Lehenga" and "lehenga" both sit in a list of eight.
+    expect(nextHistory(['lehenga'], 'LEHENGA')).toEqual(['LEHENGA']);
+  });
+
+  it('trims before comparing, so a stray space is not a new term', () => {
+    expect(nextHistory(['lehenga'], '  lehenga  ')).toEqual(['lehenga']);
+  });
+
+  it('ignores a term too short to be worth remembering', () => {
+    const prev = ['lehenga'];
+    expect(nextHistory(prev, 'a')).toBe(prev);
+    expect(nextHistory(prev, ' ')).toBe(prev);
+  });
+
+  it('never grows past the cap, dropping the oldest', () => {
+    let list: string[] = [];
+    for (let i = 1; i <= LIMIT + 3; i++) list = nextHistory(list, `term${i}`);
+    expect(list).toHaveLength(LIMIT);
+    expect(list[0]).toBe(`term${LIMIT + 3}`);       // newest kept
+    expect(list).not.toContain('term1');            // oldest dropped
+  });
+
+  it('removes exactly one term and leaves the rest', () => {
+    expect(withoutTerm(['a', 'b', 'c'], 'b')).toEqual(['a', 'c']);
+  });
+
+  it('is unbothered by removing something that is not there', () => {
+    expect(withoutTerm(['a'], 'zzz')).toEqual(['a']);
   });
 });

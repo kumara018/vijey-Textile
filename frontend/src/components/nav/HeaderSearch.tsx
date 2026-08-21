@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSearchHistory } from '@/lib/searchHistory';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { productsAPI } from '@/lib/api';
@@ -48,6 +49,7 @@ export default function HeaderSearch() {
   const [results, setResults] = useState<Product[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(0);
+  const { terms, record, remove, clear } = useSearchHistory();
 
   const router = useRouter();
   const wrap = useRef<HTMLDivElement>(null);
@@ -108,6 +110,7 @@ export default function HeaderSearch() {
     if (e.key === 'Enter') {
       e.preventDefault();
       const p = results[active];
+      record(q);
       close();
       router.push(`/products/${p.id}`);
     }
@@ -148,6 +151,62 @@ export default function HeaderSearch() {
             autoComplete="off"
             className="w-[8.5rem] bg-transparent text-caption uppercase text-paper placeholder:text-paper-faint focus:outline-none sm:w-[17rem]"
           />
+        </div>
+      )}
+
+      {/**
+        * RECENT SEARCHES, shown when the field is empty.
+        *
+        * Nobody decides on an occasion piece in one visit — they search,
+        * leave, and come back to type the same thing again on a phone
+        * keyboard. This is that retyping removed.
+        *
+        * Each line carries its own remove button, not just the clear-all. A
+        * search history is personal, and somebody buying a gift needs to drop
+        * ONE line without losing the rest; offering only "clear everything"
+        * makes the private case cost the useful case until people stop using
+        * it. The × is a real button beside the link rather than inside it,
+        * because a control nested in a link is unreachable by keyboard.
+        */}
+      {open && q.trim().length === 0 && terms.length > 0 && (
+        <div className="absolute right-0 top-9 z-50 w-[min(92vw,26rem)] border border-ink-edge bg-ink-deep">
+          <div className="flex items-baseline justify-between gap-4 border-b border-ink-edge/60 px-4 py-2.5">
+            <span className="text-rule uppercase text-paper-faint">Recent searches</span>
+            <button
+              type="button"
+              onClick={clear}
+              className="text-caption uppercase text-paper-muted transition-colors duration-300 hover:text-brass-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+            >
+              Clear all
+            </button>
+          </div>
+          <ul>
+            {terms.map((term) => (
+              <li key={term} className="flex items-center gap-2 transition-colors duration-300 hover:bg-ink-raised">
+                <button
+                  type="button"
+                  onClick={() => { record(term); close(); router.push(`/products?search=${encodeURIComponent(term)}`); }}
+                  className="flex min-w-0 flex-1 items-center gap-3 px-4 py-2.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brass-bright"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4 shrink-0 text-paper-faint">
+                    <circle cx="10" cy="10" r="7.2" stroke="currentColor" strokeWidth="1.3" />
+                    <path d="M10 6.2V10l2.6 1.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                  </svg>
+                  <span className="truncate text-sm text-paper">{term}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => remove(term)}
+                  aria-label={`Remove ${term} from recent searches`}
+                  className="mr-2 grid h-7 w-7 shrink-0 place-items-center text-paper-faint transition-colors duration-300 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
+                >
+                  <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-3.5 w-3.5">
+                    <path d="m5.5 5.5 9 9m0-9-9 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -210,7 +269,7 @@ export default function HeaderSearch() {
               </ul>
               <button
                 type="button"
-                onClick={() => { const term = q.trim(); close(); router.push(`/products?search=${encodeURIComponent(term)}`); }}
+                onClick={() => { const term = q.trim(); record(term); close(); router.push(`/products?search=${encodeURIComponent(term)}`); }}
                 className="block w-full border-t border-ink-edge px-4 py-3 text-left text-caption uppercase text-paper-muted transition-colors duration-300 hover:bg-ink-raised hover:text-brass-bright"
               >
                 See every match &rarr;
