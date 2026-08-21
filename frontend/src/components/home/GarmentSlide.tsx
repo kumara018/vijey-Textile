@@ -2,58 +2,57 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { mediaUrl } from '@/lib/media';
+import { HERO_GARMENTS } from '@/lib/heroGarments';
 import type { Product } from '@/types';
 
 /**
- * The opening: real garments, turning slowly.
+ * The opening: whole garments, turning slowly, in a frame shaped like a
+ * garment.
  *
- * WHAT IT REPLACES AND WHY. Three abstract motifs were tried here — flat
- * pleats, panels in CSS 3D, then overlapping planes — and each was rejected in
- * the same terms: it decorates the shop instead of showing it. That is a fair
- * criticism of all three. A customer arriving at a clothes shop wants to see
- * clothes, and no arrangement of translucent rectangles is a substitute for
- * the thing being sold.
+ * WHY THE FIRST VERSION SHOWED HALF A DRESS. It filled the hero edge to edge
+ * with `object-cover`. The hero is a wide, short band — roughly 1900 by 540 —
+ * and a photograph of a garment is portrait, taller than it is wide. Covering
+ * a landscape box with a portrait image can only work by cropping the top and
+ * bottom away, so what survived was a middle slice: a torso, a pair of hands,
+ * half a skirt. Every piece looked cut in half because every piece WAS cut in
+ * half.
  *
- * WHICH GARMENTS APPEAR IS THE SHOP'S CHOICE, not a guess made here. It draws
- * from the pieces marked FEATURED in the admin. That matters for a specific
- * reason: the brief is garments, not people — no child models in the opening —
- * and nothing in this code can tell whether a photograph contains a person.
- * Tying it to the featured flag means the shop decides exactly what shows,
- * by marking the flat-lay photographs as featured and nothing else.
+ * There is no setting on `object-fit` that fixes that while keeping the image
+ * full-bleed. `contain` would show the whole garment floating in a wide empty
+ * band with bars either side, which is worse. The frame has to change shape,
+ * not the fit.
  *
- * WHY IT CANNOT SLOW THE PAGE DOWN. This is the whole engineering problem with
- * putting photographs in an opening, and it is solved by not adding any:
+ * SO THE FRAME IS PORTRAIT. The garment now stands in a 3:4 panel on the right
+ * of the opening, beside the line rather than behind it — the proportion a
+ * garment photograph is actually taken in, so the whole piece fits with
+ * nothing cropped. It also means the headline sits on the shop's own ground
+ * again instead of over a photograph, which is why it stays readable whatever
+ * is showing.
  *
- *   NO NEW REQUESTS. The homepage already fetches the featured pieces for the
- *   rails below; this reuses that exact query result. The images are ones the
- *   page was going to load anyway.
+ * WHERE THE PICTURES COME FROM. `lib/heroGarments.ts` first — images the shop
+ * puts in `public/hero/`, chosen deliberately for the opening. If that list is
+ * empty it falls back to featured products so the space is never blank. The
+ * shop controls it either way, which matters because the brief is garments and
+ * not people, and nothing in this code can tell whether a photograph contains
+ * a child model.
  *
- *   ONE IMAGE DECODES AT A TIME. Only the current and next slides are mounted,
- *   so the browser never holds four full-size photographs at once. The first
- *   is eager because it is the largest thing above the fold; the rest are lazy.
+ * WHY IT CANNOT SLOW THE PAGE. Only the current and next slides are mounted,
+ * so the browser never holds four photographs at once. The transition is
+ * opacity alone, composited, so it cannot stutter a scroll. An
+ * IntersectionObserver stops the timer when the opening is scrolled away. And
+ * when it falls back to products, the images are ones the page already loaded
+ * for the rails below — no extra requests at all.
  *
- *   THE ANIMATION IS OPACITY ONLY. No layout, no paint of anything but the
- *   compositor layer, so a slide change cannot stutter a scroll.
- *
- *   IT STOPS WHEN IT IS NOT VISIBLE. An IntersectionObserver pauses the timer
- *   once the opening scrolls away, so nothing runs while somebody is reading
- *   the shelf below.
- *
- * Under `prefers-reduced-motion` the first garment simply stays.
+ * Under `prefers-reduced-motion` the first garment stays and nothing moves.
  */
 
-const HOLD_MS = 4200;   // long enough to look at a piece, not long enough to wait
+const HOLD_MS = 4200;
 
-export default function GarmentSlide({
-  products,
-  className = '',
-}: {
-  products: Product[];
-  className?: string;
-}) {
-  // Only pieces that actually have a photograph. A slide with no image is a
-  // blank frame in the rotation, which reads as the page being broken.
-  const slides = products.filter((p) => p.images?.[0]).slice(0, 5);
+export default function GarmentSlide({ products }: { products: Product[] }) {
+  /** The shop's own hero photographs win; products are the fallback. */
+  const sources: string[] = HERO_GARMENTS.length > 0
+    ? HERO_GARMENTS
+    : products.filter((p) => p.images?.[0]).slice(0, 5).map((p) => mediaUrl(p.images[0]));
 
   const [index, setIndex] = useState(0);
   const [onScreen, setOnScreen] = useState(false);
@@ -68,56 +67,39 @@ export default function GarmentSlide({
   }, []);
 
   useEffect(() => {
-    if (slides.length <= 1 || !onScreen) return;
+    if (sources.length <= 1 || !onScreen) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const t = setInterval(() => setIndex((i) => (i + 1) % slides.length), HOLD_MS);
+    const t = setInterval(() => setIndex((i) => (i + 1) % sources.length), HOLD_MS);
     return () => clearInterval(t);
-  }, [slides.length, onScreen]);
+  }, [sources.length, onScreen]);
 
-  if (slides.length === 0) return null;
+  if (sources.length === 0) return null;
 
   return (
     <div
       ref={host}
       aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
+      className="pointer-events-none absolute inset-y-0 right-0 hidden w-[38%] max-w-[30rem] items-center justify-end pr-6 md:flex lg:pr-10"
     >
-      {slides.map((p, i) => {
-        // Mount only what is on screen or about to be. Four decoded
-        // photographs held at once is what makes an image hero expensive.
-        const isCurrent = i === index;
-        const isNext = i === (index + 1) % slides.length;
-        if (!isCurrent && !isNext) return null;
-        return (
-          <img
-            key={p.id}
-            src={mediaUrl(p.images[0])}
-            alt=""
-            loading={i === 0 ? 'eager' : 'lazy'}
-            decoding="async"
-            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
-            style={{ opacity: isCurrent ? 1 : 0 }}
-          />
-        );
-      })}
-
-      {/**
-        * The wash. The opening line sits over this, and a photograph behind
-        * type is the classic way a headline becomes unreadable — it depends
-        * entirely on which garment happens to be showing.
-        *
-        * The gradient is opaque at the left, where the words are, and clears
-        * toward the right where the garment is meant to be seen. So the
-        * headline keeps its contrast against the sandalwood ground no matter
-        * what is behind it, and the photograph is still a photograph.
-        */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(90deg, rgba(247,241,232,0.97) 0%, rgba(247,241,232,0.94) 34%, rgba(247,241,232,0.55) 62%, rgba(247,241,232,0.18) 100%)',
-        }}
-      />
+      {/* 3:4 — the proportion a garment is photographed in, so it fits whole. */}
+      <div className="relative aspect-[3/4] h-[min(84%,30rem)] overflow-hidden border border-ink-edge/50 bg-ink-raised">
+        {sources.map((src, i) => {
+          const isCurrent = i === index;
+          const isNext = i === (index + 1) % sources.length;
+          if (!isCurrent && !isNext) return null;
+          return (
+            <img
+              key={src}
+              src={src}
+              alt=""
+              loading={i === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-[1400ms] ease-[cubic-bezier(0.22,0.61,0.24,1)] motion-reduce:transition-none"
+              style={{ opacity: isCurrent ? 1 : 0 }}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
