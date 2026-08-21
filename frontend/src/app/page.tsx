@@ -205,8 +205,9 @@ export default function HomePage() {
                 the wash keeps opaque, instead of running out across the
                 brightest part of the picture. Released at sm and above, where
                 one line fits in the clear left third with room to spare. */}
-            <p className="mb-[clamp(1rem,2.6vh,2rem)] max-w-[15ch] text-rule uppercase text-maroon-700 sm:max-w-none">
-              Texvalley&nbsp;·&nbsp;Erode&nbsp;·&nbsp;Sizes 12–40
+            <p className="mb-[clamp(1rem,2.6vh,2rem)] max-w-[22ch] text-rule uppercase text-maroon-700 sm:max-w-none">
+              Texvalley&nbsp;·&nbsp;Erode&nbsp;·{' '}
+              <span className="whitespace-nowrap">Sizes 12–40</span>
             </p>
 
           </Reveal>
