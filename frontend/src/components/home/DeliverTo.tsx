@@ -42,6 +42,7 @@ export default function DeliverTo() {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [gps, setGps] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   /* The saved usual address wins — it is real, and it has a city. */
@@ -89,8 +90,25 @@ export default function DeliverTo() {
         const res = await fetch('/api/geo');
         const geo = await res.json();
         if (cancelled) return;
-        if (geo?.found && (geo.city || geo.pincode)) {
-          setKnown({ pincode: geo.pincode ?? undefined, city: geo.city ?? undefined, assumed: true });
+        /**
+         * THE CITY IS KEPT AND THE PINCODE IS DROPPED, DELIBERATELY.
+         *
+         * Measured on one real connection, on one day: Vercel's edge placed
+         * it at Karur 639002, and an independent lookup placed the SAME
+         * connection at Coimbatore 641001 — two providers, two answers, and
+         * the customer was in neither. IP location finds the carrier's
+         * equipment, not the person, so it is worth roughly a city and no
+         * more. Six digits read as an exact fact; at this confidence they
+         * are not one, and a wrong pincode under "Deliver to" is precisely
+         * the kind of confident error this whole change exists to remove.
+         *
+         * A pincode the customer typed, or one from their own saved
+         * address, IS a fact and keeps its digits.
+         *
+         * No city means nothing worth showing, so it falls through and asks.
+         */
+        if (geo?.found && geo.city) {
+          setKnown({ city: geo.city, assumed: true });
           return;
         }
       } catch { /* offline or blocked — fall through to asking */ }
@@ -125,6 +143,59 @@ export default function DeliverTo() {
     }
   };
 
+  /**
+   * The exact location — and it only ever runs on a click.
+   *
+   * This is the piece that makes the approximation acceptable. The header
+   * never asks for GPS: a permission prompt on arrival, before a customer
+   * has seen a single piece, is an interruption most people dismiss, and a
+   * dismissal is sticky. But somebody who has just opened this panel BECAUSE
+   * the city is wrong has asked the question themselves, and at that moment
+   * a prompt is an answer rather than an ambush.
+   *
+   * Same reverse-geocode as checkout, so there is one behaviour to reason
+   * about. The result is a real pincode and is saved like a typed one.
+   */
+  const useMyLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setNote('This browser cannot find your location. Type the pincode instead.');
+      return;
+    }
+    setGps(true); setNote(null);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`,
+          );
+          if (!res.ok) throw new Error(String(res.status));
+          const a = (await res.json()).address || {};
+          const pin = String(a.postcode ?? '').replace(/\D/g, '').slice(0, 6);
+          if (pin.length !== 6) {
+            setNote('Found you, but no pincode there. Please type it.');
+            return;
+          }
+          localStorage.setItem(KEY, pin);
+          setKnown({ pincode: pin, city: a.city || a.town || a.village || a.county || undefined });
+          setDraft(pin);
+          setEditing(false);
+        } catch {
+          setNote('Found you, but could not turn that into a pincode. Please type it.');
+        } finally { setGps(false); }
+      },
+      (err) => {
+        setNote(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location is off for this browser. Turn it on, or type the pincode.'
+            : 'Could not get a fix on your location. Please type the pincode.',
+        );
+        setGps(false);
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 300000 },
+    );
+  };
+
   const Pin = () => (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true" className="shrink-0">
       <path d="M8 14.5S13 10.2 13 6.6A5 5 0 0 0 3 6.6C3 10.2 8 14.5 8 14.5Z"
@@ -151,6 +222,10 @@ export default function DeliverTo() {
             className="text-caption uppercase text-paper transition-colors duration-500 hover:text-brass-bright disabled:text-paper-faint">
             {busy ? 'Checking…' : 'Save'}
           </button>
+          <button type="button" onClick={useMyLocation} disabled={gps}
+            className="text-caption uppercase text-brass-bright transition-colors duration-500 hover:text-paper disabled:text-paper-faint">
+            {gps ? 'Locating…' : 'Use my location'}
+          </button>
           <button type="button" onClick={() => { setEditing(false); setNote(null); }}
             className="text-caption uppercase text-paper-faint transition-colors duration-500 hover:text-paper">
             Cancel
@@ -168,9 +243,10 @@ export default function DeliverTo() {
             *
             *   known      a saved address or a pincode the customer typed —
             *              stated plainly, because it is a fact.
-            *   detected   resolved from the connection — shown, but the
-            *              control reads "Change" so it is clearly a starting
-            *              point rather than a record of anything they said.
+            *   detected   resolved from the connection — CITY ONLY, because
+            *              that is all an IP is worth, and the control reads
+            *              "Change" so it is clearly a starting point rather
+            *              than a record of anything they said.
             *   unknown    the edge could not place the IP. It asks instead of
             *              inventing a pincode. Showing the shop's own city
             *              here, which is what it used to do, tells a customer
