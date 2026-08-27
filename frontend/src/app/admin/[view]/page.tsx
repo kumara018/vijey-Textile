@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
-import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView, AdminErrorsView } from '../AdminListViews';
+import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView, AdminErrorsView, AdminHealthView } from '../AdminListViews';
 import AdminProductsView from '../AdminProductsView';
 
 /**
@@ -25,6 +25,7 @@ const VIEWS = [
   'cancellations',
   'admins',
   'errors',
+  'health',
 ] as const;
 
 /** Pre-rendered as static shells; all data is fetched client-side. */
@@ -54,6 +55,7 @@ const TITLES: Record<string, string> = {
   cancellations: 'Cancelled Orders',
   admins:        'Admin Accounts',
   errors:        'Browser Errors',
+  health:        'System Health',
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ view: string }> }) {
@@ -92,6 +94,7 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'products') return <AdminProductsView />;
   if (view === 'admins') return <AdminAdminsView />;
   if (view === 'errors') return <AdminErrorsView />;
+  if (view === 'health') return <AdminHealthView />;
 
   // Unreachable: `notFound()` above rejects anything outside VIEWS, and every
   // member of VIEWS is handled. Kept as a typed exhaustiveness guard so adding

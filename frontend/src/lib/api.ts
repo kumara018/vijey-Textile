@@ -174,6 +174,8 @@ export const addressAPI = {
 };
 
 export const adminAPI = {
+  /** Which third parties are actually switched on. Admin-only, never returns a key. */
+  getIntegrations:     ()             => api.get('/api/diagnostics/integrations'),
   dashboard:          ()                           => api.get('/api/admin/dashboard'),
   getProducts:        ()                           => api.get('/api/admin/products'),
   createProduct:      (data: object)               => api.post('/api/admin/products', data),

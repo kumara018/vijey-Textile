@@ -65,6 +65,16 @@ module.exports = {
            7.31:1, so the two read as different hues at the same weight
            rather than as two shades of one. */
         critical: '#8A3A28',
+
+        /* Semantic status, deliberately NOT the accent.
+           `brass` is the brand cerise and carries "this is ours"; a status dot
+           painted in it would say "good" and "Vijey" at the same time, and the
+           two readings fight. These are the counterparts to `critical` above,
+           tuned warm so they sit on the sandal ground rather than on top of
+           it. Both clear 3:1 against #F7F1E8, the threshold for a non-text
+           indicator carrying meaning. */
+        positive: '#4A6034',
+        caution:  '#7D5E23',
         steel: {
           DEFAULT: '#B7B7B5',
           soft:    '#D3D3D1',

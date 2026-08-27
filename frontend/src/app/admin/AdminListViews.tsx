@@ -604,3 +604,173 @@ export function AdminErrorsView() {
     </AdminShell>
   );
 }
+
+
+/* ── System health ──────────────────────────────────────────────────────── */
+
+/**
+ * What is actually switched on, in production, right now.
+ *
+ * WHY THIS SCREEN EXISTS. Every integration in this shop fails SOFTLY and on
+ * purpose: an unconfigured SMS gateway prints to a log nobody reads and
+ * returns as though it sent, an unconfigured courier answers "we will confirm
+ * when you order", an unconfigured mailer walks Brevo then SendGrid then SMTP
+ * and gives up quietly. Each is right on its own — a customer must never meet
+ * a crash because a third party is down — but together they mean the shop can
+ * be half-dead and look completely normal from the counter.
+ *
+ * That is not hypothetical. The Delhivery token was never set on either shop,
+ * so for the entire life of the delivery-location feature the pincode check
+ * has never once actually checked, and nothing anywhere said so.
+ *
+ * CONFIGURED IS NOT PROVEN, and the wording keeps them apart. Most rows report
+ * that credentials are present and a client builds — a real check, and exactly
+ * what every soft failure is gated on, but it cannot promise the next message
+ * will be accepted. The database row IS proven: answering this request
+ * required running a statement.
+ *
+ * No key or secret ever reaches this page. See backend/routers/diagnostics.py.
+ */
+export function AdminHealthView() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true); setFailed(false);
+    try { const r = await adminAPI.getIntegrations(); setData(r.data); }
+    catch { setFailed(true); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.is_admin) { router.replace('/'); return; }
+    load();
+  }, [authLoading, user, router, load]);
+
+  if (authLoading || !user?.is_admin) return null;
+
+  const d = data;
+
+  /* Three tones, not two. "Off" is not always bad — SMS is optional when
+     WhatsApp carries the codes — so the middle tone says "absent, and that may
+     be deliberate" without either alarming or reassuring falsely. */
+  const Row = ({ label, tone, value, note }: {
+    label: string; tone: 'on' | 'off' | 'warn'; value: string; note?: string;
+  }) => (
+    <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-ink-edge/40 py-4">
+      <span
+        aria-hidden="true"
+        className={`inline-block h-2 w-2 shrink-0 translate-y-[-1px] rounded-full ${
+          tone === 'on' ? 'bg-positive' : tone === 'warn' ? 'bg-caution' : 'bg-critical'
+        }`}
+      />
+      <span className="min-w-[8rem] text-paper">{label}</span>
+      <span className={`text-sm ${tone === 'on' ? 'text-paper-muted' : 'text-paper'}`}>{value}</span>
+      {note && <span className="w-full pl-6 text-xs text-paper-faint sm:w-auto sm:pl-0">&middot; {note}</span>}
+    </div>
+  );
+
+  return (
+    <AdminShell
+      title="System health"
+      standfirst={d ? `Checked ${new Date(d.checked_at).toLocaleString()}.` : undefined}
+      actions={<ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Re-check</ActionButton>}
+    >
+      <Body
+        loading={loading}
+        failed={failed}
+        // Never empty: there is always a fixed set of integrations to report
+        // on, so the empty branch is unreachable here by construction.
+        empty={false}
+        emptyCopy=""
+        onRetry={load}
+      >
+        {d && (
+          <>
+            <div className="max-w-[54rem]">
+              <Row
+                label="Database"
+                tone={d.database?.reachable ? 'on' : 'off'}
+                value={d.database?.reachable ? 'Reachable' : `Unreachable (${d.database?.error ?? 'unknown'})`}
+                note="proven — this page ran a query to answer"
+              />
+              <Row
+                label="Payments"
+                tone={!d.payments?.configured ? 'off' : d.payments.mode === 'live' ? 'on' : 'warn'}
+                value={
+                  !d.payments?.configured ? 'Not configured — customers cannot pay'
+                    : d.payments.mode === 'live' ? 'Live keys — real money'
+                    : d.payments.mode === 'test' ? 'TEST keys — no real money moves'
+                    : 'Configured, key format unrecognised'
+                }
+                note={d.payments?.configured && !d.payments.webhook
+                  ? 'no webhook secret — refunds and out-of-session payments never reach the shop'
+                  : undefined}
+              />
+              <Row
+                label="Email"
+                tone={d.email?.configured ? 'on' : 'off'}
+                value={d.email?.configured
+                  ? `Sending via ${d.email.active}`
+                  : 'Not configured — no order confirmations, no codes by email'}
+                note={d.email?.configured && !d.email.reply_to
+                  ? 'no support address — customer replies go nowhere'
+                  : undefined}
+              />
+              <Row
+                label="Courier"
+                tone={d.courier?.configured ? 'on' : 'off'}
+                value={d.courier?.configured
+                  ? `Delhivery (${d.courier.mode})`
+                  : 'Not configured — pincode checks never check, no labels, no tracking'}
+                note={d.courier?.configured && !d.courier.return_address
+                  ? 'no return address — reverse pickups will fail'
+                  : undefined}
+              />
+              <Row
+                label="WhatsApp"
+                tone={d.messaging?.whatsapp ? 'on' : 'warn'}
+                value={d.messaging?.whatsapp ? 'Sending' : 'Not configured'}
+              />
+              <Row
+                label="SMS"
+                tone={d.messaging?.sms ? 'on' : 'warn'}
+                value={d.messaging?.sms ? 'Sending' : 'Not configured'}
+                note={!d.messaging?.sms && d.messaging?.whatsapp
+                  ? 'fine while WhatsApp carries your codes — a customer without WhatsApp gets nothing'
+                  : undefined}
+              />
+              <Row
+                label="Images"
+                tone={d.media?.configured ? 'on' : 'off'}
+                value={d.media?.configured
+                  ? 'Cloudinary connected'
+                  : 'Not configured — new product images cannot be uploaded'}
+              />
+              <Row
+                label="Security"
+                tone={d.security?.secret_key && d.security?.admin_password ? 'on' : 'off'}
+                value={d.security?.secret_key && d.security?.admin_password
+                  ? 'Signing key and admin password set'
+                  : 'Missing a signing key or admin password'}
+                note={!d.security?.frontend_url
+                  ? 'no frontend URL — links in emails may point nowhere'
+                  : undefined}
+              />
+            </div>
+            <p className="mt-7 max-w-[62ch] text-xs text-paper-faint">
+              Every row except the database reports that credentials are present and the client
+              builds. That is the same check each integration silently fails on, so it catches the
+              real problem — but it cannot promise the next message will be accepted. No key or
+              secret is ever sent to this page.
+            </p>
+          </>
+        )}
+      </Body>
+    </AdminShell>
+  );
+}
