@@ -45,8 +45,8 @@ export default function GlobalError({
           justifyContent: 'center',
           padding: '2rem 1.5rem',
           // The approved palette, written out rather than referenced.
-          backgroundColor: '#1C1917',
-          color: '#FAFAF9',
+          backgroundColor: '#F7F1E8',
+          color: '#2B2118',
           fontFamily: 'ui-serif, Georgia, "Times New Roman", serif',
           WebkitFontSmoothing: 'antialiased',
         }}
@@ -58,7 +58,7 @@ export default function GlobalError({
               fontSize: '0.68rem',
               letterSpacing: '0.26em',
               textTransform: 'uppercase',
-              color: '#C4841A',
+              color: '#C22B62',
               fontFamily: 'ui-sans-serif, system-ui, sans-serif',
             }}
           >
@@ -84,13 +84,13 @@ export default function GlobalError({
               maxWidth: '52ch',
               fontSize: '1.02rem',
               lineHeight: 1.62,
-              color: '#D6D3D1',
+              color: '#584A39',
               fontFamily: 'ui-sans-serif, system-ui, sans-serif',
             }}
           >
             Something went wrong before the page could start. Reloading usually clears it.
             If it does not, please call the shop on{' '}
-            <a href="tel:+919443947853" style={{ color: '#FAFAF9', textDecoration: 'underline' }}>
+            <a href="tel:+919443947853" style={{ color: '#2B2118', textDecoration: 'underline' }}>
               +91 94439 47853
             </a>{' '}
             — we can take your order directly.
@@ -115,7 +115,7 @@ export default function GlobalError({
                 borderBottom: '1px solid rgba(161,98,7,0.7)',
                 padding: '0 0 0.5rem',
                 cursor: 'pointer',
-                color: '#FAFAF9',
+                color: '#2B2118',
                 fontSize: '0.78rem',
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
@@ -130,7 +130,7 @@ export default function GlobalError({
             <a
               href="/"
               style={{
-                color: '#A8A29E',
+                color: '#584A39',
                 fontSize: '0.78rem',
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
@@ -147,9 +147,9 @@ export default function GlobalError({
               style={{
                 marginTop: '3.5rem',
                 paddingTop: '2rem',
-                borderTop: '1px solid #3A3431',
+                borderTop: '1px solid #C6B7A1',
                 fontSize: '0.78rem',
-                color: '#A8A29E',
+                color: '#584A39',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               }}
             >
