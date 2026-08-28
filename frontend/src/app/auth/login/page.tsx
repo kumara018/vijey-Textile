@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
+import { codeTimer, formatRemaining, CODE_TTL_SECONDS } from '@/lib/otpTimer';
 import { redirectAfterLogin } from '@/lib/auth';
 import AuthShell from '@/components/system/AuthShell';
 import { Field, Step } from '@/components/system/Field';
@@ -54,6 +55,24 @@ function SignInInner() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+
+  /**
+   * WHEN THE CODE WAS SENT — and therefore how long it has left, and whether
+   * another may be asked for yet.
+   *
+   * There was no way to ask for a second code from this screen at all. A code
+   * lasts ten minutes; a customer who does not see the email inside that
+   * window — it went to spam, the phone was in another room, the mail server
+   * was slow — had no route forward except starting the whole sign-in again,
+   * and nothing on the screen said so. They are far likelier to conclude the
+   * shop is broken and leave.
+   *
+   * Kept as the SEND TIME rather than as two counters, because two counters
+   * drift apart and then disagree with each other on screen.
+   */
+  const [codeSentAt, setCodeSentAt] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
+  const [resending, setResending] = useState(false);
 
   const [emailHint, setEmailHint] = useState('');
   const [busy, setBusy] = useState(false);
@@ -108,6 +127,19 @@ function SignInInner() {
     return () => clearTimeout(t);
   }, [announcement]);
 
+  /**
+   * One second, only while a code is on screen, and stopped as soon as both
+   * countdowns have run out — a timer that keeps firing after it can change
+   * nothing is a battery cost for no benefit.
+   */
+  useEffect(() => {
+    if (stage !== 'code' || codeSentAt === null) return;
+    const elapsed = Math.floor((Date.now() - codeSentAt) / 1000);
+    if (elapsed > CODE_TTL_SECONDS) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [stage, codeSentAt, tick]);
+
   const editIdentifier = () => {
     setStage('identifier');
     setError('');
@@ -133,6 +165,7 @@ function SignInInner() {
       const res = await authAPI.sendLoginOtp({ identifier: identifier.trim(), password });
       setEmailHint(res.data?.email_hint || '');
       setStage('code');
+      setCodeSentAt(Date.now());
       setAnnouncement('We sent a code to your registered email.');
     } catch (err: any) {
       const status = err?.response?.status;
@@ -163,6 +196,39 @@ function SignInInner() {
   const finish = (token: string, u: { is_admin?: boolean }) => {
     login(token, u as never);
     redirectAfterLogin(Boolean(u?.is_admin));
+  };
+
+  /**
+   * Send another code, reusing the password already proven at the last step.
+   *
+   * Deliberately NOT a route back to the password screen. The customer has
+   * already shown they hold the password; making them type it again to fix a
+   * problem that is ours — a slow mail server, a spam folder — is a punishment
+   * for our failure, and on a phone keyboard it is the point where people give
+   * up. It is also not a security relaxation: the code still has to arrive at
+   * the registered address, which is the whole point of the step.
+   */
+  const resendCode = async () => {
+    setResending(true);
+    setError('');
+    try {
+      const res = await authAPI.sendLoginOtp({ identifier: identifier.trim(), password });
+      setEmailHint(res.data?.email_hint || emailHint);
+      setCode('');
+      setCodeSentAt(Date.now());
+      setAnnouncement('A new code is on its way.');
+      codeRef.current?.focus();
+    } catch (err: any) {
+      if (err?.response?.status === 429) {
+        setError('That is a lot of codes in a short time. Wait a minute, then try again.');
+      } else if (!err?.response) {
+        setError('We could not reach the shop. Check your connection and try again.');
+      } else {
+        setError('We could not send another code just now. Please try again in a moment.');
+      }
+    } finally {
+      setResending(false);
+    }
   };
 
   const submitCode = async (e: React.FormEvent) => {
@@ -229,6 +295,13 @@ function SignInInner() {
     code: 'Check your email',
     device: 'One more thing',
   };
+
+  /* Both countdowns from the one send time — see lib/otpTimer, where the
+     arithmetic lives so it can be tested without a browser. `tick` is read
+     here only to make this recompute each second. */
+  void tick;
+  const { expiresIn: codeExpiresIn, expired: codeExpired, resendIn, canResend } =
+    codeTimer(codeSentAt, Date.now());
 
   return (
     <AuthShell
@@ -345,10 +418,47 @@ function SignInInner() {
               error={error || undefined}
               className="tracking-[0.4em]"
             />
-            <div className="mt-9">
-              <ActionButton type="submit" disabled={busy}>
+            <div className="mt-9 flex flex-col items-start gap-5">
+              {/**
+                * SIGN IN IS DISABLED ONCE THE CODE IS DEAD, and that is not
+                * pedantry. Submitting an expired code spends one of the
+                * customer's verify attempts to be told something the page
+                * already knew, and on a rate-limited endpoint that can be the
+                * difference between a second chance and a lockout. When the
+                * code has expired the only sensible action is a new one, so
+                * that is the only action offered.
+                */}
+              <ActionButton type="submit" disabled={busy || codeExpired}>
                 {busy ? 'Signing in…' : 'Sign in'}
               </ActionButton>
+
+              <div className="flex flex-col items-start gap-2">
+                {/* The countdown is not announced. A screen reader reciting a
+                    number every second would bury the form it belongs to; the
+                    state CHANGES are announced through `announcement`. */}
+                <p className="text-caption text-paper-faint" aria-hidden={!codeExpired}>
+                  {codeExpired
+                    ? 'That code has expired.'
+                    : codeSentAt === null
+                      ? ''
+                      : `This code works for another ${formatRemaining(codeExpiresIn)}.`}
+                </p>
+
+                {canResend ? (
+                  <button
+                    type="button"
+                    onClick={resendCode}
+                    disabled={resending}
+                    className="text-caption uppercase text-paper underline decoration-brass/60 underline-offset-4 transition-colors duration-500 hover:text-brass-bright motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright disabled:opacity-50"
+                  >
+                    {resending ? 'Sending…' : 'Send a new code'}
+                  </button>
+                ) : (
+                  <p className="text-caption uppercase text-paper-faint">
+                    You can ask for a new code in {resendIn}s
+                  </p>
+                )}
+              </div>
             </div>
           </form>
         </Step>

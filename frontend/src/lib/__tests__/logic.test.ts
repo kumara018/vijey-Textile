@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { isMoneyAtRisk, type Outcome } from '@/app/checkout/PaymentOutcome';
 import { sceneForPath, isRestrained } from '@/store/useSceneStore';
 import { nextHistory, withoutTerm, LIMIT } from '../searchHistory';
+import { codeTimer, formatRemaining, CODE_TTL_SECONDS, RESEND_AFTER_SECONDS } from '../otpTimer';
 
 /**
  * Tests for the logic where being wrong costs money or misleads a customer.
@@ -170,5 +171,79 @@ describe('search history', () => {
 
   it('is unbothered by removing something that is not there', () => {
     expect(withoutTerm(['a'], 'zzz')).toEqual(['a']);
+  });
+});
+
+describe('the sign-in code countdown', () => {
+  /**
+   * The screen had no resend at all. These pin the two states that decide
+   * whether a customer can recover: whether the code they hold can still work,
+   * and whether they are allowed to ask for another.
+   */
+  const T0 = 1_700_000_000_000;
+
+  it('offers nothing before a code has been sent', () => {
+    // Not the same as expired. A null read as expired would tell somebody
+    // "that code has expired" when they have not been sent one.
+    const t = codeTimer(null, T0);
+    expect(t.expired).toBe(false);
+    expect(t.canResend).toBe(false);
+  });
+
+  it('will not resend immediately, so the visible button never 429s', () => {
+    const t = codeTimer(T0, T0 + 5_000);
+    expect(t.canResend).toBe(false);
+    expect(t.resendIn).toBe(RESEND_AFTER_SECONDS - 5);
+  });
+
+  it('allows a resend once the cooldown has run out', () => {
+    expect(codeTimer(T0, T0 + RESEND_AFTER_SECONDS * 1000).canResend).toBe(true);
+    expect(codeTimer(T0, T0 + 120_000).canResend).toBe(true);
+  });
+
+  it('keeps the code alive for its full ten minutes', () => {
+    expect(codeTimer(T0, T0 + (CODE_TTL_SECONDS - 1) * 1000).expired).toBe(false);
+  });
+
+  it('expires the code exactly at the limit, not after it', () => {
+    // One second late must already be dead: submitting an expired code spends
+    // a verify attempt to be told what the page already knew.
+    const t = codeTimer(T0, T0 + CODE_TTL_SECONDS * 1000);
+    expect(t.expired).toBe(true);
+    expect(t.expiresIn).toBe(0);
+  });
+
+  it('never reports a negative countdown long after expiry', () => {
+    const t = codeTimer(T0, T0 + 3_600_000);
+    expect(t.expiresIn).toBe(0);
+    expect(t.resendIn).toBe(0);
+  });
+
+  it('survives a clock that jumps backwards', () => {
+    // A device correcting its time would otherwise produce a code that lasts
+    // longer than ten minutes.
+    const t = codeTimer(T0, T0 - 60_000);
+    expect(t.expiresIn).toBe(CODE_TTL_SECONDS);
+    expect(t.expired).toBe(false);
+  });
+});
+
+describe('formatRemaining — vague on purpose', () => {
+  /**
+   * A ticking mm:ss on a security step reads as pressure, and pressure is what
+   * makes people mistype a code they are copying from another device.
+   */
+  it('does not count seconds at the end', () => {
+    expect(formatRemaining(45)).toBe('less than a minute');
+  });
+
+  it('speaks in minutes', () => {
+    expect(formatRemaining(60)).toBe('about a minute');
+    expect(formatRemaining(540)).toBe('about 9 minutes');
+  });
+
+  it('says something sensible at zero rather than "0 minutes"', () => {
+    expect(formatRemaining(0)).toBe('no time');
+    expect(formatRemaining(-5)).toBe('no time');
   });
 });
