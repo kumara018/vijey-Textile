@@ -707,6 +707,71 @@ _scheduler = BackgroundScheduler()
 
 
 @asynccontextmanager
+def _print_integration_banner() -> None:
+    """
+    Print what is switched on, every boot, where the owner can actually see it.
+
+    WHY THIS IS IN THE LOG AND NOT ONLY ON THE ADMIN PAGE. The System Health
+    page answers this question properly — and it sits behind a sign-in that
+    needs a code sent by email. When email is the thing that is broken, the
+    page that would tell you email is broken is the page you cannot reach. A
+    diagnostic that is only available while everything works is not a
+    diagnostic.
+
+    The deploy log has no such problem: it is the one surface the owner can
+    always reach, and it is where they already have to look for the recovery
+    code. So the summary goes here too.
+
+    Booleans and provider names only. No key, no fragment of a key, no length.
+    """
+    def on(*names: str) -> bool:
+        return all(os.getenv(n, "").strip() for n in names)
+
+    brevo    = on("BREVO_API_KEY")
+    sendgrid = on("SENDGRID_API_KEY")
+    smtp     = on("SMTP_EMAIL", "SMTP_PASSWORD")
+    email_via = "Brevo" if brevo else "SendGrid" if sendgrid else "SMTP" if smtp else None
+    on_render = bool(os.getenv("RENDER", "").strip())
+
+    key_id = os.getenv("RAZORPAY_KEY_ID", "").strip()
+    pay = ("not configured" if not (key_id and on("RAZORPAY_KEY_SECRET"))
+           else "TEST keys" if key_id.startswith("rzp_test_")
+           else "LIVE keys" if key_id.startswith("rzp_live_")
+           else "configured, key format unrecognised")
+
+    twilio = on("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN")
+
+    rows = [
+        ("Email",    email_via or "NOT CONFIGURED - no codes, no order confirmations"),
+        ("Payments", pay),
+        ("Courier",  "Delhivery" if on("DELHIVERY_API_TOKEN")
+                     else "NOT CONFIGURED - pincode checks never check, no labels, no tracking"),
+        ("WhatsApp", "on" if twilio and on("TWILIO_WHATSAPP_FROM") else "not configured"),
+        ("SMS",      "on" if twilio and on("TWILIO_PHONE") else "not configured"),
+        ("Images",   "Cloudinary" if on("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY",
+                                        "CLOUDINARY_API_SECRET") else "NOT CONFIGURED"),
+    ]
+
+    print("=" * 68)
+    print("  INTEGRATIONS - what is switched on right now")
+    print("=" * 68)
+    for label, value in rows:
+        print(f"  {label:<10} {value}")
+
+    # The two failure modes that look like a working configuration.
+    if email_via == "SMTP" and on_render:
+        print("  " + "-" * 64)
+        print("  EMAIL CANNOT WORK HERE. This service is on Render, which blocks")
+        print("  outbound SMTP on ports 25, 465 and 587. No SMTP setting will")
+        print("  connect. Set BREVO_API_KEY - it is an HTTPS API, so it is not")
+        print("  blocked — and authorise the sending domain in Brevo's DNS records.")
+    elif email_via is None:
+        print("  " + "-" * 64)
+        print("  NO EMAIL PROVIDER. Sign-in codes cannot be delivered. Until one is")
+        print("  set, every failed send prints the code to this log, marked RECOVERY.")
+    print("=" * 68)
+
+
 async def lifespan(app: FastAPI):
     # Create all tables
     Base.metadata.create_all(bind=engine)
@@ -721,6 +786,9 @@ async def lifespan(app: FastAPI):
     _ensure_products()
     # Strip image paths that have never resolved in any environment
     _clear_dead_image_paths()
+
+    # Last, so it is the thing sitting at the bottom of a fresh deploy log.
+    _print_integration_banner()
 
     if _try_take_scheduler_lease():
         _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
