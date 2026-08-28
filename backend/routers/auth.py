@@ -68,27 +68,37 @@ def _find_user(db: Session, identifier: str):
         ).first()
 
 def _send_otp_email(to_email: str, otp: str, purpose: str = "Password Reset"):
-    """Send OTP via Gmail SMTP. Falls back to console log if not configured."""
-    smtp_email = os.getenv("SMTP_EMAIL", "")
-    smtp_pass  = os.getenv("SMTP_PASSWORD", "")
-    if not smtp_email or not smtp_pass:
+    """
+    Send a code by email, through the one SMTP path the rest of the app uses.
+
+    THIS FUNCTION USED TO OPEN smtp.gmail.com:465 ITSELF, a second hardcoded
+    Gmail endpoint alongside the one in notifications.py. Two copies meant a
+    host fix could be applied to one and forgotten on the other, and it also
+    meant this path failed for exactly the same reason: the shop's mailbox is
+    not Gmail. `notifications._smtp_send` now owns connecting, so there is a
+    single place where the host is decided.
+
+    The console fallback is kept and is deliberate. When mail cannot go out at
+    all, printing the code is the difference between an owner who can still
+    reach their own admin through the deploy logs and one who is locked out of
+    their shop. It is not a leak: reading it already requires access to the
+    server's logs.
+    """
+    if not notifications.SMTP_EMAIL or not notifications.SMTP_PASS:
         print(f"[OTP] {purpose} OTP for {to_email}: {otp}")
         return
-    try:
-        msg = MIMEText(
-            f"Your Vijey Textile {purpose} OTP is: {otp}\n\n"
-            f"This OTP is valid for 10 minutes.\n"
-            f"Do not share this OTP with anyone.\n\n"
-            f"— Vijey Textile Team"
-        )
-        msg["Subject"] = f"Vijey Textile — {purpose} OTP: {otp}"
-        msg["From"]    = smtp_email
-        msg["To"]      = to_email
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as s:
-            s.login(smtp_email, smtp_pass)
-            s.sendmail(smtp_email, to_email, msg.as_string())
-    except Exception as e:
-        print(f"[OTP Email Error] {e}")
+
+    msg = MIMEText(
+        f"Your Vijey Textile {purpose} OTP is: {otp}\n\n"
+        f"This OTP is valid for 10 minutes.\n"
+        f"Do not share this OTP with anyone.\n\n"
+        f"— Vijey Textile Team"
+    )
+    msg["Subject"] = f"Vijey Textile — {purpose} OTP: {otp}"
+    msg["From"]    = notifications.SMTP_EMAIL
+    msg["To"]      = to_email
+
+    if not notifications._smtp_send(to_email, msg["Subject"], msg):
         print(f"[OTP] {purpose} OTP for {to_email}: {otp}")
 
 def _create_otp(db: Session, identifier: str, otp_type: str = "reset") -> str:

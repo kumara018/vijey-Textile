@@ -81,10 +81,24 @@ def _check_email() -> dict:
     sendgrid = _present("SENDGRID_API_KEY")
     smtp = _present("SMTP_EMAIL", "SMTP_PASSWORD")
     active = "brevo" if brevo else "sendgrid" if sendgrid else "smtp" if smtp else None
+
+    # WHAT THE LAST ATTEMPT ACTUALLY DID, which is the part that was missing.
+    # Credentials being present is not the same as mail arriving: the SMTP host
+    # was hardcoded to Gmail while the shop's mailbox is elsewhere, so every
+    # send failed authentication and the only trace was a log line. A green row
+    # that means "a key exists" is exactly the reassurance that hid it.
+    import notifications as _n
+    last = getattr(_n, "LAST_EMAIL", {"attempted": False, "ok": None, "detail": None, "host": None})
+
     return {
         "configured": bool(active),
         "active": active,
         "brevo": brevo, "sendgrid": sendgrid, "smtp": smtp,
+        "smtp_host": (os.getenv("SMTP_HOST", "").strip() or None) if smtp else None,
+        "last_send": {"attempted": bool(last.get("attempted")),
+                      "ok": last.get("ok"),
+                      "detail": last.get("detail"),
+                      "host": last.get("host")},
         # Replies to an order confirmation go here. Missing is not fatal but it
         # means a customer's reply lands nowhere.
         "reply_to": _present("SUPPORT_EMAIL"),

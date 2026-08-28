@@ -711,15 +711,36 @@ export function AdminHealthView() {
                   ? 'no webhook secret — refunds and out-of-session payments never reach the shop'
                   : undefined}
               />
+              {/* CONFIGURED IS NOT DELIVERED, and this row is the reason that
+                  distinction earns its keep. The SMTP host was hardcoded to
+                  Gmail while the shop's mailbox is elsewhere, so credentials
+                  were present, this row would have been green, and not one
+                  message ever left. `last_send` reports what the most recent
+                  attempt actually did. */}
               <Row
                 label="Email"
-                tone={d.email?.configured ? 'on' : 'off'}
-                value={d.email?.configured
-                  ? `Sending via ${d.email.active}`
-                  : 'Not configured — no order confirmations, no codes by email'}
-                note={d.email?.configured && !d.email.reply_to
-                  ? 'no support address — customer replies go nowhere'
-                  : undefined}
+                tone={
+                  !d.email?.configured ? 'off'
+                    : d.email.last_send?.attempted && d.email.last_send?.ok === false ? 'off'
+                    : d.email.last_send?.ok ? 'on'
+                    : 'warn'
+                }
+                value={
+                  !d.email?.configured
+                    ? 'Not configured — no order confirmations, no codes by email'
+                    : d.email.last_send?.attempted && d.email.last_send?.ok === false
+                      ? `FAILING — ${d.email.last_send.detail ?? 'send rejected'}`
+                      : d.email.last_send?.ok
+                        ? `Sending via ${d.email.active}${d.email.last_send.host ? ` (${d.email.last_send.host})` : ''}`
+                        : `Configured for ${d.email.active} — nothing sent yet this run`
+                }
+                note={
+                  d.email?.last_send?.ok === false && String(d.email.last_send.detail ?? '').includes('SMTP_HOST')
+                    ? 'set SMTP_HOST — a custom-domain mailbox cannot be guessed. Hostinger uses smtp.hostinger.com on 587'
+                    : d.email?.configured && !d.email.reply_to
+                      ? 'no support address — customer replies go nowhere'
+                      : undefined
+                }
               />
               <Row
                 label="Courier"

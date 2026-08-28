@@ -29,6 +29,121 @@ STORE_ADDR    = "Shop Ground Floor No 131, Texvalley Gangapuram"
 YEAR          = datetime.now().year
 
 
+# ── Where SMTP actually connects ──────────────────────────────────────────────
+
+"""
+THE HOST WAS HARDCODED TO GMAIL, IN TWO PLACES, AND THAT IS WHY NO MAIL ARRIVED.
+
+Both send paths opened `smtp.gmail.com` regardless of whose mailbox
+`SMTP_EMAIL` names. The shop's mailbox is on Hostinger, so every attempt was
+Gmail being handed a Hostinger address and password. Gmail refuses the login —
+correctly — and the exception was caught, printed to a log nobody reads, and
+the API returned as though a code had been sent. The sign-in screen then said
+"We sent a six-digit code", which was untrue, and the owner was locked out of
+their own admin with nothing anywhere explaining why.
+
+So: the host is configuration now, not a constant.
+
+  SMTP_HOST / SMTP_PORT   set them and they are used, full stop.
+
+  Not set, consumer mailbox   inferred from the address. Somebody using a
+                              gmail.com address plainly means smtp.gmail.com,
+                              and making them state it would be pedantry.
+
+  Not set, custom domain      REFUSED, loudly, naming SMTP_HOST. A custom
+                              domain's mail can live anywhere and there is no
+                              honest guess; silently trying Gmail is precisely
+                              the bug being fixed. Guessing wrong here is worse
+                              than not sending, because it looks like sending.
+
+Port 465 is implicit TLS and 587 is STARTTLS — a different call, not a
+different number, so the port decides which is used. Hostinger, Zoho and most
+custom-domain hosts offer both; 587 is the default because it is the one that
+survives networks that block 465.
+"""
+
+_CONSUMER_SMTP = {
+    "gmail.com":      "smtp.gmail.com",
+    "googlemail.com": "smtp.gmail.com",
+    "outlook.com":    "smtp.office365.com",
+    "hotmail.com":    "smtp.office365.com",
+    "live.com":       "smtp.office365.com",
+    "yahoo.com":      "smtp.mail.yahoo.com",
+    "zoho.com":       "smtp.zoho.com",
+    "zohomail.com":   "smtp.zoho.com",
+}
+
+# The outcome of the most recent send attempt, so System Health can report
+# "email is failing, and here is what it said" instead of a green light that
+# only means credentials are present. Nothing here is a secret: a host, a
+# boolean and an exception class name.
+LAST_EMAIL = {"attempted": False, "ok": None, "detail": None, "host": None}
+
+
+def _smtp_target():
+    """(host, port, use_ssl) — or None when it cannot be known."""
+    host = os.getenv("SMTP_HOST", "").strip()
+    port = os.getenv("SMTP_PORT", "").strip()
+
+    if not host:
+        domain = SMTP_EMAIL.partition("@")[2].strip().lower()
+        host = _CONSUMER_SMTP.get(domain, "")
+        if not host:
+            return None
+
+    try:
+        port_n = int(port) if port else 587
+    except ValueError:
+        port_n = 587
+
+    return host, port_n, port_n == 465
+
+
+def _smtp_send(to: str, subject: str, mime_message) -> bool:
+    """
+    One place that opens a connection, so a host fix cannot be applied to one
+    path and forgotten on the other — which is how this shop ended up with two
+    different hardcoded Gmail endpoints.
+    """
+    target = _smtp_target()
+    if target is None:
+        LAST_EMAIL.update(attempted=True, ok=False, host=None,
+                          detail="SMTP_HOST not set for a custom-domain address")
+        print(
+            f"[Email NOT SENT] {SMTP_EMAIL} is a custom domain, so its mail server "
+            f"cannot be guessed. Set SMTP_HOST (and SMTP_PORT). "
+            f"Hostinger mailboxes use smtp.hostinger.com on 587. "
+            f"Subject was: {subject} -> {to}"
+        )
+        return False
+
+    host, port, use_ssl = target
+    try:
+        if use_ssl:
+            with smtplib.SMTP_SSL(host, port, timeout=20) as s:
+                s.login(SMTP_EMAIL, SMTP_PASS)
+                s.sendmail(SMTP_EMAIL, to, mime_message.as_string())
+        else:
+            with smtplib.SMTP(host, port, timeout=20) as s:
+                s.ehlo(); s.starttls(); s.ehlo()
+                s.login(SMTP_EMAIL, SMTP_PASS)
+                s.sendmail(SMTP_EMAIL, to, mime_message.as_string())
+        LAST_EMAIL.update(attempted=True, ok=True, host=host, detail=None)
+        print(f"[Email SENT via {host}] {subject} -> {to}")
+        return True
+    except smtplib.SMTPAuthenticationError as e:
+        LAST_EMAIL.update(attempted=True, ok=False, host=host,
+                          detail="authentication rejected")
+        print(f"[Email AUTH REJECTED by {host}] the address and password were not accepted. {e}")
+    except smtplib.SMTPException as e:
+        LAST_EMAIL.update(attempted=True, ok=False, host=host, detail=type(e).__name__)
+        print(f"[Email SMTP ERROR via {host}] {type(e).__name__}: {e}")
+    except Exception as e:
+        LAST_EMAIL.update(attempted=True, ok=False, host=host, detail=type(e).__name__)
+        print(f"[Email ERROR via {host}] {type(e).__name__}: {e}")
+    return False
+
+
 # ── Low-level send (runs in background thread so API never blocks) ─────────────
 def _send_email(to: str, subject: str, html: str):
     """
@@ -120,26 +235,13 @@ def _send_email(to: str, subject: str, html: str):
     if not SMTP_EMAIL or not SMTP_PASS:
         print(f"[Email SKIP — no Brevo/SendGrid key and no SMTP config] {subject} → {to}")
         return
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"]  = subject
-        msg["From"]     = f"{STORE_NAME} <{SMTP_EMAIL}>"
-        msg["To"]       = to
-        msg["Reply-To"] = SUPPORT_EMAIL
-        msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as s:
-            s.ehlo()
-            s.starttls()
-            s.ehlo()
-            s.login(SMTP_EMAIL, SMTP_PASS)
-            s.sendmail(SMTP_EMAIL, to, msg.as_string())
-        print(f"[Email SENT ✓ SMTP] {subject} → {to}")
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"[Email AUTH ERROR] Gmail rejected login. Check App Password. {e}")
-    except smtplib.SMTPException as e:
-        print(f"[Email SMTP ERROR] {e}")
-    except Exception as e:
-        print(f"[Email ERROR] {type(e).__name__}: {e}")
+    msg = MIMEMultipart("alternative")
+    msg["Subject"]  = subject
+    msg["From"]     = f"{STORE_NAME} <{SMTP_EMAIL}>"
+    msg["To"]       = to
+    msg["Reply-To"] = SUPPORT_EMAIL
+    msg.attach(MIMEText(html, "html"))
+    _smtp_send(to, subject, msg)
 
 def _bg(to: str, subject: str, html: str):
     """Fire-and-forget email in a daemon thread."""
