@@ -145,3 +145,92 @@ class TestFailuresAreRecordedNotSwallowed:
         notifications._smtp_send("someone@example.com", "Test", MIMEText("hi"))
 
         assert "hunter2-CANARY" not in str(notifications.LAST_EMAIL)
+
+
+class TestRenderBlocksSMTPAndSaysSo:
+    """
+    Render blocks outbound SMTP on 25, 465 and 587. A perfectly correct SMTP
+    configuration therefore cannot connect there, and the failure looks
+    identical to a wrong password — which is how an afternoon gets spent
+    re-checking a mailbox credential that was never the problem.
+    """
+
+    def test_smtp_is_refused_with_an_explanation_on_render(self, smtp_env, monkeypatch):
+        monkeypatch.setenv("RENDER", "true")
+        notifications.SMTP_EMAIL = "admin@vijeytextile.com"
+        notifications.SMTP_PASS = "irrelevant"
+        monkeypatch.setenv("SMTP_HOST", "smtp.hostinger.com")
+
+        from email.mime.text import MIMEText
+        assert notifications._smtp_send("x@example.com", "Test", MIMEText("hi")) is False
+        assert "Render" in (notifications.LAST_EMAIL["detail"] or "")
+
+    def test_off_render_a_valid_configuration_is_attempted(self, smtp_env, monkeypatch):
+        """The guard must be about Render, not about SMTP being disliked."""
+        monkeypatch.delenv("RENDER", raising=False)
+        notifications.SMTP_EMAIL = "admin@vijeytextile.com"
+        monkeypatch.setenv("SMTP_HOST", "smtp.hostinger.com")
+        assert notifications._smtp_target() == ("smtp.hostinger.com", 587, False)
+
+
+class TestALoginCodeIsNeverLostWithTheEmail:
+    """
+    Losing an order confirmation is an annoyance. Losing the code that is the
+    only way into an account locks somebody out of their own shop with no route
+    back — which is what happened. The code has to survive the send failing.
+    """
+
+    def test_the_code_reaches_the_log_when_the_send_fails(self, capsys, monkeypatch):
+        """The mechanism: a failed send with a recovery line must print it."""
+        import time
+        monkeypatch.setattr(notifications, "_send_email", lambda *a, **k: False)
+
+        notifications._bg("owner@example.com", "Your sign-in code", "<p>x</p>",
+                          recovery="sign-in code for owner@example.com is 483920")
+        time.sleep(0.5)                      # the send runs in a daemon thread
+
+        out = capsys.readouterr().out
+        assert "483920" in out, "the code must be recoverable when email is down"
+        assert "RECOVERY" in out
+
+    def test_the_login_code_is_actually_wired_to_that_mechanism(self, monkeypatch):
+        """
+        The wiring, checked against a CLEAN copy of the module.
+
+        conftest replaces every public function in `notifications` with a mock
+        for the whole session — rightly, so no test can reach a real gateway —
+        which means `send_login_otp_email` cannot be called directly here. A
+        separately loaded copy leaves the session's stubs untouched while still
+        exercising the real function.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "notifications_clean", notifications.__file__)
+        clean = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(clean)
+
+        captured = {}
+        monkeypatch.setattr(clean, "_bg",
+                            lambda to, subject, html, recovery=None: captured.update(
+                                to=to, recovery=recovery))
+
+        clean.send_login_otp_email("owner@example.com", "Shop Owner", "483920")
+
+        assert captured["recovery"] is not None, "the login code passes no recovery line"
+        assert "483920" in captured["recovery"]
+
+    def test_no_recovery_line_is_printed_when_the_send_succeeds(self, capsys, monkeypatch):
+        """
+        The code is only ever written down as a last resort. A successful send
+        must leave nothing behind.
+        """
+        import time
+        monkeypatch.setattr(notifications, "_send_email", lambda *a, **k: True)
+
+        notifications._bg("owner@example.com", "Subject", "<p>x</p>",
+                          recovery="sign-in code is 111222")
+        time.sleep(0.5)
+
+        out = capsys.readouterr().out
+        assert "111222" not in out
+        assert "RECOVERY" not in out

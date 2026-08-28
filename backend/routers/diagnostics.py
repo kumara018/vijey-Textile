@@ -95,6 +95,11 @@ def _check_email() -> dict:
         "active": active,
         "brevo": brevo, "sendgrid": sendgrid, "smtp": smtp,
         "smtp_host": (os.getenv("SMTP_HOST", "").strip() or None) if smtp else None,
+        # Render blocks outbound SMTP entirely, so an SMTP-only configuration
+        # there is broken no matter how correct the credentials are. Worth
+        # stating on the page rather than leaving somebody to re-check a
+        # password that was never wrong.
+        "smtp_blocked_by_host": bool(os.getenv("RENDER", "").strip()) and active == "smtp",
         "last_send": {"attempted": bool(last.get("attempted")),
                       "ok": last.get("ok"),
                       "detail": last.get("detail"),

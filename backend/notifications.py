@@ -80,6 +80,41 @@ _CONSUMER_SMTP = {
 LAST_EMAIL = {"attempted": False, "ok": None, "detail": None, "host": None}
 
 
+def _brevo_reason(code: int, body: str) -> str:
+    """
+    Brevo's refusals in words, because the raw body is JSON in a log.
+
+    The one that matters here: Brevo will not send as an address whose domain
+    has not been authorised in DNS. That is not Brevo being awkward — it is the
+    same rule the receiving server applies. SPF on this domain currently lists
+    the mailbox host and nothing else, so a message sent through Brevo claiming
+    to be from the domain fails authentication at BOTH ends.
+    """
+    b = (body or "").lower()
+    if "sender" in b and ("not valid" in b or "not authorised" in b or "not authorized" in b):
+        return "sender address not authorised in Brevo"
+    if "domain" in b and ("not" in b and ("verif" in b or "authenticat" in b)):
+        return "sending domain not authenticated (add Brevo's DNS records)"
+    if code == 401:
+        return "API key rejected"
+    if code == 402:
+        return "Brevo credit exhausted"
+    if code == 429:
+        return "Brevo rate limit"
+    return f"rejected with HTTP {code}"
+
+
+def _on_render() -> bool:
+    """
+    Render sets RENDER=true in every service. Worth knowing, because Render
+    BLOCKS OUTBOUND SMTP PORTS — 25, 465 and 587 all refuse — so an SMTP
+    configuration that is perfectly correct still cannot connect there. Saying
+    that plainly is the difference between a five-minute fix and an afternoon
+    spent re-checking a mailbox password that was never wrong.
+    """
+    return bool(os.getenv("RENDER", "").strip())
+
+
 def _smtp_target():
     """(host, port, use_ssl) — or None when it cannot be known."""
     host = os.getenv("SMTP_HOST", "").strip()
@@ -105,6 +140,17 @@ def _smtp_send(to: str, subject: str, mime_message) -> bool:
     path and forgotten on the other — which is how this shop ended up with two
     different hardcoded Gmail endpoints.
     """
+    if _on_render():
+        LAST_EMAIL.update(attempted=True, ok=False, host=None,
+                          detail="Render blocks outbound SMTP — use Brevo instead")
+        print(
+            "[Email CANNOT BE SENT] This service runs on Render, which blocks "
+            "outbound SMTP on ports 25, 465 and 587. No SMTP setting can work "
+            "here however correct it is. Set BREVO_API_KEY instead — it is an "
+            f"HTTPS API, so it is not blocked. Subject was: {subject} -> {to}"
+        )
+        return False
+
     target = _smtp_target()
     if target is None:
         LAST_EMAIL.update(attempted=True, ok=False, host=None,
@@ -177,13 +223,18 @@ def _send_email(to: str, subject: str, html: str):
                 },
             )
             with _req.urlopen(request, timeout=15) as resp:
-                print(f"[Email SENT ✓ Brevo {resp.status}] {subject} → {to}")
+                LAST_EMAIL.update(attempted=True, ok=True, host="brevo", detail=None)
+                print(f"[Email SENT via Brevo {resp.status}] {subject} -> {to}")
+                return True
         except _uerr.HTTPError as e:
             body = e.read().decode(errors="ignore")
-            print(f"[Email Brevo HTTP {e.code}] {subject} → {to} | {body}")
+            LAST_EMAIL.update(attempted=True, ok=False, host="brevo",
+                              detail=_brevo_reason(e.code, body))
+            print(f"[Email REJECTED by Brevo {e.code}] {subject} -> {to} | {body}")
         except Exception as e:
+            LAST_EMAIL.update(attempted=True, ok=False, host="brevo", detail=type(e).__name__)
             print(f"[Email Brevo ERROR] {type(e).__name__}: {e}")
-        return  # never fall through when Brevo key is set
+        return False  # never fall through when Brevo key is set
 
     # ── Path B: SendGrid (fallback) ─────────────────────────────────────────────
     if sg_key:
@@ -223,29 +274,51 @@ def _send_email(to: str, subject: str, html: str):
                 },
             )
             with _req.urlopen(request, timeout=15) as resp:
-                print(f"[Email SENT ✓ SendGrid {resp.status}] {subject} → {to}")
+                LAST_EMAIL.update(attempted=True, ok=True, host="sendgrid", detail=None)
+                print(f"[Email SENT via SendGrid {resp.status}] {subject} -> {to}")
+                return True
         except _uerr.HTTPError as e:
             body = e.read().decode(errors="ignore")
-            print(f"[Email SendGrid HTTP {e.code}] {subject} → {to} | {body}")
+            LAST_EMAIL.update(attempted=True, ok=False, host="sendgrid",
+                              detail=f"rejected with HTTP {e.code}")
+            print(f"[Email REJECTED by SendGrid {e.code}] {subject} -> {to} | {body}")
         except Exception as e:
+            LAST_EMAIL.update(attempted=True, ok=False, host="sendgrid", detail=type(e).__name__)
             print(f"[Email SendGrid ERROR] {type(e).__name__}: {e}")
-        return  # never fall through to SMTP when API key is set
+        return False  # never fall through to SMTP when API key is set
 
     # ── Path C: Gmail SMTP (blocked on Render free tier — local dev only) ──────
     if not SMTP_EMAIL or not SMTP_PASS:
-        print(f"[Email SKIP — no Brevo/SendGrid key and no SMTP config] {subject} → {to}")
-        return
+        LAST_EMAIL.update(attempted=True, ok=False, host=None,
+                          detail="no email provider configured")
+        print(f"[Email NOT SENT — no Brevo key, no SendGrid key, no SMTP config] {subject} -> {to}")
+        return False
     msg = MIMEMultipart("alternative")
     msg["Subject"]  = subject
     msg["From"]     = f"{STORE_NAME} <{SMTP_EMAIL}>"
     msg["To"]       = to
     msg["Reply-To"] = SUPPORT_EMAIL
     msg.attach(MIMEText(html, "html"))
-    _smtp_send(to, subject, msg)
+    return _smtp_send(to, subject, msg)
 
-def _bg(to: str, subject: str, html: str):
-    """Fire-and-forget email in a daemon thread."""
-    threading.Thread(target=_send_email, args=(to, subject, html), daemon=True).start()
+def _bg(to: str, subject: str, html: str, recovery: str | None = None):
+    """
+    Fire-and-forget email in a daemon thread.
+
+    `recovery` is printed ONLY when the send fails, and exists for one case:
+    a one-time code. Losing an order confirmation is an annoyance; losing the
+    code that is the sole way into an account locks somebody out of their own
+    shop with no route back — which is exactly what happened here, and the way
+    out was reading the code off a log line that only existed on the SMS path
+    by accident. Making it deliberate means the owner can always recover.
+
+    It is not a new exposure: reading it requires access to the service logs,
+    which already implies the ability to change the admin password outright.
+    """
+    def _run():
+        if not _send_email(to, subject, html) and recovery:
+            print(f"[RECOVERY] Email failed, so the code is here instead: {recovery}")
+    threading.Thread(target=_run, daemon=True).start()
 
 
 # ── HTML helpers ───────────────────────────────────────────────────────────────
@@ -807,7 +880,8 @@ def send_login_otp_email(email: str, name: str, otp: str):
         You can safely ignore this email — your account is secure.
       </p>
     """)
-    _bg(email, f"Your Vijey Textile sign-in code", html)
+    _bg(email, f"Your Vijey Textile sign-in code", html,
+        recovery=f"sign-in code for {email} is {otp} (valid 10 minutes)")
 
 
 # ── 9a2. Registration verification OTP ─────────────────────────────────────────
