@@ -15,8 +15,19 @@ the machine it runs on. The Dockerfile runs *on* Oracle.
 
 ## Before you start
 
-- An Oracle Cloud account (the Always Free tier needs a card for identity
-  verification but **cannot** charge you — Always Free resources stay free)
+- An Oracle Cloud account, **upgraded to Pay As You Go**. This is not
+  optional, and it is the opposite of what it sounds like.
+
+  Oracle reclaims Always Free machines that idle: if CPU stays under 20% across
+  a rolling seven days, they stop the instance and take it back. A shop of this
+  size will never reach 20%, so a plain Always Free account would suspend these
+  services exactly the way Render does — trading one surprise outage for
+  another.
+
+  Upgrading to Pay As You Go stops reclamation and **keeps the Always Free
+  resources free**. The card is for identity, and the allowance is not a
+  trial that expires. Set a budget alert at ₹1 in Billing → Budgets so any
+  accidental charge is visible the same day rather than at the end of a month.
 - A database on Neon, and its connection string
 - A subdomain to point at the machine, e.g. `api.vijeytextile.com`
 
