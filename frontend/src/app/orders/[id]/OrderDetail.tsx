@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ordersAPI } from '@/lib/api';
+import OrderNotifications from '@/components/system/OrderNotifications';
 import { orderDetailQuery, returnsQuery, qk } from '@/lib/query';
 import type { Order, ReturnRequest as ReturnRow } from '@/types';
 import PageShell from '@/components/system/PageShell';
@@ -286,6 +287,11 @@ export default function OrderDetail({ id }: { id: number }) {
           )}
 
           {/* ── The pieces ──────────────────────────────────────────── */}
+          {/* Offered once an order exists, which is the only moment a
+              notification prompt is an answer rather than an interruption —
+              see components/system/OrderNotifications. */}
+          {!delivered && !cancelled && <OrderNotifications />}
+
           <section aria-labelledby="items-heading" className="mt-[6vh] border-t border-ink-edge/60 pt-8">
             <h2 id="items-heading" className="text-rule uppercase text-paper-faint">
               What you bought

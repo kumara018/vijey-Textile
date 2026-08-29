@@ -558,3 +558,30 @@ class SchedulerLease(Base):
     id         = Column(Integer, primary_key=True)
     owner      = Column(String(64), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
+
+
+class PushSubscription(Base):
+    """
+    One browser that has agreed to receive order updates.
+
+    THE ENDPOINT IS THE IDENTITY, not the row id, and it is unique. A browser
+    hands back the same endpoint every time it subscribes, so uniqueness here
+    is what stops a customer who reloads the page from being notified three
+    times about one order.
+
+    `p256dh` and `auth` are the browser's own encryption keys: the push service
+    relays the message but cannot read it, because it is encrypted to these.
+    They are useless without the endpoint and grant nothing on their own.
+
+    Deleted with the customer's account, and deleted the moment the push
+    service says the endpoint is gone — see push.send_to_user.
+    """
+    __tablename__ = "push_subscriptions"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    user_id      = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    endpoint     = Column(String(500), unique=True, index=True, nullable=False)
+    p256dh       = Column(String(200), nullable=False)
+    auth         = Column(String(100), nullable=False)
+    created_at   = Column(DateTime(timezone=True), server_default=func.now())
+    last_sent_at = Column(DateTime(timezone=True), nullable=True)

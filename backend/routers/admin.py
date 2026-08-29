@@ -414,6 +414,7 @@ def update_order_status(
         else:
             notifications.send_order_status_email(user.email, user.full_name, order, payload.status)
             notifications.send_order_status_whatsapp(user.phone, user.full_name, order, payload.status)
+            notifications.push_order_status(db, order, payload.status)
 
         # After delivered, ask for a review
         if payload.status == "delivered":
@@ -647,6 +648,7 @@ def create_delhivery_shipment(
     if customer:
         notifications.send_order_status_email(customer.email, customer.full_name, order, order.status)
         notifications.send_order_status_whatsapp(customer.phone, customer.full_name, order, order.status)
+        notifications.push_order_status(db, order, order.status)
 
     return {
         "message":      "Shipment created on Delhivery ✅",

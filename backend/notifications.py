@@ -2532,3 +2532,48 @@ def send_admin_return_whatsapp(rr, order, user):
         f"Admin Dashboard: {STORE_URL}/admin"
     )
     _send_whatsapp(admin_phone, msg)
+
+
+# ── Web push ──────────────────────────────────────────────────────────────────
+
+def push_order_status(db, order, status: str) -> int:
+    """
+    The same order update, to every device the customer has allowed.
+
+    ALONGSIDE EMAIL AND WHATSAPP, NEVER INSTEAD OF THEM. Most customers will
+    not have granted permission — on an iPhone they must add the shop to their
+    home screen first — so a shop that moved order updates to push alone would
+    simply stop telling most people anything. This is the fast channel for the
+    people who opted in, and the others are unaffected.
+
+    Deliberately short. A push notification is read on a lock screen in about a
+    second; the detail belongs in the email it arrives beside.
+    """
+    import push as _push
+
+    if not _push.is_configured() or not getattr(order, "user_id", None):
+        return 0
+
+    said = {
+        "confirmed":        "We have your order and are packing it.",
+        "processing":       "Your order is being packed.",
+        "shipped":          "Your order is on its way.",
+        "out_for_delivery": "Out for delivery today.",
+        "delivered":        "Delivered. We hope it fits beautifully.",
+        "cancelled":        "Your order has been cancelled.",
+    }.get(status)
+    if not said:
+        return 0
+
+    try:
+        return _push.send_to_user(
+            db, order.user_id,
+            title=f"{STORE_NAME} — {order.order_number}",
+            body=said,
+            url=f"/orders/{order.id}",
+        )
+    except Exception as exc:
+        # A push failing must never break an order update. The email and
+        # WhatsApp beside it are what the customer actually relies on.
+        print(f"[Push] order status failed: {type(exc).__name__}: {exc}")
+        return 0

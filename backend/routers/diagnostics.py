@@ -152,6 +152,22 @@ def _check_messaging() -> dict:
     }
 
 
+def _check_push() -> dict:
+    """
+    The only channel here that no provider can price or switch off — so it is
+    worth knowing whether it is actually on.
+    """
+    import push as _p
+    last = getattr(_p, "LAST_PUSH", {"attempted": False, "ok": None, "detail": None})
+    return {
+        "configured": _p.is_configured(),
+        "last_send": {"attempted": bool(last.get("attempted")),
+                      "ok": last.get("ok"),
+                      "detail": last.get("detail")},
+        "verified": "credentials",
+    }
+
+
 def _check_media() -> dict:
     configured = _present("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")
     return {"configured": configured, "verified": "credentials"}
@@ -199,5 +215,6 @@ def integrations(
         "courier":    _check_courier(),
         "messaging":  _check_messaging(),
         "media":      _check_media(),
+        "push":       _check_push(),
         "security":   _check_security(),
     }
