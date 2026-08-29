@@ -80,6 +80,22 @@ _CONSUMER_SMTP = {
 LAST_EMAIL = {"attempted": False, "ok": None, "detail": None, "host": None}
 
 
+def _remember_email(ok: bool, detail: str | None, host: str | None) -> None:
+    """
+    In memory for this process, and in the database so it outlives the deploy.
+
+    Both, rather than one: the dict is what the tests read and what the same
+    request can see immediately, and the row is what the health page reads
+    hours and several restarts later.
+    """
+    LAST_EMAIL.update(attempted=True, ok=ok, detail=detail, host=host)
+    try:
+        import integration_status
+        integration_status.record("email", ok, detail if not ok else (host or "sent"))
+    except Exception:
+        pass
+
+
 def _brevo_reason(code: int, body: str) -> str:
     """
     Brevo's refusals in words, because the raw body is JSON in a log.
@@ -141,8 +157,7 @@ def _smtp_send(to: str, subject: str, mime_message) -> bool:
     different hardcoded Gmail endpoints.
     """
     if _on_render():
-        LAST_EMAIL.update(attempted=True, ok=False, host=None,
-                          detail="Render blocks outbound SMTP — use Brevo instead")
+        _remember_email(False, "Render blocks outbound SMTP — use Brevo instead", None)
         print(
             "[Email CANNOT BE SENT] This service runs on Render, which blocks "
             "outbound SMTP on ports 25, 465 and 587. No SMTP setting can work "
@@ -153,8 +168,7 @@ def _smtp_send(to: str, subject: str, mime_message) -> bool:
 
     target = _smtp_target()
     if target is None:
-        LAST_EMAIL.update(attempted=True, ok=False, host=None,
-                          detail="SMTP_HOST not set for a custom-domain address")
+        _remember_email(False, "SMTP_HOST not set for a custom-domain address", None)
         print(
             f"[Email NOT SENT] {SMTP_EMAIL} is a custom domain, so its mail server "
             f"cannot be guessed. Set SMTP_HOST (and SMTP_PORT). "
@@ -174,18 +188,17 @@ def _smtp_send(to: str, subject: str, mime_message) -> bool:
                 s.ehlo(); s.starttls(); s.ehlo()
                 s.login(SMTP_EMAIL, SMTP_PASS)
                 s.sendmail(SMTP_EMAIL, to, mime_message.as_string())
-        LAST_EMAIL.update(attempted=True, ok=True, host=host, detail=None)
+        _remember_email(True, None, host)
         print(f"[Email SENT via {host}] {subject} -> {to}")
         return True
     except smtplib.SMTPAuthenticationError as e:
-        LAST_EMAIL.update(attempted=True, ok=False, host=host,
-                          detail="authentication rejected")
+        _remember_email(False, "authentication rejected", host)
         print(f"[Email AUTH REJECTED by {host}] the address and password were not accepted. {e}")
     except smtplib.SMTPException as e:
-        LAST_EMAIL.update(attempted=True, ok=False, host=host, detail=type(e).__name__)
+        _remember_email(False, type(e, host).__name__)
         print(f"[Email SMTP ERROR via {host}] {type(e).__name__}: {e}")
     except Exception as e:
-        LAST_EMAIL.update(attempted=True, ok=False, host=host, detail=type(e).__name__)
+        _remember_email(False, type(e, host).__name__)
         print(f"[Email ERROR via {host}] {type(e).__name__}: {e}")
     return False
 
@@ -223,16 +236,15 @@ def _send_email(to: str, subject: str, html: str):
                 },
             )
             with _req.urlopen(request, timeout=15) as resp:
-                LAST_EMAIL.update(attempted=True, ok=True, host="brevo", detail=None)
+                _remember_email(True, None, "brevo")
                 print(f"[Email SENT via Brevo {resp.status}] {subject} -> {to}")
                 return True
         except _uerr.HTTPError as e:
             body = e.read().decode(errors="ignore")
-            LAST_EMAIL.update(attempted=True, ok=False, host="brevo",
-                              detail=_brevo_reason(e.code, body))
+            _remember_email(False, _brevo_reason(e.code, "brevo"))
             print(f"[Email REJECTED by Brevo {e.code}] {subject} -> {to} | {body}")
         except Exception as e:
-            LAST_EMAIL.update(attempted=True, ok=False, host="brevo", detail=type(e).__name__)
+            _remember_email(False, type(e, "brevo").__name__)
             print(f"[Email Brevo ERROR] {type(e).__name__}: {e}")
         return False  # never fall through when Brevo key is set
 
@@ -274,23 +286,21 @@ def _send_email(to: str, subject: str, html: str):
                 },
             )
             with _req.urlopen(request, timeout=15) as resp:
-                LAST_EMAIL.update(attempted=True, ok=True, host="sendgrid", detail=None)
+                _remember_email(True, None, "sendgrid")
                 print(f"[Email SENT via SendGrid {resp.status}] {subject} -> {to}")
                 return True
         except _uerr.HTTPError as e:
             body = e.read().decode(errors="ignore")
-            LAST_EMAIL.update(attempted=True, ok=False, host="sendgrid",
-                              detail=f"rejected with HTTP {e.code}")
+            _remember_email(False, f"rejected with HTTP {e.code}", "sendgrid")
             print(f"[Email REJECTED by SendGrid {e.code}] {subject} -> {to} | {body}")
         except Exception as e:
-            LAST_EMAIL.update(attempted=True, ok=False, host="sendgrid", detail=type(e).__name__)
+            _remember_email(False, type(e, "sendgrid").__name__)
             print(f"[Email SendGrid ERROR] {type(e).__name__}: {e}")
         return False  # never fall through to SMTP when API key is set
 
     # ── Path C: Gmail SMTP (blocked on Render free tier — local dev only) ──────
     if not SMTP_EMAIL or not SMTP_PASS:
-        LAST_EMAIL.update(attempted=True, ok=False, host=None,
-                          detail="no email provider configured")
+        _remember_email(False, "no email provider configured", None)
         print(f"[Email NOT SENT — no Brevo key, no SendGrid key, no SMTP config] {subject} -> {to}")
         return False
     msg = MIMEMultipart("alternative")

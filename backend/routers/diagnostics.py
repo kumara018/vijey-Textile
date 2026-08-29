@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -72,7 +72,7 @@ def _check_razorpay() -> dict:
     }
 
 
-def _check_email() -> dict:
+def _check_email(db=None) -> dict:
     """
     Three providers in a fallback chain, so the useful answer is WHICH ONE will
     actually carry the next message — not merely that one of them might.
@@ -89,6 +89,16 @@ def _check_email() -> dict:
     # that means "a key exists" is exactly the reassurance that hid it.
     import notifications as _n
     last = getattr(_n, "LAST_EMAIL", {"attempted": False, "ok": None, "detail": None, "host": None})
+
+    # The DURABLE record wins where there is one. The in-memory dict only knows
+    # what this process has done since it started, which after a deploy is
+    # nothing - and reporting "nothing sent yet" about a channel that has been
+    # working for weeks is how a status page teaches its owner to ignore it.
+    if db is not None:
+        import integration_status
+        durable = integration_status.read(db, "email")
+        if durable["attempted"]:
+            last = {**last, **durable}
 
     return {
         "configured": bool(active),
@@ -111,7 +121,7 @@ def _check_email() -> dict:
     }
 
 
-def _check_courier() -> dict:
+def _check_courier(db=None) -> dict:
     """
     Delhivery drives serviceability, labels, tracking and reverse pickups. When
     the token is absent every one of those degrades silently.
@@ -124,6 +134,13 @@ def _check_courier() -> dict:
     # green row. Found in a deploy log, not by reasoning — hence this.
     import delhivery as _dl
     last = getattr(_dl, "LAST_COURIER", {"attempted": False, "ok": None, "detail": None})
+
+    # Durable first, for the same reason as email above.
+    if db is not None:
+        import integration_status
+        durable = integration_status.read(db, "courier")
+        if durable["attempted"]:
+            last = {**last, **durable}
 
     return {
         "configured": configured,
@@ -211,55 +228,10 @@ def integrations(
         "database":   {"configured": True, "reachable": db_ok,
                        "error": db_error, "verified": "live"},
         "payments":   _check_razorpay(),
-        "email":      _check_email(),
-        "courier":    _check_courier(),
+        "email":      _check_email(db),
+        "courier":    _check_courier(db),
         "messaging":  _check_messaging(),
         "media":      _check_media(),
         "push":       _check_push(),
         "security":   _check_security(),
     }
-
-@router.post("/test-email")
-def send_test_email(
-    current_admin: models.User = Depends(auth_utils.get_current_admin),
-):
-    """
-    Prove email works, on demand, without waiting for a customer to need it.
-
-    WHY THIS EXISTS. The Email row can only report what the last real send did,
-    so after every deploy it reads "configured, nothing sent yet this run" —
-    honest, but useless at the moment you most want an answer: you have just
-    changed a setting and want to know whether it worked. The alternative was
-    placing a test order or signing out and back in, which is a lot of
-    ceremony to answer one question.
-
-    IT CAN ONLY EVER EMAIL THE ADMIN WHO ASKED. Not an address in the request —
-    the address on the calling account. So this cannot be turned into a way to
-    send mail to anybody else, which is what it would become the moment it
-    accepted a recipient.
-
-    The result is the truth from the provider, not a guess: the same
-    `_send_email` every order confirmation goes through, and its outcome is
-    recorded, so the Email row goes green or red on this one click.
-    """
-    import notifications
-
-    to = (current_admin.email or "").strip()
-    if not to:
-        raise HTTPException(400, "This admin account has no email address.")
-
-    ok = notifications._send_email(
-        to,
-        "Test from your shop's health page",
-        "<p>If you are reading this, email is working.</p>"
-        "<p>Sent from the System Health page. Nothing else was changed.</p>",
-    )
-
-    last = getattr(notifications, "LAST_EMAIL", {})
-    if not ok:
-        # The reason, not just the failure — it is the whole point of asking.
-        raise HTTPException(
-            502,
-            f"Could not send: {last.get('detail') or 'the provider refused it'}",
-        )
-    return {"sent": True, "to": to, "via": last.get("host")}

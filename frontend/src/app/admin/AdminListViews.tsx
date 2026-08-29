@@ -637,8 +637,6 @@ export function AdminHealthView() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testNote, setTestNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setFailed(false);
@@ -652,32 +650,6 @@ export function AdminHealthView() {
     if (!user?.is_admin) { router.replace('/'); return; }
     load();
   }, [authLoading, user, router, load]);
-
-  /**
-   * Prove email, rather than wait for it to be proven.
-   *
-   * The Email row can only report what the last real send did, so after every
-   * deploy it reads "nothing sent yet this run" — honest, and useless at the
-   * one moment somebody wants an answer: they have just changed a setting.
-   * This sends a real message down the same path an order confirmation takes
-   * and re-reads the page, so the row turns green or red on one click.
-   *
-   * It can only ever mail the admin who pressed it — the address comes from
-   * the calling account, never from the request — so it cannot become a way
-   * to send mail to anybody else.
-   */
-  const testEmail = async () => {
-    setTesting(true); setTestNote(null);
-    try {
-      const res = await adminAPI.sendTestEmail();
-      setTestNote(`Sent to ${res.data?.to}. Check the inbox — and spam, for the first one.`);
-    } catch (err: any) {
-      setTestNote(err?.response?.data?.detail || 'Could not send. The Email row now says why.');
-    } finally {
-      setTesting(false);
-      await load();
-    }
-  };
 
   if (authLoading || !user?.is_admin) return null;
 
@@ -764,18 +736,6 @@ export function AdminHealthView() {
                         ? `Sending via ${d.email.active}${d.email.last_send.host ? ` (${d.email.last_send.host})` : ''}`
                         : `Configured for ${d.email.active} — nothing sent yet this run`
                 }
-                action={
-                  d.email?.configured ? (
-                    <button
-                      type="button"
-                      onClick={testEmail}
-                      disabled={testing}
-                      className="text-caption uppercase text-brass-bright underline decoration-brass/50 underline-offset-4 transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright disabled:opacity-50"
-                    >
-                      {testing ? 'Sending…' : 'Send test'}
-                    </button>
-                  ) : undefined
-                }
                 note={
                   d.email?.last_send?.ok === false && String(d.email.last_send.detail ?? '').includes('SMTP_HOST')
                     ? 'set SMTP_HOST — a custom-domain mailbox cannot be guessed. Hostinger uses smtp.hostinger.com on 587'
@@ -840,9 +800,6 @@ export function AdminHealthView() {
                   : undefined}
               />
             </div>
-            {testNote && (
-              <p role="status" className="mt-6 max-w-[62ch] text-sm text-paper">{testNote}</p>
-            )}
             <p className="mt-7 max-w-[62ch] text-xs text-paper-faint">
               Every row except the database reports that credentials are present and the client
               builds. That is the same check each integration silently fails on, so it catches the

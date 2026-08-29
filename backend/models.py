@@ -585,3 +585,22 @@ class PushSubscription(Base):
     auth         = Column(String(100), nullable=False)
     created_at   = Column(DateTime(timezone=True), server_default=func.now())
     last_sent_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class IntegrationStatus(Base):
+    """
+    How each third party last behaved. One row per integration.
+
+    Durable on purpose - see integration_status.py. The in-memory version this
+    replaces reset on every deploy, so the health page spent most of its life
+    reporting "nothing sent yet this run" about channels that had worked for
+    weeks.
+
+    Never holds a secret: a key name, a boolean, a short reason, a time.
+    """
+    __tablename__ = "integration_status"
+
+    key        = Column(String(40), primary_key=True)
+    ok         = Column(Boolean, default=False)
+    detail     = Column(String(200), nullable=True)
+    checked_at = Column(DateTime(timezone=True), server_default=func.now())

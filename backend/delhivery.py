@@ -334,7 +334,13 @@ LAST_COURIER = {"attempted": False, "ok": None, "detail": None}
 
 
 def _record(ok: bool, detail: str | None = None) -> None:
+    """In memory for this process, and in the database so it outlives a deploy."""
     LAST_COURIER.update(attempted=True, ok=ok, detail=detail)
+    try:
+        import integration_status
+        integration_status.record("courier", ok, detail if not ok else "answered")
+    except Exception:
+        pass
 
 
 def _courier_reason(exc: Exception) -> str:
