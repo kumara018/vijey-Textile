@@ -78,8 +78,17 @@ def serviceability(pincode: str):
     ok = bool(result.get("serviceable"))
     _CACHE[pin] = (ok, now)
     out = {"pincode": pin, "serviceable": ok, "checked": True, "cached": False}
-    if ok:
-        # What the courier will actually do there. Cash on delivery in
-        # particular decides whether to offer it at checkout at all.
-        out.update({k: result[k] for k in ("cod", "prepaid", "district") if k in result})
+    if ok and result.get("district"):
+        # The place name, which lets a customer confirm the pincode they typed
+        # is the one they meant.
+        #
+        # `cod` AND `prepaid` ARE DELIBERATELY NOT PUBLISHED. Delhivery reports
+        # them, and they are the COURIER'S capability - "we can collect cash
+        # at this pincode" - not this shop's policy. Neither shop offers cash
+        # on delivery: checkout takes Razorpay only. Publishing cod:true on an
+        # endpoint any customer can call reads as an offer the shop does not
+        # make, and the first person to wire it into the UI would be building
+        # on a promise nobody made. `check_serviceability` still returns them
+        # for the day COD is offered; until then they stay inside the server.
+        out["district"] = result["district"]
     return out
