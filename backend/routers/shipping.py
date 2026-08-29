@@ -63,7 +63,7 @@ def serviceability(pincode: str):
     if hit and now - hit[1] < _TTL_SECONDS:
         return {"pincode": pin, "serviceable": hit[0], "checked": True, "cached": True}
 
-    origin = os.getenv("DELHIVERY_RETURN_PIN", "638001")
+    origin = os.getenv("DELHIVERY_RETURN_PIN", "638102")
     result = dl.check_serviceability(origin, pin)
 
     # Not configured, or the call failed: say so rather than inventing a "no".

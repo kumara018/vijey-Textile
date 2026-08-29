@@ -85,7 +85,7 @@ def create_shipment(order, user) -> dict | None:
         # Send under BOTH field names — different Delhivery API versions differ
         "payment_mode":   payment,
         "payment":        payment,
-        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638001"),
+        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638102"),
         "return_city":    os.getenv("DELHIVERY_RETURN_CITY",    "Gangapuram"),
         "return_state":   os.getenv("DELHIVERY_RETURN_STATE",   "Tamil Nadu"),
         "return_country": "India",
@@ -204,7 +204,7 @@ def create_return_pickup(order, user) -> dict | None:
         "payment_mode":   "Pickup",
         "payment":        "Pickup",
         # Shop becomes the delivery destination for the returned item
-        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638001"),
+        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638102"),
         "return_city":    os.getenv("DELHIVERY_RETURN_CITY",    "Gangapuram"),
         "return_state":   os.getenv("DELHIVERY_RETURN_STATE",   "Tamil Nadu"),
         "return_country": "India",
@@ -281,7 +281,7 @@ def create_replacement_shipment(rr, order, user) -> dict | None:
         # nothing more) for the item being exchanged.
         "payment_mode":   "Pre-paid",
         "payment":        "Pre-paid",
-        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638001"),
+        "return_pin":     os.getenv("DELHIVERY_RETURN_PIN",     "638102"),
         "return_city":    os.getenv("DELHIVERY_RETURN_CITY",    "Gangapuram"),
         "return_state":   os.getenv("DELHIVERY_RETURN_STATE",   "Tamil Nadu"),
         "return_country": "India",
