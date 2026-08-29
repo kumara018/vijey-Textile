@@ -352,28 +352,68 @@ def _courier_reason(exc: Exception) -> str:
 
 
 def check_serviceability(origin_pin: str, dest_pin: str, weight_grams: int = 500) -> dict | None:
+    """
+    Does Delhivery deliver to this pincode?
+
+    THIS ASKED THE WRONG ENDPOINT, AND THAT COST WEEKS OF THE FEATURE BEING
+    DEAD. It called `/api/kinko/v1/invoice/charges/`, which is the SHIPPING
+    COST api — it answers "what would this parcel cost", and answering it
+    happens to imply the pincode is reachable. Delhivery scopes API access per
+    endpoint, and this account is not authorised for charges: every call came
+    back 401 Unauthorized, the caller turned that into `checked: false`, and
+    the shop said "we will confirm delivery when you order" to every customer
+    who ever typed a pincode.
+
+    The token was never the problem. Proven from the server: the same token,
+    in the same header, against the endpoint below, returns real data.
+
+    `/c/api/pin-codes/json/` is the endpoint that exists for this question. It
+    also answers more of it — whether cash on delivery is available there,
+    whether prepaid is, whether Delhivery will collect a return pickup — which
+    the cost API never told us.
+
+    `origin_pin` and `weight_grams` are kept in the signature because callers
+    pass them and a cost estimate may want them later. Serviceability does not
+    depend on either.
+    """
     if not is_configured():
         _record(False, "no DELHIVERY_API_TOKEN set")
         return None
+
+    del origin_pin, weight_grams          # not part of this question
+
     try:
-        params = _parse.urlencode({
-            "md":  "E",
-            "cgm": weight_grams,
-            "o_pin": origin_pin,
-            "d_pin": dest_pin,
-            "ss":  "DTO",
-            "pt":  "Pre-paid",
-        })
-        url = f"{_base()}/api/kinko/v1/invoice/charges/?{params}"
+        url = f"{_base()}/c/api/pin-codes/json/?filter_codes={_parse.quote(str(dest_pin))}"
         req = _req.Request(url, headers=_headers(), method="GET")
         with _req.urlopen(req, timeout=10) as resp:
             body = json.loads(resp.read())
-            _record(True)
-            return body
     except Exception as e:
         _record(False, _courier_reason(e))
         print(f"[Delhivery] Serviceability error: {e}")
         return None
+
+    _record(True)
+
+    # An empty `delivery_codes` is a real answer, not a failure: Delhivery
+    # knows the pincode and does not serve it. That must stay distinct from
+    # "we could not ask", which is the None above — one is a no, the other is
+    # a shrug, and showing a customer the wrong one either loses an order or
+    # promises a delivery that cannot happen.
+    codes = body.get("delivery_codes") or []
+    if not codes:
+        return {"serviceable": False, "pin": str(dest_pin)}
+
+    postal = (codes[0] or {}).get("postal_code") or {}
+    yes = lambda v: str(v).strip().upper() == "Y"
+    return {
+        "serviceable": True,
+        "pin":      str(postal.get("pin") or dest_pin),
+        "district": postal.get("district"),
+        "state":    postal.get("state_code"),
+        "cod":      yes(postal.get("cod")),
+        "prepaid":  yes(postal.get("pre_paid")),
+        "pickup":   yes(postal.get("pickup")),
+    }
 
 
 # ── Parse tracking events into a clean list ───────────────────────────────────

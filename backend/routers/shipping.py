@@ -70,6 +70,16 @@ def serviceability(pincode: str):
     if result is None:
         return {"pincode": pin, "serviceable": None, "checked": False, "cached": False}
 
-    ok = not result.get("error") if isinstance(result, dict) else bool(result)
-    _CACHE[pin] = (bool(ok), now)
-    return {"pincode": pin, "serviceable": bool(ok), "checked": True, "cached": False}
+    # `serviceable` is now stated by the courier rather than inferred from the
+    # absence of an error key. The old reading — "no error field, therefore we
+    # deliver" — would call every unserved pincode deliverable the moment the
+    # endpoint answered cleanly, which is the failure that costs a customer a
+    # parcel rather than a sale.
+    ok = bool(result.get("serviceable"))
+    _CACHE[pin] = (ok, now)
+    out = {"pincode": pin, "serviceable": ok, "checked": True, "cached": False}
+    if ok:
+        # What the courier will actually do there. Cash on delivery in
+        # particular decides whether to offer it at checkout at all.
+        out.update({k: result[k] for k in ("cod", "prepaid", "district") if k in result})
+    return out
