@@ -103,7 +103,7 @@ export default function AccountMenu() {
         <div
           role="menu"
           aria-label="Your account"
-          className="absolute right-0 top-12 z-50 w-64 border border-ink-edge bg-night/95 py-2 backdrop-blur-md"
+          className="absolute right-0 top-12 z-50 flex max-h-[calc(100vh-7rem)] w-64 flex-col overflow-y-auto overscroll-contain border border-ink-edge bg-night py-2"
         >
           <p className="px-5 pb-2 pt-1 text-rule uppercase text-paper-faint">
             Hello, {first}
@@ -143,7 +143,26 @@ export default function AccountMenu() {
                   type="button"
                   role="menuitem"
                   className={item}
-                  onClick={async () => { setOpen(false); await switchAccount(s); }}
+                  onClick={async () => {
+                    setOpen(false);
+                    await switchAccount(s);
+                    /* A FULL LOAD, NOT A ROUTER PUSH, AND NOT STAYING PUT.
+                     *
+                     * Switching account used to leave you on whatever page you
+                     * were reading - a product, someone else's order - now
+                     * signed in as somebody different. Everything that account
+                     * had loaded was still on screen.
+                     *
+                     * It reloads rather than navigating because the auth
+                     * context is not the only thing holding the old account's
+                     * data: the cart, the kept pieces and anything else
+                     * fetched for the previous user are still in memory, and a
+                     * client-side push keeps all of it. A real load starts the
+                     * new account clean, which is what every other shop does
+                     * here and the only version that cannot show one
+                     * customer's bag to another. */
+                    window.location.href = s.user.is_admin ? '/admin' : '/';
+                  }}
                 >
                   <span className="block truncate">{s.user.full_name?.split(' ')[0] || s.user.email}</span>
                   <span className="block truncate text-caption text-paper-faint">
