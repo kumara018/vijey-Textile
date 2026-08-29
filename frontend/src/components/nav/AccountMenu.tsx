@@ -40,7 +40,7 @@ import { performLogout } from '@/lib/auth';
  */
 
 export default function AccountMenu() {
-  const { user } = useAuth();
+  const { user, sessions, switchAccount } = useAuth();
   const [open, setOpen] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -75,6 +75,11 @@ export default function AccountMenu() {
 
   const first = (user.full_name || '').trim().split(' ')[0] || 'your account';
 
+  /* Every saved account except the one currently active. Filtered by id
+     rather than by token, because a refreshed token would otherwise make an
+     account appear twice — once as itself and once as "another account". */
+  const others = (sessions ?? []).filter((s) => s.user.id !== user?.id);
+
   const item =
     'block w-full px-5 py-2.5 text-left text-sm text-paper-muted transition-colors duration-300 hover:bg-ink-deep/[0.06] hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-maroon-300';
 
@@ -107,10 +112,52 @@ export default function AccountMenu() {
           <Link href="/account" role="menuitem" className={item} onClick={() => setOpen(false)}>
             Your account
           </Link>
+          {/**
+            * THE ACCOUNTS ALREADY SIGNED IN, SWITCHED TO IN ONE TAP.
+            *
+            * This was a link to the sign-in page, which meant switching back
+            * to an account you had signed into five minutes ago asked for the
+            * password and the emailed code all over again. The session was
+            * never lost — AuthContext keeps a live token per account in
+            * `sessions`, and `switchAccount` applies one instantly. The data
+            * was there the whole time; only the menu did not use it.
+            *
+            * Amazon and Google both work this way: the accounts you have
+            * signed into are listed, and moving between them is immediate.
+            * Proving you own an account is what signing IN is for; proving it
+            * again to return to a session you already hold is a toll on the
+            * customer for nothing.
+            *
+            * Anyone not already in the list still signs in properly, which is
+            * the link at the bottom.
+            */}
+          {others.length > 0 && (
+            <>
+              <div className="my-2 h-px bg-ink-raised" />
+              <p className="px-5 pb-1 text-rule uppercase text-paper-faint">
+                Also signed in
+              </p>
+              {others.map((s) => (
+                <button
+                  key={s.user.id}
+                  type="button"
+                  role="menuitem"
+                  className={item}
+                  onClick={async () => { setOpen(false); await switchAccount(s); }}
+                >
+                  <span className="block truncate">{s.user.full_name?.split(' ')[0] || s.user.email}</span>
+                  <span className="block truncate text-caption text-paper-faint">
+                    {s.user.is_admin ? 'Admin' : s.user.email}
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
+
           {/* A navigation, not a sign-out — you stay signed in until someone
               else actually signs in. */}
           <Link href="/auth/login?switch=1" role="menuitem" className={item} onClick={() => setOpen(false)}>
-            Switch account
+            {others.length > 0 ? 'Use another account' : 'Switch account'}
           </Link>
           <button
             type="button"
