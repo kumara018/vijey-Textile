@@ -38,8 +38,14 @@ router = APIRouter(prefix="/api/shipping", tags=["shipping"])
 
 _PIN = re.compile(r"^[1-9][0-9]{5}$")
 
-# pincode -> (serviceable, checked_at)
-_CACHE: dict[str, tuple[bool, float]] = {}
+# pincode -> (serviceable, district, checked_at)
+#
+# The district is cached alongside the answer because it is part of the answer.
+# Storing only the boolean meant a fresh call returned {"serviceable", "district"}
+# and a cached one returned {"serviceable"} - the same question giving two
+# different shapes twelve hours apart, so a page showing the place name would
+# show it, then silently stop.
+_CACHE: dict[str, tuple[bool, str | None, float]] = {}
 _TTL_SECONDS = 60 * 60 * 12
 
 
@@ -60,8 +66,11 @@ def serviceability(pincode: str):
 
     now = time.time()
     hit = _CACHE.get(pin)
-    if hit and now - hit[1] < _TTL_SECONDS:
-        return {"pincode": pin, "serviceable": hit[0], "checked": True, "cached": True}
+    if hit and now - hit[2] < _TTL_SECONDS:
+        out = {"pincode": pin, "serviceable": hit[0], "checked": True, "cached": True}
+        if hit[1]:
+            out["district"] = hit[1]
+        return out
 
     origin = os.getenv("DELHIVERY_RETURN_PIN", "638102")
     result = dl.check_serviceability(origin, pin)
@@ -76,7 +85,7 @@ def serviceability(pincode: str):
     # endpoint answered cleanly, which is the failure that costs a customer a
     # parcel rather than a sale.
     ok = bool(result.get("serviceable"))
-    _CACHE[pin] = (ok, now)
+    _CACHE[pin] = (ok, result.get("district"), now)
     out = {"pincode": pin, "serviceable": ok, "checked": True, "cached": False}
     if ok and result.get("district"):
         # The place name, which lets a customer confirm the pincode they typed
