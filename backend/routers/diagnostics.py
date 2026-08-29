@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -218,3 +218,48 @@ def integrations(
         "push":       _check_push(),
         "security":   _check_security(),
     }
+
+@router.post("/test-email")
+def send_test_email(
+    current_admin: models.User = Depends(auth_utils.get_current_admin),
+):
+    """
+    Prove email works, on demand, without waiting for a customer to need it.
+
+    WHY THIS EXISTS. The Email row can only report what the last real send did,
+    so after every deploy it reads "configured, nothing sent yet this run" —
+    honest, but useless at the moment you most want an answer: you have just
+    changed a setting and want to know whether it worked. The alternative was
+    placing a test order or signing out and back in, which is a lot of
+    ceremony to answer one question.
+
+    IT CAN ONLY EVER EMAIL THE ADMIN WHO ASKED. Not an address in the request —
+    the address on the calling account. So this cannot be turned into a way to
+    send mail to anybody else, which is what it would become the moment it
+    accepted a recipient.
+
+    The result is the truth from the provider, not a guess: the same
+    `_send_email` every order confirmation goes through, and its outcome is
+    recorded, so the Email row goes green or red on this one click.
+    """
+    import notifications
+
+    to = (current_admin.email or "").strip()
+    if not to:
+        raise HTTPException(400, "This admin account has no email address.")
+
+    ok = notifications._send_email(
+        to,
+        "Test from your shop's health page",
+        "<p>If you are reading this, email is working.</p>"
+        "<p>Sent from the System Health page. Nothing else was changed.</p>",
+    )
+
+    last = getattr(notifications, "LAST_EMAIL", {})
+    if not ok:
+        # The reason, not just the failure — it is the whole point of asking.
+        raise HTTPException(
+            502,
+            f"Could not send: {last.get('detail') or 'the provider refused it'}",
+        )
+    return {"sent": True, "to": to, "via": last.get("host")}

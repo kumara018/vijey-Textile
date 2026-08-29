@@ -637,6 +637,8 @@ export function AdminHealthView() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testNote, setTestNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setFailed(false);
@@ -651,6 +653,32 @@ export function AdminHealthView() {
     load();
   }, [authLoading, user, router, load]);
 
+  /**
+   * Prove email, rather than wait for it to be proven.
+   *
+   * The Email row can only report what the last real send did, so after every
+   * deploy it reads "nothing sent yet this run" — honest, and useless at the
+   * one moment somebody wants an answer: they have just changed a setting.
+   * This sends a real message down the same path an order confirmation takes
+   * and re-reads the page, so the row turns green or red on one click.
+   *
+   * It can only ever mail the admin who pressed it — the address comes from
+   * the calling account, never from the request — so it cannot become a way
+   * to send mail to anybody else.
+   */
+  const testEmail = async () => {
+    setTesting(true); setTestNote(null);
+    try {
+      const res = await adminAPI.sendTestEmail();
+      setTestNote(`Sent to ${res.data?.to}. Check the inbox — and spam, for the first one.`);
+    } catch (err: any) {
+      setTestNote(err?.response?.data?.detail || 'Could not send. The Email row now says why.');
+    } finally {
+      setTesting(false);
+      await load();
+    }
+  };
+
   if (authLoading || !user?.is_admin) return null;
 
   const d = data;
@@ -658,8 +686,9 @@ export function AdminHealthView() {
   /* Three tones, not two. "Off" is not always bad — SMS is optional when
      WhatsApp carries the codes — so the middle tone says "absent, and that may
      be deliberate" without either alarming or reassuring falsely. */
-  const Row = ({ label, tone, value, note }: {
+  const Row = ({ label, tone, value, note, action }: {
     label: string; tone: 'on' | 'off' | 'warn'; value: string; note?: string;
+    action?: React.ReactNode;
   }) => (
     <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-ink-edge/40 py-4">
       <span
@@ -671,6 +700,7 @@ export function AdminHealthView() {
       <span className="min-w-[8rem] text-paper">{label}</span>
       <span className={`text-sm ${tone === 'on' ? 'text-paper-muted' : 'text-paper'}`}>{value}</span>
       {note && <span className="w-full pl-6 text-xs text-paper-faint sm:w-auto sm:pl-0">&middot; {note}</span>}
+      {action && <span className="ml-auto shrink-0">{action}</span>}
     </div>
   );
 
@@ -733,6 +763,18 @@ export function AdminHealthView() {
                       : d.email.last_send?.ok
                         ? `Sending via ${d.email.active}${d.email.last_send.host ? ` (${d.email.last_send.host})` : ''}`
                         : `Configured for ${d.email.active} — nothing sent yet this run`
+                }
+                action={
+                  d.email?.configured ? (
+                    <button
+                      type="button"
+                      onClick={testEmail}
+                      disabled={testing}
+                      className="text-caption uppercase text-brass-bright underline decoration-brass/50 underline-offset-4 transition-colors hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright disabled:opacity-50"
+                    >
+                      {testing ? 'Sending…' : 'Send test'}
+                    </button>
+                  ) : undefined
                 }
                 note={
                   d.email?.last_send?.ok === false && String(d.email.last_send.detail ?? '').includes('SMTP_HOST')
@@ -798,6 +840,9 @@ export function AdminHealthView() {
                   : undefined}
               />
             </div>
+            {testNote && (
+              <p role="status" className="mt-6 max-w-[62ch] text-sm text-paper">{testNote}</p>
+            )}
             <p className="mt-7 max-w-[62ch] text-xs text-paper-faint">
               Every row except the database reports that credentials are present and the client
               builds. That is the same check each integration silently fails on, so it catches the
