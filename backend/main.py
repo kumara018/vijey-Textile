@@ -744,7 +744,8 @@ def _print_integration_banner() -> None:
     rows = [
         ("Email",    email_via or "NOT CONFIGURED - no codes, no order confirmations"),
         ("Payments", pay),
-        ("Courier",  "Delhivery" if on("DELHIVERY_API_TOKEN")
+        ("Courier",  "Delhivery token present (watch for 401 below on first use)"
+                     if on("DELHIVERY_API_TOKEN")
                      else "NOT CONFIGURED - pincode checks never check, no labels, no tracking"),
         ("WhatsApp", "on" if twilio and on("TWILIO_WHATSAPP_FROM") else "not configured"),
         ("SMS",      "on" if twilio and on("TWILIO_PHONE") else "not configured"),
@@ -948,7 +949,11 @@ def root():
     }
 
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+# `include_in_schema=False` because a health check is infrastructure, not API
+# surface — and because listing one route under two methods made FastAPI
+# emit a duplicate-operation-id warning on every boot, which is noise in a
+# log that has to stay readable enough to find a recovery code in.
+@app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
 def health():
     return {"status": "healthy"}
 

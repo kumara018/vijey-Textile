@@ -322,8 +322,38 @@ def create_replacement_shipment(rr, order, user) -> dict | None:
 
 
 # ── Check serviceability (pincode reachable?) ─────────────────────────────────
+# The outcome of the most recent courier call, so System Health can report
+# "the token is being REJECTED" rather than "a token is present".
+#
+# THIS IS THE SAME BUG THE EMAIL ROW HAD, found in the deploy log rather than
+# by reasoning: the token IS set, and Delhivery answers 401 Unauthorized. The
+# health page checked only that the variable was non-empty, so it would have
+# shown the courier as configured and green while every serviceability call
+# failed. Presence is not permission.
+LAST_COURIER = {"attempted": False, "ok": None, "detail": None}
+
+
+def _record(ok: bool, detail: str | None = None) -> None:
+    LAST_COURIER.update(attempted=True, ok=ok, detail=detail)
+
+
+def _courier_reason(exc: Exception) -> str:
+    """The refusal in words. The status code is the whole story here."""
+    text = str(exc)
+    if "401" in text:
+        return "token rejected (401) - the API token is wrong or expired"
+    if "403" in text:
+        return "token accepted but not permitted (403) - check the account's API access"
+    if "404" in text:
+        return "endpoint not found (404) - wrong DELHIVERY_MODE for this token?"
+    if "timed out" in text.lower() or "timeout" in text.lower():
+        return "Delhivery did not answer in time"
+    return type(exc).__name__
+
+
 def check_serviceability(origin_pin: str, dest_pin: str, weight_grams: int = 500) -> dict | None:
     if not is_configured():
+        _record(False, "no DELHIVERY_API_TOKEN set")
         return None
     try:
         params = _parse.urlencode({
@@ -337,8 +367,11 @@ def check_serviceability(origin_pin: str, dest_pin: str, weight_grams: int = 500
         url = f"{_base()}/api/kinko/v1/invoice/charges/?{params}"
         req = _req.Request(url, headers=_headers(), method="GET")
         with _req.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read())
+            body = json.loads(resp.read())
+            _record(True)
+            return body
     except Exception as e:
+        _record(False, _courier_reason(e))
         print(f"[Delhivery] Serviceability error: {e}")
         return None
 

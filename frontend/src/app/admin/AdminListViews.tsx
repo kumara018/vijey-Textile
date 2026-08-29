@@ -742,12 +742,27 @@ export function AdminHealthView() {
                       : undefined
                 }
               />
+              {/* A TOKEN BEING PRESENT IS NOT A TOKEN BEING ACCEPTED. This shop
+                  has one set and Delhivery answers 401 Unauthorized; the row
+                  used to go green on presence alone, which is the same bug the
+                  email row had. `last_call` reports what the courier said. */}
               <Row
                 label="Courier"
-                tone={d.courier?.configured ? 'on' : 'off'}
-                value={d.courier?.configured
-                  ? `Delhivery (${d.courier.mode})`
-                  : 'Not configured — pincode checks never check, no labels, no tracking'}
+                tone={
+                  !d.courier?.configured ? 'off'
+                    : d.courier.last_call?.attempted && d.courier.last_call?.ok === false ? 'off'
+                    : d.courier.last_call?.ok ? 'on'
+                    : 'warn'
+                }
+                value={
+                  !d.courier?.configured
+                    ? 'Not configured — pincode checks never check, no labels, no tracking'
+                    : d.courier.last_call?.attempted && d.courier.last_call?.ok === false
+                      ? `FAILING — ${d.courier.last_call.detail ?? 'the courier refused the call'}`
+                      : d.courier.last_call?.ok
+                        ? `Delhivery (${d.courier.mode})`
+                        : `Delhivery (${d.courier.mode}) — no call made yet this run`
+                }
                 note={d.courier?.configured && !d.courier.return_address
                   ? 'no return address — reverse pickups will fail'
                   : undefined}

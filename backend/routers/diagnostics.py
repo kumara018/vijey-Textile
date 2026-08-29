@@ -117,11 +117,22 @@ def _check_courier() -> dict:
     the token is absent every one of those degrades silently.
     """
     configured = _present("DELHIVERY_API_TOKEN")
+
+    # WHAT THE COURIER ACTUALLY SAID LAST TIME. A token being present is not the
+    # same as a token being accepted: this shop has one set and Delhivery
+    # answers 401 Unauthorized, which the presence check reported as a healthy
+    # green row. Found in a deploy log, not by reasoning — hence this.
+    import delhivery as _dl
+    last = getattr(_dl, "LAST_COURIER", {"attempted": False, "ok": None, "detail": None})
+
     return {
         "configured": configured,
         "mode": os.getenv("DELHIVERY_MODE", "production").strip().lower() if configured else None,
         "pickup_named": _present("DELHIVERY_PICKUP_NAME"),
         "return_address": _present("DELHIVERY_RETURN_PIN", "DELHIVERY_RETURN_PHONE"),
+        "last_call": {"attempted": bool(last.get("attempted")),
+                      "ok": last.get("ok"),
+                      "detail": last.get("detail")},
         "verified": "credentials",
     }
 
