@@ -109,6 +109,21 @@ def send(subscription: dict, title: str, body: str, url: str = "/") -> tuple[boo
         if status in (404, 410):
             _record(True)          # the channel works; this endpoint is dead
             return False, "gone"
+        # 403 IS NOT A DEAD SUBSCRIPTION, AND MUST NOT BE TREATED AS ONE.
+        # It means VAPID authentication was rejected, which has two very
+        # different causes that look identical from here: this subscription was
+        # created with a key we have since rotated away from, or the whole VAPID
+        # configuration is wrong (a `sub` claim that is not a mailto: or https:
+        # URL is the usual one) and EVERY push will fail the same way.
+        #
+        # Pruning on 403 would delete every subscription in the shop the first
+        # time somebody mistyped the subject. So it is reported, not acted on —
+        # and the browser resolves the rotation case, because only it can see
+        # which key its own subscription was made with (see lib/push.ts).
+        if status == 403:
+            _record(False, "push service rejected our VAPID credentials (403) — "
+                           "rotated keys, or a bad VAPID_SUBJECT")
+            return False, "403"
         _record(False, f"push service returned {status}" if status else type(exc).__name__)
         return False, str(status or type(exc).__name__)
     except Exception as exc:                              # pragma: no cover

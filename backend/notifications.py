@@ -1319,24 +1319,62 @@ def _sender_note(sender: str | None) -> str | None:
     return None
 
 
+# Twilio's refusals, in words somebody can act on. Codes taken from the REST
+# API error reference; the SMS ones matter as much as the WhatsApp ones and
+# were missing, which is how a real failure reached the health page reading
+# only "TwilioRestException".
+_TWILIO_CODES: dict[int, str] = {
+    # WhatsApp
+    63007: "no WhatsApp sender for this number",
+    63016: "outside the 24-hour window and no template",
+    63018: "WhatsApp rate limit reached",
+    # Account and credentials
+    20003: "Twilio credentials rejected",
+    20429: "too many requests - Twilio is rate limiting us",
+    # Sender problems
+    21606: "the From number cannot send SMS - check TWILIO_PHONE",
+    21612: "Twilio cannot route from this sender to that number",
+    # Recipient problems
+    21211: "that phone number is not a valid destination",
+    21214: "that phone number could not be reached",
+    21610: "recipient has opted out",
+    21614: "that number cannot receive SMS - it is not a mobile",
+    # Account state - the two that stop a shop dead
+    21408: "not permitted to send to this region - enable it in Twilio "
+           "Messaging Geo Permissions",
+    21608: "TRIAL ACCOUNT - it can only message numbers verified in Twilio. "
+           "Upgrade the account, or verify the recipient",
+}
+
+
 def _twilio_reason(exc: Exception, sender: str | None) -> str:
     """
     Twilio's refusal in words, with the sandbox called out by name.
 
-    Code 63007 and 63016 both mean "that sender cannot message this recipient",
-    which on the sandbox almost always means the recipient never joined it —
-    a fact worth stating rather than leaving somebody to look up a number.
+    READ FROM THE EXCEPTION'S OWN FIELDS, not from its string. TwilioRestException
+    carries `code` as an integer; searching the formatted message for "21408"
+    also matches an account SID or a URL that happens to contain those digits,
+    and — worse in practice — an unrecognised code fell through to the class
+    name alone. "TwilioRestException" on a health page tells the reader that
+    something failed and nothing whatsoever about what to do, while Twilio had
+    already said precisely what was wrong.
+
+    Anything not in the table keeps Twilio's own words rather than discarding
+    them. An unfamiliar code with a message beats a familiar name without one.
     """
-    text = str(exc)
     if sender and _TWILIO_WA_SANDBOX in str(sender):
         return "sandbox sender - the recipient has not joined it"
-    for code, said in (("63007", "no WhatsApp sender for this number"),
-                       ("63016", "outside the 24-hour window and no template"),
-                       ("21610", "recipient has opted out"),
-                       ("21408", "not permitted to send to this region"),
-                       ("20003", "Twilio credentials rejected")):
-        if code in text:
-            return said
+
+    code = getattr(exc, "code", None)
+    if isinstance(code, int) and code in _TWILIO_CODES:
+        return f"Twilio {code}: {_TWILIO_CODES[code]}"
+
+    # Twilio's own description, trimmed. This is a status line, not a log.
+    detail = (getattr(exc, "msg", None) or str(exc) or "").strip().replace("\n", " ")
+    if detail:
+        if len(detail) > 140:
+            detail = detail[:137] + "..."
+        return f"Twilio {code}: {detail}" if code else detail
     return type(exc).__name__
 
 

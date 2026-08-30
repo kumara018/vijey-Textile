@@ -75,6 +75,31 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
 }
 
 /**
+ * The reverse, so an existing subscription can be compared with the shop's
+ * current key. Padding is stripped because the server sends its key unpadded
+ * and two spellings of the same key must not read as different.
+ */
+function uint8ArrayToUrlBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return window.btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Same key, however it happens to be spelled.
+ *
+ * Exported for tests. Getting this wrong is expensive in both directions: say
+ * "different" when they match and every page load unsubscribes and resubscribes
+ * the customer; say "same" when they differ and the rotation this function
+ * exists to detect goes unnoticed.
+ */
+export function sameKey(a: string, b: string): boolean {
+  const strip = (s: string) => s.replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return strip(a) === strip(b);
+}
+
+/**
  * Ask permission, subscribe, and register the device with the shop.
  *
  * Only call this from a real user gesture. See the note at the top.
@@ -102,14 +127,51 @@ export async function enablePush(): Promise<PushOutcome> {
     await navigator.serviceWorker.ready;
 
     /*
-     * Reuse an existing subscription rather than creating a second one. The
-     * browser returns the same endpoint either way, so this mostly saves a
-     * round trip — but calling `subscribe` again with a DIFFERENT key throws,
-     * which is exactly what happens after the shop rotates its VAPID keys.
+     * Reuse an existing subscription rather than creating a second one — the
+     * browser returns the same endpoint either way, so this saves a round trip.
+     *
+     * UNLESS IT IS BOUND TO A KEY THE SHOP NO LONGER HAS. A subscription is
+     * tied to the VAPID key it was created with; rotate the keys and every
+     * existing one is permanently undeliverable. The push service answers 403
+     * to those, not 404 or 410, so the server cannot safely prune them either —
+     * a misconfigured VAPID subject produces the same 403 for every device, and
+     * treating that as "dead subscription" would delete the lot.
+     *
+     * The browser is the only place that can tell the two apart, because only
+     * it can see which key its own subscription was made with. So compare, and
+     * if they differ, retire the old one and subscribe afresh. Without this a
+     * customer who turned notifications on before a rotation stays silently
+     * broken forever: the code reuses their stale subscription, so they never
+     * resubscribe, and pressing the button again changes nothing.
      */
     const existing = await registration.pushManager.getSubscription();
-    const subscription =
-      existing ??
+    let subscription = existing;
+
+    if (existing) {
+      const boundTo = existing.options?.applicationServerKey;
+      const stale = !boundTo || !sameKey(uint8ArrayToUrlBase64(boundTo), key!);
+      if (stale) {
+        // Told to the shop first, so the row is removed rather than left
+        // behind as an endpoint nothing can ever reach — same ordering as
+        // disablePush, and for the same reason.
+        try {
+          const old = existing.toJSON();
+          await api.post('/api/push/unsubscribe', {
+            endpoint: existing.endpoint,
+            p256dh: old.keys?.p256dh,
+            auth: old.keys?.auth,
+          });
+        } catch {
+          // Best effort. A row we could not delete is untidy; failing to
+          // resubscribe the customer because of it would be worse.
+        }
+        await existing.unsubscribe();
+        subscription = null;
+      }
+    }
+
+    subscription =
+      subscription ??
       (await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key!),
@@ -151,12 +213,39 @@ export async function disablePush(): Promise<boolean> {
   }
 }
 
-/** True when this device is already receiving updates. */
+/**
+ * True when this device is already receiving updates — genuinely, not just
+ * holding a subscription object.
+ *
+ * A subscription bound to a rotated-away VAPID key still exists in the browser
+ * and still looks live from here. Reporting that as "on" is the worst answer
+ * available: the customer is shown "we will buzz this device", offered nothing
+ * but a Turn-off button, and never buzzed. Saying "off" is both true and
+ * actionable — the button they then press resubscribes them properly.
+ *
+ * The key check costs one small GET. If it cannot be made, fall back to
+ * reporting what the browser holds rather than logging somebody out of
+ * notifications over a dropped connection.
+ */
 export async function isSubscribed(): Promise<boolean> {
   if (!pushSupported() || Notification.permission !== 'granted') return false;
   try {
     const registration = await navigator.serviceWorker.getRegistration('/sw.js');
-    return Boolean(await registration?.pushManager.getSubscription());
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return false;
+
+    try {
+      const res = await api.get('/api/push/key');
+      const current: string | undefined = res.data?.key;
+      if (res.data?.enabled && current) {
+        const boundTo = subscription.options?.applicationServerKey;
+        if (!boundTo) return false;
+        return sameKey(uint8ArrayToUrlBase64(boundTo), current);
+      }
+    } catch {
+      // Network trouble, not a stale key. Fall through.
+    }
+    return true;
   } catch {
     return false;
   }
