@@ -154,17 +154,34 @@ def _check_courier(db=None) -> dict:
     }
 
 
-def _check_messaging() -> dict:
+def _check_messaging(db=None) -> dict:
     """
     SMS and WhatsApp share a Twilio account but need DIFFERENT senders, and
     having one does not give you the other — which is precisely the kind of
     half-configured state that looks fine until an OTP does not arrive.
     """
     account = _present("TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN")
+    wa_from = os.getenv("TWILIO_WHATSAPP_FROM", "").strip()
+
+    # PRESENCE IS NOT DELIVERY, AND HERE IT WAS ACTIVELY MISLEADING. The shop
+    # had TWILIO_WHATSAPP_FROM set to Twilio's shared SANDBOX number, so this
+    # row read "Sending" while every WhatsApp message failed. The sandbox only
+    # reaches phones that have joined it and expires after 24 hours idle.
+    sandbox = "+14155238886" in wa_from
+
+    last_wa, last_sms = {}, {}
+    if db is not None:
+        import integration_status
+        last_wa = integration_status.read(db, "whatsapp")
+        last_sms = integration_status.read(db, "sms")
+
     return {
         "configured": account,
         "sms": account and _present("TWILIO_PHONE"),
-        "whatsapp": account and _present("TWILIO_WHATSAPP_FROM"),
+        "whatsapp": account and bool(wa_from),
+        "whatsapp_sandbox": sandbox,
+        "last_whatsapp": last_wa or {"attempted": False, "ok": None, "detail": None},
+        "last_sms": last_sms or {"attempted": False, "ok": None, "detail": None},
         "verified": "credentials",
     }
 
@@ -230,7 +247,7 @@ def integrations(
         "payments":   _check_razorpay(),
         "email":      _check_email(db),
         "courier":    _check_courier(db),
-        "messaging":  _check_messaging(),
+        "messaging":  _check_messaging(db),
         "media":      _check_media(),
         "push":       _check_push(),
         "security":   _check_security(),

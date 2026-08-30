@@ -1306,17 +1306,63 @@ def _twilio_client():
         return None, "", ""
 
 
+#: Twilio's shared WhatsApp sandbox. It only ever delivers to phones that have
+#: joined it by texting a join code, and the link expires after 24 hours idle —
+#: so a shop configured with it looks configured and reaches nobody.
+_TWILIO_WA_SANDBOX = "+14155238886"
+
+
+def _sender_note(sender: str | None) -> str | None:
+    """Name the sandbox, because 'configured' is not the useful word for it."""
+    if sender and _TWILIO_WA_SANDBOX in str(sender):
+        return "SANDBOX number - only reaches phones that joined it"
+    return None
+
+
+def _twilio_reason(exc: Exception, sender: str | None) -> str:
+    """
+    Twilio's refusal in words, with the sandbox called out by name.
+
+    Code 63007 and 63016 both mean "that sender cannot message this recipient",
+    which on the sandbox almost always means the recipient never joined it —
+    a fact worth stating rather than leaving somebody to look up a number.
+    """
+    text = str(exc)
+    if sender and _TWILIO_WA_SANDBOX in str(sender):
+        return "sandbox sender - the recipient has not joined it"
+    for code, said in (("63007", "no WhatsApp sender for this number"),
+                       ("63016", "outside the 24-hour window and no template"),
+                       ("21610", "recipient has opted out"),
+                       ("21408", "not permitted to send to this region"),
+                       ("20003", "Twilio credentials rejected")):
+        if code in text:
+            return said
+    return type(exc).__name__
+
+
+def _remember_channel(key: str, ok: bool, detail: str | None) -> None:
+    """Durable, so the health page survives a deploy. Never raises."""
+    try:
+        import integration_status
+        integration_status.record(key, ok, detail)
+    except Exception:
+        pass
+
+
 def _send_sms(to_phone: str, message: str):
     """Send SMS. Logs to console if Twilio not configured."""
     to_phone = _normalize_phone(to_phone)
     client, sms_from, _ = _twilio_client()
     if not client or not sms_from:
+        _remember_channel("sms", False, "no sender configured")
         print(f"[SMS not configured] {to_phone}: {message}")
         return
     try:
         msg = client.messages.create(body=message, from_=sms_from, to=to_phone)
-        print(f"[SMS SENT ✓ {msg.sid}] → {to_phone}")
+        _remember_channel("sms", True, None)
+        print(f"[SMS SENT {msg.sid}] -> {to_phone}")
     except Exception as e:
+        _remember_channel("sms", False, _twilio_reason(e, sms_from))
         print(f"[SMS ERROR] {type(e).__name__}: {e}")
 
 
@@ -1334,12 +1380,15 @@ def _send_whatsapp(to_phone: str, message: str):
         to = "whatsapp:" + _normalize_phone(to_phone)
         client, _, wa_from = _twilio_client()
         if not client or not wa_from:
+            _remember_channel("whatsapp", False, "no sender configured")
             print(f"[WhatsApp not configured] {to}: {message[:80]}")
             return
         try:
             msg = client.messages.create(body=message + _brand, from_=wa_from, to=to)
-            print(f"[WhatsApp SENT ✓ {msg.sid}] → {to}")
+            _remember_channel("whatsapp", True, _sender_note(wa_from))
+            print(f"[WhatsApp SENT {msg.sid}] -> {to}")
         except Exception as e:
+            _remember_channel("whatsapp", False, _twilio_reason(e, wa_from))
             print(f"[WhatsApp ERROR] {type(e).__name__}: {e}")
     threading.Thread(target=_do, daemon=True).start()
 

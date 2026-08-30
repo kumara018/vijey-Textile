@@ -769,15 +769,51 @@ export function AdminHealthView() {
                   ? 'no return address — reverse pickups will fail'
                   : undefined}
               />
+              {/* A SENDER BEING SET IS NOT A MESSAGE ARRIVING. This shop had
+                  TWILIO_WHATSAPP_FROM pointing at Twilio's shared sandbox, so
+                  this row said "Sending" while every WhatsApp failed — the
+                  sandbox only reaches phones that have joined it. */}
               <Row
                 label="WhatsApp"
-                tone={d.messaging?.whatsapp ? 'on' : 'warn'}
-                value={d.messaging?.whatsapp ? 'Sending' : 'Not configured'}
+                tone={
+                  !d.messaging?.whatsapp ? 'warn'
+                    : d.messaging.whatsapp_sandbox ? 'off'
+                    : d.messaging.last_whatsapp?.ok === false ? 'off'
+                    : d.messaging.last_whatsapp?.ok ? 'on'
+                    : 'warn'
+                }
+                value={
+                  !d.messaging?.whatsapp
+                    ? 'Not configured'
+                    : d.messaging.whatsapp_sandbox
+                      ? 'SANDBOX sender — reaches nobody but test phones'
+                      : d.messaging.last_whatsapp?.ok === false
+                        ? `FAILING — ${d.messaging.last_whatsapp.detail ?? 'refused'}`
+                        : d.messaging.last_whatsapp?.ok
+                          ? 'Sending'
+                          : 'Configured — nothing sent yet'
+                }
+                note={d.messaging?.whatsapp_sandbox
+                  ? 'buy a WhatsApp sender in Twilio, or move to Meta directly, before customers rely on this'
+                  : undefined}
               />
               <Row
                 label="SMS"
-                tone={d.messaging?.sms ? 'on' : 'warn'}
-                value={d.messaging?.sms ? 'Sending' : 'Not configured'}
+                tone={
+                  !d.messaging?.sms ? 'warn'
+                    : d.messaging.last_sms?.ok === false ? 'off'
+                    : d.messaging.last_sms?.ok ? 'on'
+                    : 'warn'
+                }
+                value={
+                  !d.messaging?.sms
+                    ? 'Not configured'
+                    : d.messaging.last_sms?.ok === false
+                      ? `FAILING — ${d.messaging.last_sms.detail ?? 'refused'}`
+                      : d.messaging.last_sms?.ok
+                        ? 'Sending'
+                        : 'Configured — nothing sent yet'
+                }
                 note={!d.messaging?.sms && d.messaging?.whatsapp
                   ? 'fine while WhatsApp carries your codes — a customer without WhatsApp gets nothing'
                   : undefined}
