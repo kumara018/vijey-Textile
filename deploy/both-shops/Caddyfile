@@ -3,19 +3,45 @@
 #
 # Create BOTH A records pointing at this machine's public IP before starting,
 # or the certificate for whichever name does not resolve will fail to issue.
+#
+# SYNTAX NOTE, learned the hard way. Caddy requires an opening brace to be the
+# LAST thing on its line — `header { -Server }` written on one line is a parse
+# error ("Unexpected next token after '{' on same line"), and a Caddyfile that
+# does not parse means Caddy never starts at all. It then restarts in a loop
+# and the symptom looks exactly like a certificate that will not issue, which
+# sends you off checking DNS for an hour. Keep every block opened and closed on
+# its own line.
 
 api.vijeytextile.com {
 	reverse_proxy vijey-api:8000
+
+	# Compress responses. The product list is JSON and compresses well, which
+	# matters on the mobile connections most customers are using.
 	encode zstd gzip
-	header { -Server }
-	log { output stdout
-	      format console }
+
+	# Caddy sets HSTS itself. The rest of the security headers come from the
+	# app, so they are not duplicated here — one source of truth.
+	header {
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
 }
 
 api.ammalutex.com {
 	reverse_proxy ammalu-api:8000
+
 	encode zstd gzip
-	header { -Server }
-	log { output stdout
-	      format console }
+
+	header {
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
 }
