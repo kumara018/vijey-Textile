@@ -11,7 +11,7 @@ Phone 1       : +91 99941 68839
 Phone 2       : +91 94439 47853
 Admin Email   : kumaragurubaran27102@gmail.com
 Frontend URL  : https://vijeytextile.com  (set up on Vercel)
-Backend URL   : https://vijey-textile.onrender.com  (set up on Render)
+Backend URL   : https://api.vijeytextile.com  (Oracle Cloud, deploy/both-shops)
 
 ================================================================
 STEP 1 — PUSH CODE TO GITHUB
@@ -102,7 +102,7 @@ STEP 3 — DEPLOY FRONTEND ON VERCEL
    - Framework     : Next.js
    - Root Directory: frontend
 3. Add Environment Variable:
-   NEXT_PUBLIC_API_URL = https://vijey-textile.onrender.com
+   NEXT_PUBLIC_API_URL = https://api.vijeytextile.com
 4. Deploy!
 
 5. Custom Domain (vijeytextile.com via Hostinger):
@@ -116,7 +116,7 @@ STEP 3 — DEPLOY FRONTEND ON VERCEL
 STEP 4 — SET UP RAZORPAY WEBHOOK
 ================================================================
 1. Go to Razorpay Dashboard → Settings → Webhooks → Add New
-2. Webhook URL: https://vijey-textile.onrender.com/api/payments/webhook/razorpay
+2. Webhook URL: https://api.vijeytextile.com/api/payments/webhook/razorpay
 3. Select events: refund.created, refund.processed
 4. Copy the Webhook Secret → add as RAZORPAY_WEBHOOK_SECRET in Render
 
@@ -132,7 +132,7 @@ page, but the webhook makes it near-instant.
    manager, or support@delhivery.com) asking to activate Push API /
    webhook tracking for your account.
 2. Give them:
-     Endpoint URL : https://vijey-textile.onrender.com/api/webhooks/delhivery
+     Endpoint URL : https://api.vijeytextile.com/api/webhooks/delhivery
      Method       : POST, expects a 200 OK response
      Sample AWBs  : 1-2 of your own past waybill numbers, for their test push
 3. Documented turnaround is 5-6 working days. No further setup needed on

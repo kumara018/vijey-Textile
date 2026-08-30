@@ -60,7 +60,7 @@ It reads the origins compiled into the shipped JavaScript and reports which
 backend the build talks to. On the current build:
 
 ```
-API origin in this build : https://vijey-textile.onrender.com
+API origin in this build : https://api.vijeytextile.com
 OK — this build talks to the production backend.
 ```
 

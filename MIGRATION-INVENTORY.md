@@ -7,7 +7,7 @@ actually true of this codebase, that is called out explicitly under
 
 - Frontend: `frontend/` — Next.js 16 App Router, TypeScript, Tailwind
 - Backend: `backend/` — FastAPI + SQLAlchemy. **Out of scope. Do not modify.**
-- Live: `https://vijeytextile.com` (Vercel) → `https://vijey-textile.onrender.com` (Render)
+- Live: `https://vijeytextile.com` (Vercel) → `https://api.vijeytextile.com` (Oracle Cloud)
 
 ---
 
@@ -18,8 +18,8 @@ actually true of this codebase, that is called out explicitly under
 | Property | Value |
 |---|---|
 | Base URL (browser, localhost) | `http://localhost:8000` |
-| Base URL (browser, anywhere else) | `https://vijey-textile.onrender.com` |
-| Base URL (SSR) | `https://vijey-textile.onrender.com` |
+| Base URL (browser, anywhere else) | `https://api.vijeytextile.com` |
+| Base URL (SSR) | `https://api.vijeytextile.com` |
 | Timeout | `65000` ms — Render cold starts reach ~60s |
 | Default header | `Content-Type: application/json` |
 

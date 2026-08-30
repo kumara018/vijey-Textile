@@ -8,7 +8,7 @@ Two full-stack e-commerce projects live in this GitHub account:
 |---|---|---|
 | Status | **Live in production** | Local/dev twin, not deployed |
 | Frontend | `https://vijeytextile.com` (Vercel) | not deployed |
-| Backend | `https://vijey-textile.onrender.com` (Render) | not deployed |
+| Backend | `https://api.vijeytextile.com` (Oracle Cloud) | not deployed |
 | Store | Vijey Textile, Shop GF No 131, Texvalley Gangapuram, Erode – 638004 | Ammalu Tex, Shop GF No 129, Texvalley Gangapuram |
 | Admin login | kumaragurubaran27102@gmail.com | admin@ammalutex.com |
 

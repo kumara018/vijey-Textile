@@ -82,9 +82,20 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     """
     Razorpay sends events here automatically.
     Configure in: Razorpay Dashboard → Settings → Webhooks
-      URL:    https://vijey-textile.onrender.com/api/payments/webhook/razorpay
-      Events: refund.processed, refund.created, refund.speed_changed
-      Secret: set RAZORPAY_WEBHOOK_SECRET in Render env vars (optional but recommended)
+      URL:    https://api.vijeytextile.com/api/payments/webhook/razorpay
+      Events: refund.created, refund.processed, refund.speed_changed
+      Secret: set RAZORPAY_WEBHOOK_SECRET in the shop's env file
+
+    ONLY REFUND EVENTS MATTER HERE, and it is worth saying so out loud because
+    the obvious-looking ones do nothing. `payment.captured` and `payment.failed`
+    are received and silently ignored: a payment is verified in the browser at
+    checkout, synchronously, before the order is created. Ticking them costs
+    nothing but buys nothing either, and it invites the assumption that payment
+    confirmation depends on this endpoint — it does not.
+
+    A refund is the opposite. Razorpay settles it minutes to days after the
+    request, long after the customer has closed the tab, and this webhook is the
+    only way the shop ever learns it completed.
 
     Flow:
       1. Customer cancels → Razorpay refund API called → payment_status = "refund_initiated"
