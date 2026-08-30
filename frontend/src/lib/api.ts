@@ -2,19 +2,63 @@ import * as C from './contracts';
 import axios from 'axios';
 import { noteRequestId } from './errorReporter';
 
-// Determine backend URL based on where the app is running.
-// - localhost / 127.0.0.1  →  local FastAPI server
-// - anywhere else (Vercel) →  Render backend
+/** Used only when nothing valid is configured. See getApiBase below. */
+const FALLBACK_API = 'https://vijey-textile.onrender.com';
+
+/**
+ * The one place that decides which backend the browser talks to.
+ *
+ * WHY THIS READS THE ENVIRONMENT AND NO LONGER HARDCODES A HOST.
+ *
+ * This function used to return the Render URL for every non-localhost host and
+ * ignore NEXT_PUBLIC_API_URL completely — while next.config.js built the
+ * Content Security Policy FROM that variable. The policy and the requests came
+ * from two different sources of truth, which is the outage next.config.js
+ * documents at length at the top of the file, and which it explicitly names as
+ * "the real defect" without being able to fix it from over there.
+ *
+ * The second consequence is the one that actually blocked a migration: the API
+ * origin could not be changed by configuration. Setting the variable on the
+ * host moved the CSP and nothing else, so the browser was handed a policy
+ * naming the new origin while the code carried on calling the old one — a
+ * change that looks applied, deploys green, and serves a shop that quietly
+ * cannot reach its backend. Moving off Render therefore required a code edit
+ * no matter what the hosting dashboard said.
+ *
+ * next.config.js validates this variable and rewrites it to a bare origin
+ * before it reaches the bundle, so what arrives here has already been checked
+ * and normalised; an unparseable value was replaced by the fallback and warned
+ * about in the build log. The guard below is belt and braces — this value
+ * decides where a customer's bearer token is sent, and that is worth two
+ * cheap checks even when it should be impossible for it to be wrong.
+ */
 export function getApiBase(): string {
-  if (typeof window === 'undefined') {
-    // Server-side (Next.js SSR) — always use Render
-    return 'https://vijey-textile.onrender.com';
+  /*
+   * Local development keeps its local backend with no configuration at all,
+   * and this is checked FIRST on purpose: it means a production value left in
+   * a developer's environment can never point their browser — and the token in
+   * their localStorage — at the live shop.
+   */
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:8000';
+    }
   }
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'http://localhost:8000';
+
+  const configured = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+  if (configured) {
+    try {
+      const url = new URL(configured);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        return url.origin; // normalised: no trailing slash, no path
+      }
+    } catch {
+      // Deliberately silent here. next.config.js has already printed the
+      // reason into the build log, where somebody can actually see it.
+    }
   }
-  return 'https://vijey-textile.onrender.com';
+  return FALLBACK_API;
 }
 
 const API_BASE = getApiBase();

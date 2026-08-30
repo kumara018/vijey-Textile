@@ -13,7 +13,7 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { STORE, SHORT_ADDRESS } from '@/lib/config';
 import { performLogout } from '@/lib/auth';
-import { productsAPI } from '@/lib/api';
+import { productsAPI, getApiBase } from '@/lib/api';
 import Logo from './Logo';
 
 const CATEGORIES = [
@@ -268,7 +268,11 @@ export default function Navbar() {
                     >
                       {p.images?.[0] && (
                         <img
-                          src={p.images[0].startsWith('http') ? p.images[0] : `https://vijey-textile.onrender.com${p.images[0]}`}
+                          /* Backend-relative paths need the API origin, which
+                             getApiBase() decides — hardcoding it here meant a
+                             search thumbnail kept pointing at the old backend
+                             after the API moved. */
+                          src={p.images[0].startsWith('http') ? p.images[0] : `${getApiBase()}${p.images[0]}`}
                           alt=""
                           className="w-10 h-10 rounded object-cover flex-shrink-0 bg-gray-100"
                         />
