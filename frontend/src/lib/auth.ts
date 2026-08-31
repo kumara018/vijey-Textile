@@ -36,6 +36,38 @@ export async function performLogin(
   }
 }
 
+/** One saved account, as it is held in localStorage. */
+export interface StoredSession {
+  token: string;
+  user: { id?: number; is_admin?: boolean };
+}
+
+/**
+ * Which accounts survive signing out of the current one.
+ *
+ * Pulled out of `performLogout` so it can be tested, because this decision has
+ * now been got wrong three separate times: the list was pruned and then thrown
+ * away anyway; an expired token elsewhere wiped every account; and the revoke
+ * was sent with the wrong credentials. Each fault had the same symptom — sign
+ * out of one account, lose both — and none of them could be caught by a test,
+ * because the logic was tangled up with localStorage, cookies and a redirect.
+ *
+ * Entries without a usable token are dropped rather than kept: a session that
+ * cannot authenticate is not an account you are signed into, and promoting one
+ * would land the customer on a page that immediately signs them out.
+ */
+export function sessionsAfterSignOut(
+  sessions: unknown,
+  currentUserId: number | undefined,
+): StoredSession[] {
+  if (!Array.isArray(sessions)) return [];
+  return sessions.filter(
+    (s): s is StoredSession =>
+      Boolean(s) && typeof s?.token === 'string' && s.token.length > 0 &&
+      s?.user?.id !== currentUserId,
+  );
+}
+
 /**
  * Sign out of the CURRENT account, and land wherever that leaves you.
  *
@@ -45,8 +77,23 @@ export async function performLogin(
  * both remaining callers are plain Sign out and neither passes it.
  */
 export function performLogout(to: string = '/') {
-  // Revoke the device session server-side (fire-and-forget).
-  authAPI.logout().catch(() => {});
+  /*
+   * THE TOKEN IS CAPTURED AND PASSED EXPLICITLY, and that is not defensive
+   * tidying — without it this function revokes the WRONG ACCOUNT.
+   *
+   * `api.ts`'s request interceptor fills in Authorization from localStorage,
+   * and it runs as a microtask: after this synchronous block has finished, by
+   * which point the lines below have already written the NEXT account's token
+   * there. The revoke would then be sent with the credentials of the account
+   * being switched TO — killing its session server-side, so its next request
+   * 401s and signs that one out as well. Sign out of one account, lose both,
+   * which is the exact fault this whole function was rewritten to fix.
+   *
+   * The interceptor leaves an explicit Authorization header alone precisely so
+   * this call site can say which account it means. Its comment names this case.
+   */
+  const leaving = localStorage.getItem('token') || undefined;
+  authAPI.logout(leaving).catch(() => {});
 
   /*
    * SIGNING OUT OF ONE ACCOUNT DOES NOT SIGN YOU OUT OF THE REST.
@@ -67,14 +114,12 @@ export function performLogout(to: string = '/') {
    * are. Landing somewhere ambiguous while still signed in as somebody would be
    * worse than either outcome.
    */
-  let remaining: Array<{ token: string; user: { id?: number; is_admin?: boolean } }> = [];
+  let remaining: StoredSession[] = [];
   try {
     const sessionsRaw = localStorage.getItem('sessions');
     const userRaw     = localStorage.getItem('user');
     if (sessionsRaw && userRaw) {
-      const sessions = JSON.parse(sessionsRaw);
-      const current  = JSON.parse(userRaw);
-      remaining = sessions.filter((s: any) => s?.token && s.user?.id !== current?.id);
+      remaining = sessionsAfterSignOut(JSON.parse(sessionsRaw), JSON.parse(userRaw)?.id);
       localStorage.setItem('sessions', JSON.stringify(remaining));
     }
   } catch {
