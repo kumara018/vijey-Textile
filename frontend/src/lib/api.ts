@@ -131,12 +131,48 @@ api.interceptors.response.use(
         // Token is still valid — just this endpoint had an issue, don't logout
       } catch (meErr: any) {
         if (meErr.response?.status === 401) {
-          // Token is truly invalid — clear everything and redirect
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          localStorage.removeItem('sessions');
-          document.cookie = 'auth_token=; path=/; max-age=0';
-          window.location.href = '/auth/login';
+          /*
+           * ONE DEAD ACCOUNT MUST NOT SIGN OUT THE OTHERS.
+           *
+           * This used to remove `sessions` — the whole saved-account list — the
+           * moment any single token expired. A customer signed into two
+           * accounts lost both, was thrown to the login page, and had to type
+           * two sets of credentials to get back to where they were. That is the
+           * precise opposite of what the account switcher is for: the switcher
+           * exists so you never re-prove an account you already hold, and this
+           * threw all of them away over one.
+           *
+           * Only the token that actually failed is dropped. If another signed-in
+           * account remains, we move to it rather than to the login page —
+           * which is what every shop with account switching does, because being
+           * shown a login form while you are still signed into something is
+           * both wrong and alarming.
+           */
+          const dead = localStorage.getItem('token');
+          let remaining: Array<{ token: string; user: { is_admin?: boolean } }> = [];
+          try {
+            remaining = JSON.parse(localStorage.getItem('sessions') || '[]')
+              .filter((s: { token?: string }) => s?.token && s.token !== dead);
+          } catch {
+            remaining = [];   // unreadable list — treat as none rather than throw
+          }
+
+          if (remaining.length > 0) {
+            const next = remaining[0];
+            localStorage.setItem('sessions', JSON.stringify(remaining));
+            localStorage.setItem('token', next.token);
+            localStorage.setItem('user', JSON.stringify(next.user));
+            document.cookie = `auth_token=${next.token}; path=/; max-age=7776000; SameSite=Lax`;
+            // A full load, not a push: the dead account's cart and kept pieces
+            // are still in memory. Same reasoning as switching by hand.
+            window.location.href = next.user?.is_admin ? '/admin' : '/';
+          } else {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('sessions');
+            document.cookie = 'auth_token=; path=/; max-age=0';
+            window.location.href = '/auth/login';
+          }
         }
       }
     }

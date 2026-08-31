@@ -516,7 +516,7 @@ function CheckoutInner() {
               </label>
 
               <div className="mt-10">
-                <ActionButton type="submit" disabled={placing || !scriptReady || atRisk}>
+                <ActionButton tone="primary" type="submit" disabled={placing || !scriptReady || atRisk}>
                   {placing ? 'Opening payment…' : !scriptReady ? 'Preparing…' : `Pay ${money(grandTotal)}`}
                 </ActionButton>
                 {atRisk && (

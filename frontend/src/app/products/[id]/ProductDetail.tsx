@@ -478,11 +478,11 @@ export default function ProductDetail({ id }: { id: number }) {
             )}
 
             <div className="mt-9 flex flex-wrap items-center gap-x-10 gap-y-5">
-              <ActionButton onClick={add} disabled={adding || soldOut}>
+              <ActionButton tone="primary" onClick={add} disabled={adding || soldOut}>
                 {soldOut ? 'Sold out' : adding ? 'Adding…' : 'Add to bag'}
               </ActionButton>
               {!soldOut && (
-                <ActionButton tone="lead" onClick={buyNow} disabled={adding}>
+                <ActionButton tone="secondary" onClick={buyNow} disabled={adding}>
                   Buy it now
                 </ActionButton>
               )}
