@@ -45,9 +45,20 @@ report() {
   git -C "$repo" --no-pager log -5 --date=format:'%d %b %H:%M' \
       --format='     %C(auto)%h%Creset  %ad  %s' 2>/dev/null
 
-  local head_sha head_epoch started started_epoch
-  head_sha="$(git -C "$repo" rev-parse --short HEAD)"
-  head_epoch="$(git -C "$repo" log -1 --format=%ct)"
+  # ONLY backend/ COUNTS, and the first version of this script got that wrong.
+  # It compared every commit, so a frontend-only change — which is most changes
+  # — made both shops report "run ./deploy.sh" when there was nothing whatsoever
+  # to deploy. A status line that cries wolf after every push is read carefully
+  # twice and ignored thereafter, which is worse than no status line: it
+  # occupies the place where a real warning would be seen.
+  #
+  # The containers build from backend/ and nothing else. Everything under
+  # frontend/ is Vercel's, and its state here is genuinely irrelevant.
+  local backend_sha backend_epoch started started_epoch
+  backend_sha="$(git -C "$repo" log -1 --format=%h -- backend/ 2>/dev/null)"
+  backend_epoch="$(git -C "$repo" log -1 --format=%ct -- backend/ 2>/dev/null || echo 0)"
+  echo "   last backend   $(git -C "$repo" log -1 --date=format:'%d %b %H:%M' \
+        --format='%h  %ad  %s' -- backend/ 2>/dev/null)"
 
   started="$(docker inspect -f '{{.State.StartedAt}}' "$container" 2>/dev/null || true)"
   if [ -n "$started" ]; then
@@ -58,18 +69,24 @@ report() {
     echo "   running since  container not found"
   fi
 
-  # Is the machine behind the remote?
   git -C "$repo" fetch -q 2>/dev/null
-  local behind
-  behind="$(git -C "$repo" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+  local behind_backend behind_all
+  behind_backend="$(git -C "$repo" rev-list --count HEAD..origin/main -- backend/ 2>/dev/null || echo 0)"
+  behind_all="$(git -C "$repo" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
 
-  if [ "$behind" -gt 0 ]; then
-    echo "   ⚠ $behind commit(s) pushed but NOT on this machine — run ./deploy.sh"
-  elif [ "$started_epoch" -gt 0 ] && [ "$head_epoch" -gt "$started_epoch" ]; then
-    # The subtle one: repository current, container built before that commit.
-    echo "   ⚠ repo is at $head_sha but the container started BEFORE it — run ./deploy.sh"
+  if [ "$behind_backend" -gt 0 ]; then
+    echo "   ⚠ $behind_backend backend commit(s) pushed but NOT on this machine — run ./deploy.sh"
+  elif [ "$started_epoch" -gt 0 ] && [ "$backend_epoch" -gt "$started_epoch" ]; then
+    # The subtle one: repository pulled, container never rebuilt. Every file on
+    # the machine shows the new code while the container serves the old.
+    echo "   ⚠ backend is at $backend_sha but the container started BEFORE it — run ./deploy.sh"
   else
-    echo "   ✓ serving $head_sha"
+    echo "   ✓ serving current backend code ($backend_sha)"
+  fi
+
+  # Worth saying, but not a warning: nothing here is served by this machine.
+  if [ "$behind_all" -gt "$behind_backend" ]; then
+    dim "   · $((behind_all - behind_backend)) unpulled commit(s) touch only the frontend — Vercel's"
   fi
 
   local code
