@@ -85,11 +85,29 @@ export default function ProductDetail({ id }: { id: number }) {
     return () => setHeroImage(null);
   }, [product, setHeroImage]);
 
-  // Default to the only option when there is exactly one — asking someone to
-  // choose from a list of one is a question with no information in it.
+  /*
+   * OPEN ON THE FIRST SIZE AND COLOUR ALREADY CHOSEN.
+   *
+   * This used to default only when there was exactly one option — "asking
+   * someone to choose from a list of one is a question with no information in
+   * it" — which is true and did not go far enough. With several options the
+   * page opened with nothing selected, so pressing Add to bag produced "please
+   * choose a size" on a page where the customer had, as far as they could tell,
+   * already looked at the sizes and moved on.
+   *
+   * The sister shop has always opened with the first of each chosen, and the
+   * difference between the two was obvious the moment they were compared. Every
+   * large shop does the same: a preselected variant is a starting point, not a
+   * recommendation, and it removes a step from the only path that earns money.
+   *
+   * It is safe here because the selection is now unmistakable — the chosen chip
+   * is a filled dark block, not a tinted hairline. Preselecting while the
+   * selected state was invisible would have been the worst of both: an order
+   * placed in a size the customer never knowingly picked.
+   */
   useEffect(() => {
-    if (product?.size_options?.length === 1) setSize(product.size_options[0]);
-    if (product?.colors?.length === 1) setColour(product.colors[0]);
+    if (product?.size_options?.length) setSize(product.size_options[0]);
+    if (product?.colors?.length) setColour(product.colors[0]);
   }, [product]);
 
   useEffect(() => {
