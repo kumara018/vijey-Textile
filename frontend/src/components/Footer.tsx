@@ -90,10 +90,24 @@ const CATEGORIES = [
   'Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear',
 ];
 
+/*
+ * HELP AND POLICIES, AND NOT THREE THINGS THAT ARE NEITHER.
+ *
+ * The list opened with "All pieces", "My orders" and "Contact us". None of
+ * them is help or a policy, and two were already on the page:
+ *
+ *   All pieces  -> the column immediately to the left IS the pieces, six of
+ *                  them by name.
+ *   Contact us  -> "Reach us" on the right carries the address, both numbers,
+ *                  both mail addresses and the map.
+ *   My orders   -> an account link. It lives in the account menu, where
+ *                  somebody looking for their order actually goes.
+ *
+ * What remains is what the heading promises: the documents a customer reads
+ * before or after buying. It also shortens a column that ran three items past
+ * every other one, which is where the gap under the wordmark came from.
+ */
 const HELP = [
-  { href: '/products',            label: 'All pieces' },
-  { href: '/orders',              label: 'My orders' },
-  { href: '/support',             label: 'Contact us' },
   { href: '/support#size-guide',  label: 'Size guide' },
   { href: '/support#shipping',    label: 'Shipping policy' },
   { href: '/support#returns',     label: 'Cancel, return & exchange FAQ' },
@@ -296,6 +310,19 @@ export default function Footer() {
               {STORE.weekdays}<br />{STORE.weekend}
             </p>
 
+            {/* THE MAP SITS WITH THE HOURS, NOT WITH THE CONTACT ROWS.
+                It was the last line under "Reach us", among the phone numbers
+                and the mail addresses — which made it read as another way to
+                get in touch. It is not. It answers a different question: when
+                is the counter open, and where is it. Those two belong
+                together, and the sister shop has always grouped them this way.
+                It also gives this column something below the hours, which is
+                where the gap under the wordmark was. */}
+            <p className="mt-4 flex gap-3">
+              <Pin />
+              <FooterLink href={STORE.googleMapsUrl} external>Find us on the map</FooterLink>
+            </p>
+
             <div className="mt-9 flex items-center gap-3">
               <a
                 href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"
@@ -397,10 +424,6 @@ export default function Footer() {
                   <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
                   <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
                 </span>
-              </p>
-              <p className="flex gap-3">
-                <Pin />
-                <FooterLink href={STORE.googleMapsUrl} external>Find us on the map</FooterLink>
               </p>
             </address>
 
