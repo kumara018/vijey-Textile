@@ -24,7 +24,7 @@ export const STORE = {
   area:        'Texvalley Gangapuram',
   city:        'Erode',
   state:       'Tamil Nadu',
-  pincode:     '638004',
+  pincode:     '638102',
   country:     'India',
 
   // ── Store Timings ─────────────────────────────────

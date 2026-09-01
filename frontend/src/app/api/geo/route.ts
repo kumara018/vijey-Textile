@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
  * Where the visitor is, from their IP, with no permission prompt.
  *
  * WHY THIS EXISTS. Signed out, the delivery line showed the SHOP'S OWN
- * pincode — 638004, Erode — because that was the only thing available to
+ * pincode — 638102, Erode — because that was the only thing available to
  * fall back to. It is marked as an assumption in the markup, but a customer
  * in Chennai reads a specific pincode as a claim about them, and it is wrong.
  *

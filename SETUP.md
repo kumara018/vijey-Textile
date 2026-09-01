@@ -1,5 +1,5 @@
 # Vijey Textile — Complete Deployment Guide
-# Shop Ground Floor No 131, Texvalley Gangapuram, Erode – 638004
+# Shop Ground Floor No 131, Texvalley Gangapuram, Erode – 638102
 
 ================================================================
 STORE DETAILS
@@ -82,7 +82,7 @@ STEP 2 — DEPLOY BACKEND ON RENDER
                               leave unset, and do not reuse the other shop's)
    DELHIVERY_RETURN_NAME   = Vijey Textile
    DELHIVERY_RETURN_ADDRESS= Shop Ground Floor No 131, Texvalley Gangapuram
-   DELHIVERY_RETURN_PIN    = 638004
+   DELHIVERY_RETURN_PIN    = 638102
    DELHIVERY_RETURN_CITY   = Erode
    DELHIVERY_RETURN_STATE  = Tamil Nadu
    DELHIVERY_RETURN_PHONE  = 9994168839

@@ -9,7 +9,7 @@ Two full-stack e-commerce projects live in this GitHub account:
 | Status | **Live in production** | Local/dev twin, not deployed |
 | Frontend | `https://vijeytextile.com` (Vercel) | not deployed |
 | Backend | `https://api.vijeytextile.com` (Oracle Cloud) | not deployed |
-| Store | Vijey Textile, Shop GF No 131, Texvalley Gangapuram, Erode – 638004 | Ammalu Tex, Shop GF No 129, Texvalley Gangapuram |
+| Store | Vijey Textile, Shop GF No 131, Texvalley Gangapuram, Erode – 638102 | Ammalu Tex, Shop GF No 129, Texvalley Gangapuram |
 | Admin login | kumaragurubaran27102@gmail.com | admin@ammalutex.com |
 
 **The two codebases are near-identical forks**, not a simple prototype vs. final product — same DB schema, same dependencies (`requirements.txt` is byte-for-byte identical), same Razorpay/Twilio/Cloudinary/Delhivery/Shiprocket integrations, same 16 frontend routes. A handful of real differences exist (see [§6](#6-differences-ammalu-tex-vs-vijey-textile)), the most notable being that **ammalu-tex has a working customer-facing order-cancellation endpoint that vijey-textile is missing.**

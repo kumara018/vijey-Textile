@@ -67,11 +67,11 @@ export default function DeliverTo() {
       /**
        * NOT SIGNED IN AND NOTHING TYPED: ASK THE CONNECTION, NOT THE SHOP.
        *
-       * This used to fall back to the SHOP'S own pincode — 638004, Erode. It
+       * This used to fall back to the SHOP'S own pincode — 638102, Erode. It
        * was labelled as an assumption, and it is still the wrong thing to
        * show: a customer in Chennai reads a specific pincode as a statement
        * about where THEY are, and it is simply false. "Deliver to Erode
-       * 638004" to somebody who has never told us anything is a claim, not a
+       * 638102" to somebody who has never told us anything is a claim, not a
        * default.
        *
        * /api/geo resolves it from the IP at Vercel's edge — no permission
