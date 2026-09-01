@@ -105,7 +105,22 @@ const HELP = [
 
 
 /* One hairline weight, sized to sit on the first line of the text beside it. */
-const ico = 'mt-[0.28em] h-4 w-4 shrink-0 text-brass-bright';
+/*
+ * THE NUDGE THAT CENTRES AN ICON AGAINST ITS FIRST LINE OF TEXT.
+ *
+ * Measured on the live page rather than guessed, because the previous 0.28em
+ * was right for exactly one of the four rows. `FooterLink` carries `py-1`, so
+ * a link's text sits 4px lower than the bare span the address uses — and the
+ * icons beside the three link rows therefore rode 3.2px high while the one
+ * beside the address was correct. Four rows, one shared class, two different
+ * text boxes.
+ *
+ * Fixed at the cause: the address span now takes the same `py-1`, so every row
+ * has identical geometry and a single offset is true for all of them.
+ * 0.48em = 7.7px, which centres a 16px icon in the 24px line box once the
+ * padding is even.
+ */
+const ico = 'mt-[0.48em] h-4 w-4 shrink-0 text-brass-bright';
 
 function Shop() {
   return (
@@ -351,7 +366,13 @@ export default function Footer() {
             <address className="mt-6 space-y-4 not-italic">
               <p className="flex gap-3 text-paper-faint">
                 <Shop />
-                <span>{STORE.shopNo}<br />{STORE.area}<br />{STORE.city}</span>
+                {/* `py-1` to match FooterLink, so this row's text box is the
+                    same as the other three and the shared icon offset holds. */}
+                {/* The whole address, including state and pincode. It stopped at the
+                    city, which is not a postable address and is the one place a
+                    customer checks when a parcel goes astray — and 638102 is the
+                    pincode the courier actually collects from. */}
+                <span className="py-1">{STORE.shopNo}<br />{STORE.area}<br />{STORE.city}, {STORE.state} {STORE.pincode}</span>
               </p>
               <p className="flex gap-3">
                 <Handset />
@@ -372,6 +393,22 @@ export default function Footer() {
                 <FooterLink href={STORE.googleMapsUrl} external>Find us on the map</FooterLink>
               </p>
             </address>
+
+            {/* WHEN THE COUNTER IS OPEN, AND WHAT DELIVERY COSTS.
+                Both were already in lib/config.ts and shown only by the sister
+                shop's footer — so this shop published a street address and two
+                phone numbers without ever saying when anyone would be there to
+                answer. For a shop whose whole argument is that it has a real
+                counter in Texvalley, that is the fact most worth stating.
+                No icons: these are facts about the shop rather than ways to
+                reach it, so they sit outside the <address> block and read as
+                a note rather than as two more contact rows. */}
+            <p className="mt-5 text-paper-faint">
+              {STORE.weekdays}<br />{STORE.weekend}
+            </p>
+            <p className="mt-5 text-paper-faint">
+              Delivered across India · ₹{STORE.shippingFee} flat
+            </p>
           </div>
         </div>
 
