@@ -282,8 +282,18 @@ export default function Footer() {
                   phone — all true, and none of it is what somebody scrolling
                   to the bottom of a page is looking for. They want a link, an
                   address or a number. The sentence lives on the homepage,
-                  where there is room to say it properly. */}
-              Ground floor, Texvalley, Gangapuram, Erode.
+                  where there is room to say it properly.
+
+                  WHAT REPLACED IT, AND WHY NOT THE ADDRESS. A short form of
+                  the address stood here — "Ground floor, Texvalley,
+                  Gangapuram, Erode." — while the full one sits under Reach us
+                  three columns across. The same fact twice, neither of them
+                  complete, and this column still ended a screen short of the
+                  ones beside it.
+                  The opening hours appear nowhere else on the page and are
+                  what a customer scrolling this far actually wants to know
+                  about a shop with a real counter. */}
+              {STORE.weekdays}<br />{STORE.weekend}
             </p>
 
             <div className="mt-9 flex items-center gap-3">
@@ -394,31 +404,20 @@ export default function Footer() {
               </p>
             </address>
 
-            {/* WHEN THE COUNTER IS OPEN, AND WHAT DELIVERY COSTS.
-                Both were already in lib/config.ts and shown only by the sister
-                shop's footer — so this shop published a street address and two
-                phone numbers without ever saying when anyone would be there to
-                answer. For a shop whose whole argument is that it has a real
-                counter in Texvalley, that is the fact most worth stating.
-                No icons: these are facts about the shop rather than ways to
-                reach it, so they sit outside the <address> block and read as
-                a note rather than as two more contact rows. */}
-            <p className="mt-5 text-paper-faint">
-              {STORE.weekdays}<br />{STORE.weekend}
-            </p>
-            <p className="mt-5 text-paper-faint">
-              Delivered across India · ₹{STORE.shippingFee} flat
-            </p>
+
           </div>
         </div>
 
         {/* ── Colophon ───────────────────────────────────────────────── */}
         <div className="mt-[7vh] flex flex-col gap-5 border-t border-ink-edge/60 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-caption uppercase text-paper-faint">
-            © {year} {STORE.name} — Erode, Tamil Nadu
+            {/* "— Erode, Tamil Nadu" was appended here, and the full postal
+                address now sits three columns across in the same footer. A
+                colophon is a signature, not a second address. */}
+            © {year} {STORE.name}
           </p>
           <p className="text-caption uppercase text-paper-faint">
-            Sizes 12–40 · Delivered across India
+            Sizes 12–40 · Delivered across India · ₹{STORE.shippingFee} flat
           </p>
         </div>
       </div>
