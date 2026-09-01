@@ -103,7 +103,19 @@ export default function AccountMenu() {
         <div
           role="menu"
           aria-label="Your account"
-          className="absolute right-0 top-12 z-50 flex max-h-[calc(100vh-7rem)] w-64 flex-col overflow-y-auto overscroll-contain border border-ink-edge bg-night py-2"
+/* HEIGHT CAP: `dvh`, NOT `vh`, AND NINE REMS OF CLEARANCE.
+                 `vh` is the LARGEST the viewport gets — on a phone it measures
+                 the window as though the address bar were retracted, so with
+                 the bar showing this panel is sized taller than the screen it
+                 is on and its last item sits underneath browser chrome the
+                 customer cannot scroll away. `dvh` tracks the space actually
+                 available. On the desktop the two are identical, which is why
+                 measuring it here never showed the fault.
+                 The subtrahend was 7rem, and the panel opens ~6rem down: that
+                 left sixteen pixels between the menu and the bottom edge, so
+                 the scrollbar existed but had nowhere to be seen and the last
+                 row read as cut off rather than scrollable. */
+              className="absolute right-0 top-12 z-50 flex max-h-[calc(100dvh-9rem)] w-64 flex-col overflow-y-auto overscroll-contain border border-ink-edge bg-night py-2"
         >
           <p className="px-5 pb-2 pt-1 text-rule uppercase text-paper-faint">
             Hello, {first}

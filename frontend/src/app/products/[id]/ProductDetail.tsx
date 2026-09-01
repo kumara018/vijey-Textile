@@ -389,12 +389,23 @@ export default function ProductDetail({ id }: { id: number }) {
                   </Link>
                 </legend>
                 <div className="mt-4 flex flex-wrap gap-3">
+                  {/* SELECTED IS A FILLED CHIP, NOT A TINTED HAIRLINE.
+                      It was `border-brass-bright text-paper` against an
+                      unselected `border-ink-edge text-paper-muted` — a one-pixel
+                      border changing colour and the label darkening slightly.
+                      Side by side with the sister shop, whose selected chip is
+                      a solid dark block, this shop looked like nothing had been
+                      chosen at all, and the owner read his own page as still
+                      asking him to pick a size after he had picked one.
+                      A choice the customer cannot see they have made is the
+                      same as no choice: they press Add to bag, get told to
+                      select a size, and cannot tell what is wrong. */}
                   {product.size_options.map((s) => (
                     <label
                       key={s}
                       className={`cursor-pointer border px-5 py-2.5 text-sm tabular-nums transition-colors duration-500 motion-reduce:transition-none has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-brass-bright ${
                         size === s
-                          ? 'border-brass-bright text-paper'
+                          ? 'border-paper bg-paper text-ink'
                           : 'border-ink-edge text-paper-muted hover:border-paper-faint'
                       }`}
                     >
@@ -423,7 +434,7 @@ export default function ProductDetail({ id }: { id: number }) {
                       key={c}
                       className={`cursor-pointer border px-5 py-2.5 text-sm transition-colors duration-500 motion-reduce:transition-none has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-brass-bright ${
                         colour === c
-                          ? 'border-brass-bright text-paper'
+                          ? 'border-paper bg-paper text-ink'
                           : 'border-ink-edge text-paper-muted hover:border-paper-faint'
                       }`}
                     >
