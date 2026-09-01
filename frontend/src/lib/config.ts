@@ -13,9 +13,19 @@ export const STORE = {
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 94439 47853',
   phone2:      '+91 75981 86790',
-  email:       'admin@vijeytextile.com',
-  email2:      'vijeytextile@gmail.com',
-  supportEmail:'admin@vijeytextile.com',
+  /* THE ORDER MATTERS: `email` is what the footer and the invoice print, and
+     the pages that list both show `email` then `email2`.
+     It was the domain address, while the server's SUPPORT_EMAIL — the reply-to
+     on every message the shop sends — was already the Gmail. So a customer read
+     one address on the page, wrote to it, and got an answer from another; and
+     what they wrote to landed in the Hostinger mailbox that has been the
+     unreliable one. The address shown is now the mailbox that is actually read.
+     admin@vijeytextile.com stays, second, because it is real and still has a
+     job: it is SMTP_EMAIL, the sending identity Brevo's domain authentication
+     signs. It must keep working — it just should not be the one advertised. */
+  email:       'vijeytextile@gmail.com',
+  email2:      'admin@vijeytextile.com',
+  supportEmail:'vijeytextile@gmail.com',
   whatsapp:    '919443947853',   // primary WhatsApp — country code + number, no + or spaces
   whatsapp2:   '917598186790',   // secondary WhatsApp
 
