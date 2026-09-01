@@ -71,10 +71,87 @@ each project and redeploy.
 ## Day to day
 
 ```bash
+./status.sh                             # what is running, since when, is it current
+./deploy.sh vijey                       # pull, rebuild, wait for healthy (or: ammalu | both)
 docker compose logs -f vijey-api        # one shop's logs
 docker compose restart ammalu-api       # restart one without touching the other
-cd ~/vijey-Textile && git pull && cd deploy/both-shops && docker compose up -d --build vijey-api
 ```
+
+**Changing a value in an env file needs `up -d`, not `restart`.** Environment
+values are baked in when a container is created, so a restart runs the old
+process with the old values and looks like it worked:
+
+```bash
+docker compose up -d ammalu-api
+```
+
+Anything under `frontend/` deploys itself from Vercel and never touches this
+machine. `deploy.sh` and `status.sh` are backends only.
+
+## From a different computer
+
+Nothing lives on your laptop except the key. The machine keeps running whether
+you are connected or not — these steps restore your *access*, nothing else.
+
+**1. The two things you must not lose.** Neither can be recovered by Oracle or
+by anyone else:
+
+| File | What it is |
+|---|---|
+| `ssh-key-....key` | the only way in |
+| `.env.vijey`, `.env.ammalu` | every secret both shops hold |
+
+Keep them in a password manager — not in a repository, not in a synced
+documents folder.
+
+**2. Put the key on the new machine** and lock its permissions, or OpenSSH will
+refuse to use it:
+
+```bash
+mkdir -p ~/.ssh && cp /path/to/ssh-key-....key ~/.ssh/shops.key && chmod 600 ~/.ssh/shops.key
+```
+
+On Windows:
+
+```powershell
+icacls $HOME\.ssh\shops.key /inheritance:r /grant:r "$($env:USERNAME):(R)"
+```
+
+**3. Give it a name** in `~/.ssh/config`, so the path is typed once and never
+again:
+
+```
+Host shops
+    HostName 92.4.88.89
+    User ubuntu
+    IdentityFile ~/.ssh/shops.key
+```
+
+Windows Notepad silently appends `.txt` to a file saved without an extension,
+and SSH then ignores it without saying so. Check with `ls ~/.ssh`: the file must
+be named exactly `config`.
+
+**4. That is all.**
+
+```bash
+ssh shops
+cd ~/vijey-Textile/deploy/both-shops && ./status.sh
+```
+
+Both repositories, Docker, the containers and the certificates are already on
+the machine. You clone nothing, install nothing, and copy no env file — those
+live on the server, not on you. Deploying is unchanged:
+
+```bash
+./deploy.sh both
+```
+
+**If the key is lost** you cannot get back in, and Oracle cannot let you in.
+Rebuild instead: launch an instance, install Docker, clone both repositories as
+siblings, put the two env files in `deploy/both-shops/`, `docker compose up -d`,
+then repoint the two A records. The data is untouched throughout — it lives in
+Neon, not on this machine. About thirty minutes, which is the entire reason the
+env files are worth keeping.
 
 Backups land in `./backups/vijey/` and `./backups/ammalu/`, nightly, fourteen
 kept. **Copy them off this machine periodically** — a backup on the same disk
