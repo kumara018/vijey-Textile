@@ -18,7 +18,23 @@ import SiteToaster from '@/components/system/SiteToaster';
 import { STORE } from '@/lib/config';
 
 export const metadata: Metadata = {
-  title: `${STORE.name} — Luxury Baby, Kids & Girls Fashion | Texvalley Erode`,
+  /*
+   * THE TAGLINE, NOT A DESCRIPTION OF THE STOCK.
+   *
+   * These titles read "Luxury Baby, Kids & Girls Fashion" -- a phrase chosen because it is what somebody
+   * types into a search box. The shop's own line is what it signs itself with
+   * everywhere else: the header, the footer, the invoice, the mail masthead
+   * and its WhatsApp messages. Having the browser tab and every shared link
+   * introduce the shop by a different phrase than the shop itself uses was the
+   * inconsistency the owner kept seeing, and consistency of name won.
+   *
+   * The location stays. "Texvalley Erode" is the part that helps somebody in
+   * Erode find a shop in Erode, and it costs the tagline nothing to sit beside
+   * it. The descriptions below still carry the categories in full, so what the
+   * shop sells is still stated -- in the sentence written for that purpose
+   * rather than in the name.
+   */
+  title: `${STORE.name} — ${STORE.tagline} | Texvalley Erode`,
   description: 'Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile. Located at Texvalley Gangapuram, Erode. Fast delivery across India.',
   keywords: 'Vijey Textile, vijey textile, baby frocks Erode, chudithar kids, lehenga girls, frocks online, party wear kids, western dresses girls, textile shop Erode, Texvalley Gangapuram, baby clothing India, kids fashion, girls fashion Erode',
   authors: [{ name: 'Vijey Textile' }],
@@ -27,7 +43,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://vijeytextile.com'),
   alternates: { canonical: 'https://vijeytextile.com' },
   openGraph: {
-    title: 'Vijey Textile — Luxury Baby, Kids & Girls Fashion',
+    title: `${STORE.name} — ${STORE.tagline}`,
     description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile, Texvalley Gangapuram, Erode.',
     url: 'https://vijeytextile.com',
     siteName: 'Vijey Textile',
@@ -36,7 +52,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Vijey Textile — Luxury Baby, Kids & Girls Fashion',
+    title: `${STORE.name} — ${STORE.tagline}`,
     description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile, Texvalley Erode.',
   },
   robots: {
