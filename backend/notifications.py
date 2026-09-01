@@ -335,7 +335,7 @@ def _bg(to: str, subject: str, html: str, recovery: str | None = None):
 # Shared brand header. Matches the live navbar (frontend/src/components/Navbar.tsx
 # + Logo.tsx):
 #   bg          = maroon-50  #faf7f2   (light cream, same as navbar bg)
-#   brand text  = maroon-900 #2A1F24   (dark ink, same as navbar text)
+#   brand text  = maroon-900 #2B2118   (dark ink, same as navbar text)
 #   tagline     = maroon-500 #8f7a5f
 #   font-display= Georgia    (brand name)
 # Logo is an absolute URL (email clients can't load relative/local paths) —
@@ -350,7 +350,7 @@ def _bg(to: str, subject: str, html: str, recovery: str | None = None):
 # survives being 46px wide.
 _HEADER_HTML = f"""\
           <tr>
-            <td style="padding:34px 36px 0;background:#FFFBFC;">
+            <td style="padding:34px 36px 0;background:#FFFCF6;">
               <table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
                   <td valign="middle" style="padding-right:15px;">
@@ -359,7 +359,7 @@ _HEADER_HTML = f"""\
                   </td>
                   <td valign="middle" style="text-align:left;">
                     <p style="margin:0;padding:0;font-family:Georgia,'Times New Roman',Times,serif;font-size:20px;
-                              letter-spacing:3px;text-transform:uppercase;color:#2A1F24;
+                              letter-spacing:3px;text-transform:uppercase;color:#2B2118;
                               line-height:1.1;mso-line-height-rule:exactly;">{STORE_NAME}</p>
                     <!-- The shop's own line, under the mark — the same one the
                          header, the footer and the invoice carry. -->
@@ -417,50 +417,67 @@ def _wrap(body: str) -> str:
   <meta name="supported-color-schemes" content="light only">
   <title>{STORE_NAME}</title>
 </head>
-<body style="margin:0;padding:0;background:#F7EAEE;">
+<body style="margin:0;padding:0;background:#F7F1E8;">
   <!-- Preheader: the grey line a client shows beside the subject. Left empty
        and collapsed, so it does not leak the first words of the body. -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">&nbsp;</div>
 
   <table width="100%" cellpadding="0" cellspacing="0" border="0"
-         style="border-collapse:collapse;background:#F7EAEE;">
+         style="border-collapse:collapse;background:#F7F1E8;">
     <tr>
       <td align="center" style="padding:32px 16px;">
 
         <table width="600" cellpadding="0" cellspacing="0" border="0"
                style="border-collapse:collapse;max-width:600px;width:100%;
-                      background:#FFFBFC;border:1px solid #DCC3CB;">
+                      background:#FFFCF6;border:1px solid #C6B7A1;">
 
 {_HEADER_HTML}
 
           <tr>
             <td style="padding:30px 36px 38px;font-family:Helvetica,Arial,sans-serif;
-                       font-size:15px;line-height:1.65;color:#2A1F24;">{body}</td>
+                       font-size:15px;line-height:1.65;color:#2B2118;">{body}</td>
           </tr>
 
           <!-- The counter, at the end of the letter as it is at the end of the
-               site. Dark, so the message has a floor. -->
+               site. Dark, so the message has a floor.
+
+               NO `opacity` HERE, AND THAT IS NOT A STYLE PREFERENCE. Outlook
+               renders through Word and ignores it outright, so the same message
+               arrived washed-out in Gmail and full-strength in Outlook — the
+               hierarchy existed for some readers and not others. Worse, the
+               copyright at 0.4 computed to 3.67:1 against this ground, under the
+               4.5:1 it needs. Both lines now carry an explicit colour taken from
+               the site's own palette: sandal for the address at 10.6:1, the edge
+               tone for the copyright at 8.1:1. Same hierarchy, every client. -->
           <tr>
-            <td style="padding:26px 36px;background:#2A1F24;">
+            <td style="padding:26px 36px;background:#2B2118;">
+              <!-- WARM WHITE, NOT CERISE. The shop's name was set in the accent
+                   on this near-black counter, which measures 2.13:1 — under half
+                   the 4.5:1 a caption needs, and at 11px with two points of
+                   letter-spacing it was the least legible text in the message.
+                   Cerise simply cannot carry text on a dark ground; even the
+                   brightest tint of it only reaches 2.86:1. So the accent does
+                   what it is good at here — the rule under the links — and the
+                   name is set in the page's own warm white at 14.0:1. -->
               <p style="margin:0 0 10px;font-family:Helvetica,Arial,sans-serif;
                         font-size:11px;letter-spacing:2px;text-transform:uppercase;
-                        color:#A21D48;">{STORE_NAME}</p>
+                        color:#F7F1E8;">{STORE_NAME}</p>
               <p style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;
-                        font-size:13px;line-height:1.6;color:#FFFBFC;opacity:0.72;">
+                        font-size:13px;line-height:1.6;color:#DFD2C0;">
                 {STORE_ADDR}
               </p>
               <p style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;font-size:13px;">
-                <a href="{STORE_URL}" style="color:#FFFBFC;text-decoration:none;
+                <a href="{STORE_URL}" style="color:#FFFCF6;text-decoration:none;
                    border-bottom:1px solid #A21D48;padding-bottom:1px;">The shop</a>
                 &nbsp;&nbsp;&nbsp;
-                <a href="{STORE_URL}/orders" style="color:#FFFBFC;text-decoration:none;
+                <a href="{STORE_URL}/orders" style="color:#FFFCF6;text-decoration:none;
                    border-bottom:1px solid #A21D48;padding-bottom:1px;">Your orders</a>
                 &nbsp;&nbsp;&nbsp;
-                <a href="mailto:{SUPPORT_EMAIL}" style="color:#FFFBFC;text-decoration:none;
+                <a href="mailto:{SUPPORT_EMAIL}" style="color:#FFFCF6;text-decoration:none;
                    border-bottom:1px solid #A21D48;padding-bottom:1px;">Speak to us</a>
               </p>
               <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:11px;
-                        letter-spacing:1px;text-transform:uppercase;color:#FFFBFC;opacity:0.4;">
+                        letter-spacing:1px;text-transform:uppercase;color:#C6B7A1;">
                 &copy; {YEAR} {STORE_NAME}
               </p>
             </td>
@@ -488,7 +505,7 @@ def _btn(text: str, url: str, bg: str = "#A21D48") -> str:
         f'<td align="center" style="background:{bg};border-radius:2px;">'
         f'<a href="{url}" style="display:inline-block;padding:15px 34px;'
         f'font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:2px;'
-        f'text-transform:uppercase;color:#FFFBFC;text-decoration:none;'
+        f'text-transform:uppercase;color:#FFFCF6;text-decoration:none;'
         f'mso-padding-alt:15px 34px;">{text}</a>'
         f'</td></tr></table>'
     )
@@ -506,25 +523,25 @@ def send_welcome_email(email: str, name: str):
       <p style="color:#444;line-height:1.7;font-size:15px;">Discover our exclusive collection:</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0;">
         <tr>
-          <td style="padding:12px 8px;text-align:center;background:#F7EAEE;border-radius:2px;width:30%;">
+          <td style="padding:12px 8px;text-align:center;background:#F7F1E8;border-radius:2px;width:30%;">
             <div style="font-size:30px;">👗</div>
             <div style="color:#A21D48;font-weight:bold;font-size:13px;margin-top:6px;">Chudithar &amp; Tops</div>
           </td>
           <td style="width:4%;"></td>
-          <td style="padding:12px 8px;text-align:center;background:#F7EAEE;border-radius:2px;width:30%;">
+          <td style="padding:12px 8px;text-align:center;background:#F7F1E8;border-radius:2px;width:30%;">
             <div style="font-size:30px;">🪭</div>
             <div style="color:#A21D48;font-weight:bold;font-size:13px;margin-top:6px;">Lehenga &amp; Half Sarees</div>
           </td>
           <td style="width:4%;"></td>
-          <td style="padding:12px 8px;text-align:center;background:#F7EAEE;border-radius:2px;width:30%;">
+          <td style="padding:12px 8px;text-align:center;background:#F7F1E8;border-radius:2px;width:30%;">
             <div style="font-size:30px;">✨</div>
             <div style="color:#A21D48;font-weight:bold;font-size:13px;margin-top:6px;">Party Wears</div>
           </td>
         </tr>
       </table>
       {_btn("Start Shopping →", STORE_URL)}
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:13px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:13px;line-height:1.6;margin:0;">
         Questions? Email us at
         <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a> — we reply within 24 hours.
       </p>
@@ -538,7 +555,7 @@ def send_order_confirmation_email(email: str, name: str, order):
     rows = "".join(f"""
       <tr>
         <td style="padding:10px 0;color:#444;border-bottom:1px solid #f0ebe5;font-size:14px;">{i.get('name','')}</td>
-        <td style="padding:10px 0;color:#2A1F24;border-bottom:1px solid #f0ebe5;font-size:14px;text-align:center;">×{i.get('quantity',1)}</td>
+        <td style="padding:10px 0;color:#2B2118;border-bottom:1px solid #f0ebe5;font-size:14px;text-align:center;">×{i.get('quantity',1)}</td>
         <td style="padding:10px 0;color:#444;border-bottom:1px solid #f0ebe5;font-size:14px;text-align:right;font-weight:bold;">₹{i.get('price',0):,.0f}</td>
       </tr>""" for i in (order.items_snapshot or []))
 
@@ -548,34 +565,34 @@ def send_order_confirmation_email(email: str, name: str, order):
       <div style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:2px;padding:10px 20px;margin-bottom:20px;">
         <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ Order Confirmed</span>
       </div>
-      <h2 style="color:#2A1F24;margin-top:0;font-size:21px;">Hi {first}, your order is placed!</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:21px;">Hi {first}, your order is placed!</h2>
       <p style="color:#444;font-size:14px;line-height:1.6;">We've received your order and our team is getting it ready for you.</p>
 
-      <div style="background:#FFFBFC;border-left:4px solid #A21D48;border-radius:4px;padding:16px;margin:20px 0;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Order Number</p>
+      <div style="background:#FFFCF6;border-left:4px solid #A21D48;border-radius:4px;padding:16px;margin:20px 0;">
+        <p style="margin:0;color:#584A39;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Order Number</p>
         <p style="margin:6px 0 0;font-size:22px;font-weight:bold;color:#A21D48;letter-spacing:2px;">{order.order_number}</p>
       </div>
 
       <table style="width:100%;border-collapse:collapse;margin:20px 0;">
         <thead>
           <tr>
-            <th style="text-align:left;padding:10px 0;color:#6B5A60;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Product</th>
-            <th style="text-align:center;padding:10px 0;color:#6B5A60;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Qty</th>
-            <th style="text-align:right;padding:10px 0;color:#6B5A60;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Price</th>
+            <th style="text-align:left;padding:10px 0;color:#584A39;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Product</th>
+            <th style="text-align:center;padding:10px 0;color:#584A39;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Qty</th>
+            <th style="text-align:right;padding:10px 0;color:#584A39;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e5e0db;">Price</th>
           </tr>
         </thead>
         <tbody>{rows}</tbody>
       </table>
 
-      <div style="background:#FFFBFC;border-radius:2px;padding:16px;margin:16px 0;">
-        <p style="margin:0 0 6px;color:#2A1F24;font-size:14px;">Subtotal &nbsp;<strong style="color:#444;float:right;">₹{order.subtotal:,.0f}</strong></p>
-        <p style="margin:0 0 6px;color:#2A1F24;font-size:14px;">Shipping &nbsp;<strong style="color:#16a34a;float:right;">{"FREE" if order.shipping_fee == 0 else f"₹{order.shipping_fee:,.0f}"}</strong></p>
+      <div style="background:#FFFCF6;border-radius:2px;padding:16px;margin:16px 0;">
+        <p style="margin:0 0 6px;color:#2B2118;font-size:14px;">Subtotal &nbsp;<strong style="color:#444;float:right;">₹{order.subtotal:,.0f}</strong></p>
+        <p style="margin:0 0 6px;color:#2B2118;font-size:14px;">Shipping &nbsp;<strong style="color:#16a34a;float:right;">{"FREE" if order.shipping_fee == 0 else f"₹{order.shipping_fee:,.0f}"}</strong></p>
         <hr style="border:none;border-top:1px solid #ddd;margin:10px 0;">
-        <p style="margin:0;color:#2A1F24;font-weight:bold;font-size:16px;">Total &nbsp;<strong style="color:#A21D48;font-size:18px;float:right;">₹{order.total:,.0f}</strong></p>
+        <p style="margin:0;color:#2B2118;font-weight:bold;font-size:16px;">Total &nbsp;<strong style="color:#A21D48;font-size:18px;float:right;">₹{order.total:,.0f}</strong></p>
       </div>
 
       <div style="margin:20px 0;">
-        <p style="color:#6B5A60;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Delivering to</p>
+        <p style="color:#584A39;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Delivering to</p>
         <p style="color:#444;font-size:14px;margin:0;line-height:1.8;">
           <strong>{addr.get('full_name','')}</strong><br>
           {addr.get('address_line1','')}{addr2}<br>
@@ -602,10 +619,10 @@ def send_payment_success_email(email: str, name: str, order):
         <p style="margin:8px 0 0;color:#166534;font-size:13px;">Your order is being prepared and will be shipped soon.</p>
       </div>
       <table style="width:100%;font-size:14px;margin:16px 0;">
-        <tr><td style="color:#6B5A60;padding:6px 0;">Payment Method</td><td style="color:#444;font-weight:bold;text-align:right;">{order.payment_method.upper()}</td></tr>
-        <tr><td style="color:#6B5A60;padding:6px 0;">Amount Paid</td><td style="color:#A21D48;font-weight:bold;text-align:right;">₹{order.total:,.0f}</td></tr>
-        <tr><td style="color:#6B5A60;padding:6px 0;">Order Number</td><td style="color:#444;font-weight:bold;text-align:right;">{order.order_number}</td></tr>
-        {f'<tr><td style="color:#6B5A60;padding:6px 0;">Transaction ID</td><td style="color:#444;font-weight:bold;text-align:right;font-family:monospace;font-size:12px;">{order.payment_transaction_id}</td></tr>' if getattr(order, "payment_transaction_id", None) else ""}
+        <tr><td style="color:#584A39;padding:6px 0;">Payment Method</td><td style="color:#444;font-weight:bold;text-align:right;">{order.payment_method.upper()}</td></tr>
+        <tr><td style="color:#584A39;padding:6px 0;">Amount Paid</td><td style="color:#A21D48;font-weight:bold;text-align:right;">₹{order.total:,.0f}</td></tr>
+        <tr><td style="color:#584A39;padding:6px 0;">Order Number</td><td style="color:#444;font-weight:bold;text-align:right;">{order.order_number}</td></tr>
+        {f'<tr><td style="color:#584A39;padding:6px 0;">Transaction ID</td><td style="color:#444;font-weight:bold;text-align:right;font-family:monospace;font-size:12px;">{order.payment_transaction_id}</td></tr>' if getattr(order, "payment_transaction_id", None) else ""}
       </table>
       {_btn("View Order Details →", f"{STORE_URL}/orders/{order.id}")}
     """)
@@ -625,7 +642,7 @@ def send_payment_failed_email(email: str, name: str, order):
         <p style="margin:8px 0 0;color:#991b1b;font-size:13px;">Please try again with a different payment method.</p>
       </div>
       {_btn("Try Again →", STORE_URL, "#dc2626")}
-      <p style="color:#6B5A60;font-size:13px;margin-top:20px;">
+      <p style="color:#584A39;font-size:13px;margin-top:20px;">
         If you were charged, contact us at
         <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
       </p>
@@ -636,7 +653,7 @@ def send_payment_failed_email(email: str, name: str, order):
 # ── 5. Order status update ─────────────────────────────────────────────────────
 _STATUS_MAP = {
     "processing":       ("🔄 Order Being Processed",   "#2563eb", "#eff6ff", "Your order is being prepared by our team."),
-    "shipped":          ("📦 Your Order is Shipped!",   "#A21D48", "#F7EAEE", "Your order is on its way — expect it soon!"),
+    "shipped":          ("📦 Your Order is Shipped!",   "#A21D48", "#F7F1E8", "Your order is on its way — expect it soon!"),
     "out_for_delivery": ("🚚 Out for Delivery Today!",  "#ea580c", "#fff7ed", "Your order is out for delivery — stay at home!"),
     "delivered":        ("✅ Order Delivered!",          "#16a34a", "#f0fdf4", "Your order has been delivered. We hope you love it!"),
     "cancelled":        ("❌ Order Cancelled",            "#dc2626", "#fef2f2", "Your order has been cancelled."),
@@ -645,7 +662,7 @@ _STATUS_MAP = {
 def send_order_status_email(email: str, name: str, order, new_status: str):
     first = name.split()[0]
     title, color, bg, msg = _STATUS_MAP.get(
-        new_status, (f"Order Update: {new_status.title()}", "#A21D48", "#FFFBFC", f"Status: {new_status}")
+        new_status, (f"Order Update: {new_status.title()}", "#A21D48", "#FFFCF6", f"Status: {new_status}")
     )
     tracking = (f'<p style="color:#444;font-size:14px;margin-top:12px;">'
                 f'Tracking Number: <strong>{order.tracking_number}</strong></p>'
@@ -700,7 +717,7 @@ def send_review_request_email(email: str, name: str, order):
         It takes less than 2 minutes!
       </p>
       {_btn("⭐ Write a Review", f"{STORE_URL}/orders/{order.id}", "#f5c842")}
-      <p style="color:#6B5A60;font-size:12px;text-align:center;margin-top:8px;">
+      <p style="color:#584A39;font-size:12px;text-align:center;margin-top:8px;">
         Click above to rate and review your purchase.
       </p>
     """)
@@ -721,19 +738,19 @@ def send_deletion_otp_email(email: str, name: str, otp: str, window_text: str = 
         Hi {first}, we received a request to permanently delete your <strong>{STORE_NAME}</strong> account.
       </p>
       <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:2px;padding:24px;margin:20px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:12px;text-transform:uppercase;letter-spacing:2px;">Your Deletion OTP</p>
+        <p style="margin:0;color:#584A39;font-size:12px;text-transform:uppercase;letter-spacing:2px;">Your Deletion OTP</p>
         <p style="margin:12px 0 4px;font-size:40px;font-weight:bold;color:#dc2626;letter-spacing:10px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#6B5A60;font-size:12px;">Valid for 10 minutes only</p>
+        <p style="margin:0;color:#584A39;font-size:12px;">Valid for 10 minutes only</p>
       </div>
       <div style="background:#fff8e1;border:1px solid #fde68a;border-radius:2px;padding:16px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-weight:bold;font-size:14px;">
+        <p style="margin:0;color:#750929;font-weight:bold;font-size:14px;">
           ⏳ Your account will be permanently deleted after {window_text}.
         </p>
-        <p style="margin:8px 0 0;color:#86173A;font-size:13px;">
+        <p style="margin:8px 0 0;color:#750929;font-size:13px;">
           To cancel: simply log in to your account within {window_text}.
         </p>
       </div>
-      <p style="color:#6B5A60;font-size:13px;">
+      <p style="color:#584A39;font-size:13px;">
         If you did NOT request this, ignore this email — your account remains safe.
       </p>
     """)
@@ -758,7 +775,7 @@ def send_deletion_scheduled_email(email: str, name: str, delete_at):
         <span style="color:#dc2626;font-weight:bold;font-size:14px;">⚠️ Account Deletion Initiated</span>
       </div>
 
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Hi {first}, your account deletion is scheduled</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Hi {first}, your account deletion is scheduled</h2>
 
       <p style="color:#444;font-size:14px;line-height:1.7;">
         We've received your request to permanently delete your <strong>{STORE_NAME}</strong> account.
@@ -767,7 +784,7 @@ def send_deletion_scheduled_email(email: str, name: str, delete_at):
 
       <!-- Countdown box -->
       <div style="background:#fef2f2;border:2px solid #fca5a5;border-radius:2px;padding:24px;margin:20px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Account will be permanently deleted at</p>
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:2px;">Account will be permanently deleted at</p>
         <p style="margin:12px 0 4px;font-size:22px;font-weight:bold;color:#dc2626;">{delete_str}</p>
         <p style="margin:8px 0 0;color:#991b1b;font-size:13px;">All your orders, addresses and data will be erased</p>
       </div>
@@ -782,8 +799,8 @@ def send_deletion_scheduled_email(email: str, name: str, delete_at):
         {_btn("🔓 Retrieve My Account →", retrieve_url, "#16a34a")}
       </div>
 
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:12px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:12px;line-height:1.6;margin:0;">
         If you did NOT request this, your account may be at risk. Please
         <a href="{retrieve_url}" style="color:#A21D48;">log in immediately</a> to secure it,
         or contact <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
@@ -800,7 +817,7 @@ def send_account_permanently_deleted_email(email: str, name: str):
         <span style="color:#dc2626;font-weight:bold;font-size:14px;">❌ Account Permanently Deleted</span>
       </div>
 
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Hi {first}, your account has been deleted</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Hi {first}, your account has been deleted</h2>
 
       <p style="color:#444;font-size:14px;line-height:1.7;">
         Your <strong>{STORE_NAME}</strong> account and all associated data have been
@@ -817,15 +834,15 @@ def send_account_permanently_deleted_email(email: str, name: str):
         </p>
       </div>
 
-      <div style="background:#FFFBFC;border-radius:2px;padding:16px;margin:20px 0;text-align:center;">
+      <div style="background:#FFFCF6;border-radius:2px;padding:16px;margin:20px 0;text-align:center;">
         <p style="margin:0;color:#555;font-size:14px;">
           You can always create a new account at
           <a href="{STORE_URL}" style="color:#A21D48;font-weight:bold;">{STORE_URL}</a>
         </p>
       </div>
 
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:12px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:12px;line-height:1.6;margin:0;">
         If you believe this was a mistake, contact us immediately at
         <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
         We may be able to assist within 24 hours of deletion.
@@ -842,7 +859,7 @@ def send_account_retrieved_email(email: str, name: str):
         <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ Account Successfully Restored</span>
       </div>
 
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Welcome back, {first}! 🎉 Your account is safe</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Welcome back, {first}! 🎉 Your account is safe</h2>
 
       <p style="color:#444;font-size:14px;line-height:1.7;">
         Your <strong>{STORE_NAME}</strong> account deletion has been <strong style="color:#15803d;">cancelled</strong>.
@@ -857,8 +874,8 @@ def send_account_retrieved_email(email: str, name: str):
 
       {_btn("Continue Shopping →", STORE_URL)}
 
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:12px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:12px;line-height:1.6;margin:0;">
         If you did not cancel this deletion yourself, please change your password immediately
         or contact <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
       </p>
@@ -874,18 +891,18 @@ def send_login_otp_email(email: str, name: str, otp: str):
       <p style="color:#444;font-size:14px;line-height:1.6;">
         Hi {first}, use the OTP below to complete your sign-in to <strong>{STORE_NAME}</strong>.
       </p>
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:3px;">One-Time Password</p>
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:3px;">One-Time Password</p>
         <p style="margin:14px 0 6px;font-size:46px;font-weight:bold;color:#A21D48;letter-spacing:14px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#6B5A60;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
+        <p style="margin:0;color:#584A39;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
       </div>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-size:13px;line-height:1.6;">
           🛡️ <strong>Security tip:</strong> Never share this OTP with anyone.
           Vijey Textile staff will never ask for your OTP.
         </p>
       </div>
-      <p style="color:#6B5A60;font-size:13px;line-height:1.6;">
+      <p style="color:#584A39;font-size:13px;line-height:1.6;">
         Didn't request this? Someone may have tried to sign in with your account.
         You can safely ignore this email — your account is secure.
       </p>
@@ -903,18 +920,18 @@ def send_register_otp_email(email: str, name: str, otp: str):
         Hi {first}, welcome to <strong>{STORE_NAME}</strong>! Enter the code below to verify your
         email and mobile number and finish creating your account.
       </p>
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Verification Code</p>
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Verification Code</p>
         <p style="margin:14px 0 6px;font-size:46px;font-weight:bold;color:#A21D48;letter-spacing:14px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#6B5A60;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
+        <p style="margin:0;color:#584A39;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
       </div>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-size:13px;line-height:1.6;">
           🛡️ <strong>Security tip:</strong> Never share this code with anyone.
           Vijey Textile staff will never ask for it.
         </p>
       </div>
-      <p style="color:#6B5A60;font-size:13px;line-height:1.6;">
+      <p style="color:#584A39;font-size:13px;line-height:1.6;">
         Didn't create an account with us? You can safely ignore this email.
       </p>
     """)
@@ -926,34 +943,34 @@ def send_login_notification_email(email: str, name: str, device_name: str = None
     first = name.split()[0]
     when = datetime.now().strftime("%d %b %Y, %I:%M %p")
     detail_rows = f"""
-        <tr><td style="padding:6px 0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Sign-in time</td></tr>
-        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#2A1F24;">{when}</td></tr>
+        <tr><td style="padding:6px 0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Sign-in time</td></tr>
+        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#2B2118;">{when}</td></tr>
     """
     if device_name:
         detail_rows += f"""
-        <tr><td style="padding:6px 0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Device</td></tr>
-        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#2A1F24;">{device_name}</td></tr>
+        <tr><td style="padding:6px 0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Device</td></tr>
+        <tr><td style="padding:0 0 12px;font-size:16px;font-weight:bold;color:#2B2118;">{device_name}</td></tr>
         """
     if location:
         detail_rows += f"""
-        <tr><td style="padding:6px 0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Approximate location</td></tr>
-        <tr><td style="padding:0;font-size:16px;font-weight:bold;color:#2A1F24;">{location}</td></tr>
+        <tr><td style="padding:6px 0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Approximate location</td></tr>
+        <tr><td style="padding:0;font-size:16px;font-weight:bold;color:#2B2118;">{location}</td></tr>
         """
     html = _wrap(f"""
       <div style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:2px;padding:10px 20px;margin-bottom:20px;">
         <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ New Sign-In</span>
       </div>
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Hi {first}, you just signed in</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Hi {first}, you just signed in</h2>
       <p style="color:#444;font-size:14px;line-height:1.7;">
         Your <strong>{STORE_NAME}</strong> account was just signed into successfully on a device.
       </p>
-      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFBFC;border-radius:2px;padding:16px;margin:20px 0;border-collapse:collapse;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#FFFCF6;border-radius:2px;padding:16px;margin:20px 0;border-collapse:collapse;">
         <tr><td style="padding:16px;">
           <table cellpadding="0" cellspacing="0">{detail_rows}</table>
         </td></tr>
       </table>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-size:13px;line-height:1.6;">
           🛡️ <strong>Wasn't you?</strong> Open <em>Linked Devices</em> in your account to sign that device out,
           reset your password immediately, and contact
           <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
@@ -973,13 +990,13 @@ def send_password_reset_otp_email(email: str, name: str, otp: str):
         Hi {first}, we received a request to reset your <strong>{STORE_NAME}</strong> password.
         Use the OTP below to continue.
       </p>
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Password Reset OTP</p>
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Password Reset OTP</p>
         <p style="margin:14px 0 6px;font-size:46px;font-weight:bold;color:#A21D48;letter-spacing:14px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#6B5A60;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
+        <p style="margin:0;color:#584A39;font-size:12px;">Valid for <strong>10 minutes</strong> only</p>
       </div>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-size:13px;line-height:1.6;">
           🛡️ <strong>Security tip:</strong> Never share this OTP with anyone.
           If you did NOT request a password reset, please ignore this email.
         </p>
@@ -998,7 +1015,7 @@ _EMOJI_MAP = {
 def _cart_summary_html(cart_items: list) -> str:
     """Build an HTML table of all items currently in the cart."""
     if not cart_items:
-        return "<p style='color:#6B5A60;font-size:13px;text-align:center;'>Your cart is now empty.</p>"
+        return "<p style='color:#584A39;font-size:13px;text-align:center;'>Your cart is now empty.</p>"
     rows = ""
     total_qty   = 0
     total_price = 0.0
@@ -1017,8 +1034,8 @@ def _cart_summary_html(cart_items: list) -> str:
         <tr>
           <td style="padding:10px 8px;border-bottom:1px solid #f0ebe5;font-size:14px;">
             <span style="font-size:18px;">{emoji}</span>
-            <span style="margin-left:8px;font-weight:600;color:#2A1F24;">{name}</span>
-            {f'<br><span style="font-size:11px;color:#6B5A60;margin-left:26px;">{size_color}</span>' if size_color else ''}
+            <span style="margin-left:8px;font-weight:600;color:#2B2118;">{name}</span>
+            {f'<br><span style="font-size:11px;color:#584A39;margin-left:26px;">{size_color}</span>' if size_color else ''}
           </td>
           <td style="padding:10px 8px;border-bottom:1px solid #f0ebe5;text-align:center;color:#555;font-size:14px;">×{qty}</td>
           <td style="padding:10px 8px;border-bottom:1px solid #f0ebe5;text-align:right;font-weight:bold;color:#A21D48;font-size:14px;">₹{subtotal:,.0f}</td>
@@ -1026,10 +1043,10 @@ def _cart_summary_html(cart_items: list) -> str:
     return f"""
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">
       <thead>
-        <tr style="background:#F7EAEE;">
-          <th style="text-align:left;padding:10px 8px;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Product</th>
-          <th style="text-align:center;padding:10px 8px;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Qty</th>
-          <th style="text-align:right;padding:10px 8px;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Price</th>
+        <tr style="background:#F7F1E8;">
+          <th style="text-align:left;padding:10px 8px;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Product</th>
+          <th style="text-align:center;padding:10px 8px;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Qty</th>
+          <th style="text-align:right;padding:10px 8px;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Price</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>
@@ -1073,12 +1090,12 @@ def send_cart_add_email(email: str, name: str, product_name: str,
       </p>
 
       <!-- Added product highlight -->
-      <div style="background:#F7EAEE;border:2px solid #f97316;border-radius:2px;padding:20px;margin:20px 0;display:flex;align-items:center;gap:16px;">
+      <div style="background:#F7F1E8;border:2px solid #f97316;border-radius:2px;padding:20px;margin:20px 0;display:flex;align-items:center;gap:16px;">
         <div style="font-size:52px;flex-shrink:0;">{emoji}</div>
         <div>
           <p style="margin:0;font-size:16px;font-weight:bold;color:#A21D48;">{product_name}</p>
-          <p style="margin:4px 0 0;color:#6B5A60;font-size:13px;">Quantity: {quantity}</p>
-          {f'<p style="margin:4px 0 0;color:#6B5A60;font-size:12px;">{details_line}</p>' if details_line else ''}
+          <p style="margin:4px 0 0;color:#584A39;font-size:13px;">Quantity: {quantity}</p>
+          {f'<p style="margin:4px 0 0;color:#584A39;font-size:12px;">{details_line}</p>' if details_line else ''}
         </div>
       </div>
 
@@ -1088,7 +1105,7 @@ def send_cart_add_email(email: str, name: str, product_name: str,
 
       <!-- Urgency nudge -->
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-size:13px;line-height:1.6;">
           ⚡ <strong>Stock is limited!</strong> Complete your order before someone else grabs it.
         </p>
       </div>
@@ -1166,14 +1183,14 @@ def send_delivery_otp_email(email: str, name: str, otp: str, order_number: str,
         Hi {first}, your order <strong>{order_number}</strong> is on its way and will be delivered today!
       </p>
       {agent_block}
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Your Delivery OTP</p>
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Your Delivery OTP</p>
         <p style="margin:14px 0 6px;font-size:52px;font-weight:bold;color:#A21D48;letter-spacing:14px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#2A1F24;font-size:13px;">Share this OTP with the delivery agent to confirm receipt</p>
+        <p style="margin:0;color:#2B2118;font-size:13px;">Share this OTP with the delivery agent to confirm receipt</p>
       </div>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-weight:bold;font-size:14px;">⚠️ Important Security Note</p>
-        <p style="margin:8px 0 0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-weight:bold;font-size:14px;">⚠️ Important Security Note</p>
+        <p style="margin:8px 0 0;color:#750929;font-size:13px;line-height:1.6;">
           • Only share this OTP with the delivery person at your door<br>
           • Do NOT share via phone call or message<br>
           • The OTP confirms you received the package
@@ -1203,14 +1220,14 @@ def send_pickup_otp_email(email: str, name: str, otp: str, request_type: str, or
         Hi {first}, our courier will be collecting your item for order <strong>{order_number}</strong> soon.
       </p>
       {agent_block}
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
-        <p style="margin:0;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Your Pickup OTP</p>
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:28px;margin:24px 0;text-align:center;">
+        <p style="margin:0;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:3px;">Your Pickup OTP</p>
         <p style="margin:14px 0 6px;font-size:52px;font-weight:bold;color:#A21D48;letter-spacing:14px;font-family:monospace;">{otp}</p>
-        <p style="margin:0;color:#2A1F24;font-size:13px;">Give this OTP to the pickup agent to confirm the handover</p>
+        <p style="margin:0;color:#2B2118;font-size:13px;">Give this OTP to the pickup agent to confirm the handover</p>
       </div>
       <div style="background:#fefce8;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:20px 0;">
-        <p style="margin:0;color:#86173A;font-weight:bold;font-size:14px;">⚠️ Important Security Note</p>
-        <p style="margin:8px 0 0;color:#86173A;font-size:13px;line-height:1.6;">
+        <p style="margin:0;color:#750929;font-weight:bold;font-size:14px;">⚠️ Important Security Note</p>
+        <p style="margin:8px 0 0;color:#750929;font-size:13px;line-height:1.6;">
           • Only share this OTP with the pickup agent at your door<br>
           • Do NOT share via phone call or message<br>
           • The OTP confirms we're collecting the right item from the right person
@@ -1230,7 +1247,7 @@ def send_support_rating_confirmation(email: str, name: str, rating: int):
       <p style="color:#444;font-size:14px;line-height:1.6;">
         Hi {first}, we truly appreciate you taking the time to rate your experience with our support team.
       </p>
-      <div style="background:#F7EAEE;border:2px solid #A21D48;border-radius:2px;padding:24px;margin:20px 0;text-align:center;">
+      <div style="background:#F7F1E8;border:2px solid #A21D48;border-radius:2px;padding:24px;margin:20px 0;text-align:center;">
         <p style="margin:0;font-size:36px;">{stars}</p>
         <p style="margin:10px 0 0;color:#A21D48;font-weight:bold;font-size:16px;">You rated us {rating}/5</p>
       </div>
@@ -1251,28 +1268,28 @@ def send_support_rating_admin_notify(name: str, email: str, rating: int, categor
     stars = "⭐" * rating + "☆" * (5 - rating)
     color = "#16a34a" if rating >= 4 else "#ea580c" if rating == 3 else "#dc2626"
     category_row = (
-        f"<tr><td style='color:#6B5A60;padding:6px 0;'>Category</td><td style='color:#444;'>{category}</td></tr>"
+        f"<tr><td style='color:#584A39;padding:6px 0;'>Category</td><td style='color:#444;'>{category}</td></tr>"
         if category else ""
     )
     message_block = (
-        f"<div style='background:#FFFBFC;border-radius:2px;padding:16px;margin:16px 0;'>"
-        f"<p style='margin:0;color:#6B5A60;font-size:12px;text-transform:uppercase;letter-spacing:1px;'>Customer Comment</p>"
+        f"<div style='background:#FFFCF6;border-radius:2px;padding:16px;margin:16px 0;'>"
+        f"<p style='margin:0;color:#584A39;font-size:12px;text-transform:uppercase;letter-spacing:1px;'>Customer Comment</p>"
         f"<p style='margin:8px 0 0;color:#444;font-size:14px;line-height:1.6;'>{message}</p></div>"
         if message else ""
     )
     html = _wrap(f"""
       <h2 style="color:#A21D48;margin-top:0;font-size:22px;">📊 New Support Rating Received</h2>
-      <div style="background:#FFFBFC;border-left:4px solid {color};border-radius:4px;padding:16px;margin:20px 0;">
+      <div style="background:#FFFCF6;border-left:4px solid {color};border-radius:4px;padding:16px;margin:20px 0;">
         <p style="margin:0;font-size:28px;">{stars}</p>
         <p style="margin:8px 0 0;font-size:22px;font-weight:bold;color:{color};">{rating}/5 Stars</p>
       </div>
       <table style="width:100%;font-size:14px;margin:16px 0;">
-        <tr><td style="color:#6B5A60;padding:6px 0;width:120px;">Customer</td><td style="color:#444;font-weight:bold;">{name}</td></tr>
-        <tr><td style="color:#6B5A60;padding:6px 0;">Email</td><td style="color:#444;">{email}</td></tr>
+        <tr><td style="color:#584A39;padding:6px 0;width:120px;">Customer</td><td style="color:#444;font-weight:bold;">{name}</td></tr>
+        <tr><td style="color:#584A39;padding:6px 0;">Email</td><td style="color:#444;">{email}</td></tr>
         {category_row}
       </table>
       {message_block}
-      <p style="color:#6B5A60;font-size:13px;">View all ratings in the Admin Dashboard → Support Ratings tab.</p>
+      <p style="color:#584A39;font-size:13px;">View all ratings in the Admin Dashboard → Support Ratings tab.</p>
     """)
     _bg(admin_email, f"New {rating}★ Support Rating from {name} — {STORE_NAME}", html)
 
@@ -1692,20 +1709,20 @@ def send_order_cancelled_email(email: str, name: str, order):
           </tr></thead>
           <tbody>{items_html}</tbody>
         </table>
-        <div style='background:#fef9c3;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:16px 0'><p style='margin:0;color:#86173A;font-size:14px'>💰 <b>Refund:</b> Your refund has been initiated and will be processed within 5–7 business days to your original payment method.</p></div>
+        <div style='background:#fef9c3;border:1px solid #fde68a;border-radius:2px;padding:14px;margin:16px 0'><p style='margin:0;color:#750929;font-size:14px'>💰 <b>Refund:</b> Your refund has been initiated and will be processed within 5–7 business days to your original payment method.</p></div>
         <p style="color:#555;font-size:14px">Changed your mind? You can always <a href="{STORE_URL}/products" style="color:#A21D48">shop again</a>.</p>
-        <p style="color:#6B5A60;font-size:13px">Questions? Email us at <a href="mailto:{SUPPORT_EMAIL}">{SUPPORT_EMAIL}</a></p>
+        <p style="color:#584A39;font-size:13px">Questions? Email us at <a href="mailto:{SUPPORT_EMAIL}">{SUPPORT_EMAIL}</a></p>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#FFFBFC;border-top:1px solid #DCC3CB;">
+             style="border-collapse:collapse;background:#FFFCF6;border-top:1px solid #C6B7A1;">
         <tr><td align="center" style="padding:16px 24px;">
-          <p style="margin:0 0 5px;color:#6B5A60;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
+          <p style="margin:0 0 5px;color:#584A39;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;text-decoration:none;">Contact Support</a>
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}" style="color:#A21D48;text-decoration:none;">Visit Store</a>
           </p>
-          <p style="margin:0;color:#6B5A60;font-size:11px;font-family:Arial,sans-serif;">
+          <p style="margin:0;color:#584A39;font-size:11px;font-family:Arial,sans-serif;">
             &copy; {YEAR} {STORE_NAME}. All rights reserved.
           </p>
         </td></tr>
@@ -1745,41 +1762,41 @@ def send_admin_cancellation_email(order, user):
         <p style='margin:0;color:#dc2626;font-weight:bold;font-size:14px;'>
           Refund auto-initiated via Razorpay for ₹{order.total:,.0f}.</p></div>
       <table style="width:100%;font-size:14px;border-collapse:collapse;margin:16px 0;">
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;width:140px;">Order #</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;width:140px;">Order #</td>
           <td style="color:#111;font-weight:bold;">{order.order_number}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Customer</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Customer</td>
           <td style="color:#444;">{user.full_name}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Phone</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Phone</td>
           <td style="color:#444;">{user.phone}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Email</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Email</td>
           <td style="color:#444;">{user.email}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Amount</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Amount</td>
           <td style="color:#444;font-weight:bold;">₹{order.total:,.0f}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Payment</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Payment</td>
           <td style="color:#444;">{order.payment_method.upper()} — {order.payment_status.replace('_',' ').title()}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Cancel Reason</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Cancel Reason</td>
           <td style="color:#444;">{order.cancel_reason or 'Not specified'}</td>
         </tr>
         <tr>
-          <td style="color:#6B5A60;padding:8px 0;">Ship To</td>
+          <td style="color:#584A39;padding:8px 0;">Ship To</td>
           <td style="color:#444;">{addr.get('city','')}, {addr.get('state','')}</td>
         </tr>
       </table>
       {_btn("Open Admin Dashboard", f"{STORE_URL}/admin")}
-      <p style="color:#6B5A60;font-size:12px;margin-top:20px;">
+      <p style="color:#584A39;font-size:12px;margin-top:20px;">
         Go to Orders tab and filter by Cancelled to see this order.
       </p>
     """)
@@ -1844,13 +1861,13 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
             <tr><td style="color:#555;padding:5px 0">Order Number</td><td style="text-align:right;font-weight:bold;color:#111">{order.order_number}</td></tr>
             <tr><td style="color:#555;padding:5px 0">Refund Amount</td><td style="text-align:right;font-weight:bold;color:#16a34a;font-size:18px">₹{order.total:,.0f}</td></tr>
             <tr><td style="color:#555;padding:5px 0">Payment Method</td><td style="text-align:right;font-weight:bold;color:#111">{'Razorpay (Online)' if pm == 'razorpay' else pm.upper()}</td></tr>
-            {f"<tr><td style='color:#555;padding:5px 0'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2A1F24;font-size:12px'>{txn}</td></tr>" if txn else ""}
-            {f"<tr><td style='color:#555;padding:5px 0'>Refund ID</td><td style='text-align:right;font-family:monospace;color:#2A1F24;font-size:12px'>{refund_id}</td></tr>" if refund_id else ""}
+            {f"<tr><td style='color:#555;padding:5px 0'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2B2118;font-size:12px'>{txn}</td></tr>" if txn else ""}
+            {f"<tr><td style='color:#555;padding:5px 0'>Refund ID</td><td style='text-align:right;font-family:monospace;color:#2B2118;font-size:12px'>{refund_id}</td></tr>" if refund_id else ""}
           </table>
         </div>
 
         <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:2px;padding:16px;margin:16px 0">
-          <p style="margin:0;color:#86173A;font-size:14px">⏱️ <b>Expected credit date:</b> <b>{_expected_refund_date()}</b> — Razorpay will deposit the amount to your original payment method by this date.</p>
+          <p style="margin:0;color:#750929;font-size:14px">⏱️ <b>Expected credit date:</b> <b>{_expected_refund_date()}</b> — Razorpay will deposit the amount to your original payment method by this date.</p>
         </div>
 
         <div style="text-align:center;margin:24px 0">
@@ -1877,9 +1894,9 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
         </div>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#FFFBFC;border-top:1px solid #DCC3CB;">
+             style="border-collapse:collapse;background:#FFFCF6;border-top:1px solid #C6B7A1;">
         <tr><td align="center" style="padding:16px 24px;">
-          <p style="margin:0 0 5px;color:#6B5A60;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
+          <p style="margin:0 0 5px;color:#584A39;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;text-decoration:none;">Contact Support</a>
             &nbsp;&middot;&nbsp;
@@ -1887,7 +1904,7 @@ def send_refund_initiated_email(email: str, name: str, order, refund_id: str = "
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}" style="color:#A21D48;text-decoration:none;">Visit Store</a>
           </p>
-          <p style="margin:0;color:#6B5A60;font-size:11px;font-family:Arial,sans-serif;">
+          <p style="margin:0;color:#584A39;font-size:11px;font-family:Arial,sans-serif;">
             &copy; {YEAR} {STORE_NAME}. All rights reserved.
           </p>
         </td></tr>
@@ -1975,8 +1992,8 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
             <td style="text-align:right;font-weight:bold;color:#16a34a;
                        border-bottom:1px solid #d1fae5;">{_expected_refund_date()}</td>
           </tr>
-          {f"<tr><td style='color:#555;padding:6px 0;border-bottom:1px solid #d1fae5;'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2A1F24;font-size:12px;border-bottom:1px solid #d1fae5;'>{txn}</td></tr>" if txn else ""}
-          {f"<tr><td style='color:#555;padding:6px 0;'>Refund ID</td><td style='text-align:right;font-family:monospace;color:#2A1F24;font-size:12px;'>{refund_id}</td></tr>" if refund_id and refund_id != 'manual' else ""}
+          {f"<tr><td style='color:#555;padding:6px 0;border-bottom:1px solid #d1fae5;'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2B2118;font-size:12px;border-bottom:1px solid #d1fae5;'>{txn}</td></tr>" if txn else ""}
+          {f"<tr><td style='color:#555;padding:6px 0;'>Refund ID</td><td style='text-align:right;font-family:monospace;color:#2B2118;font-size:12px;'>{refund_id}</td></tr>" if refund_id and refund_id != 'manual' else ""}
         </table>
       </div>
 
@@ -1985,7 +2002,7 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
       <!-- Support section -->
       <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:2px;
                   padding:18px 24px;margin:24px 0 8px;">
-        <p style="margin:0 0 12px;font-size:13px;font-weight:bold;color:#2A1F24;
+        <p style="margin:0 0 12px;font-size:13px;font-weight:bold;color:#2B2118;
                   text-transform:uppercase;letter-spacing:1px;">Need Help?</p>
         <p style="margin:0 0 10px;color:#475569;font-size:13px;line-height:1.6;">
           If the refund amount does not appear in your bank account or card statement within
@@ -1994,7 +2011,7 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
         <table width="100%" style="border-collapse:collapse;font-size:13px;">
           <tr>
             <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;vertical-align:top;width:40%;">
-              <strong style="color:#2A1F24;">💳 Razorpay Support</strong><br>
+              <strong style="color:#2B2118;">💳 Razorpay Support</strong><br>
               <span style="color:#64748b;font-size:12px;">For payment / refund queries</span>
             </td>
             <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;vertical-align:top;">
@@ -2006,7 +2023,7 @@ def send_refund_credited_email(email: str, name: str, order, refund_id: str = ""
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;">
-              <strong style="color:#2A1F24;">🏪 Vijey Textile Support</strong><br>
+              <strong style="color:#2B2118;">🏪 Vijey Textile Support</strong><br>
               <span style="color:#64748b;font-size:12px;">For order / product queries</span>
             </td>
             <td style="padding:8px 0;text-align:right;vertical-align:top;">
@@ -2090,15 +2107,15 @@ def send_return_request_email(email: str, name: str, order, rr):
         Hi {first}, we've received your <strong>{type_label}</strong> request for order <strong>{order.order_number}</strong>.
         Our team will review it within <strong>24 hours</strong>.
       </p>
-      <div style="background:#FFFBFC;border-left:4px solid #A21D48;border-radius:4px;padding:16px;margin:20px 0;">
-        <p style="margin:0 0 6px;color:#6B5A60;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Request Details</p>
+      <div style="background:#FFFCF6;border-left:4px solid #A21D48;border-radius:4px;padding:16px;margin:20px 0;">
+        <p style="margin:0 0 6px;color:#584A39;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Request Details</p>
         <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Type:</strong> {type_label}</p>
         <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Reason:</strong> {_REASON_LABEL.get(rr.reason, rr.reason)}</p>
         {f'<p style="margin:4px 0;font-size:14px;color:#444;"><strong>Details:</strong> {rr.description}</p>' if rr.description else ''}
         <p style="margin:4px 0;font-size:14px;color:#444;"><strong>Status:</strong> <span style="color:#f59e0b;font-weight:bold;">Pending Review</span></p>
       </div>
       <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:2px;padding:14px;margin:16px 0;">
-        <p style="margin:0;font-size:13px;color:#86173A;">
+        <p style="margin:0;font-size:13px;color:#750929;">
           If you uploaded photos, our team will review them during the inspection.
           Please ensure the item is unused (for size issues) and securely packed for pickup.
         </p>
@@ -2133,14 +2150,14 @@ def send_return_status_email(email: str, name: str, order, rr, status: str | Non
     type_label = _RETURN_TYPE_LABEL.get(rr.request_type, rr.request_type.title())
     title, color, msg = _RETURN_STATUS_INFO.get(status, (f"Update: {status}", "#A21D48", ""))
     admin_note = (f'<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:2px;padding:14px;margin:16px 0;">'
-                  f'<p style="margin:0;font-size:13px;color:#86173A;"><strong>Note from our team:</strong> {rr.admin_notes}</p></div>'
+                  f'<p style="margin:0;font-size:13px;color:#750929;"><strong>Note from our team:</strong> {rr.admin_notes}</p></div>'
                   if rr.admin_notes else "")
     html = _wrap(f"""
       <h2 style="color:{color};margin-top:0;font-size:22px;">{title}</h2>
       <p style="color:#444;font-size:14px;line-height:1.6;">
         Hi {first}, here's an update on your <strong>{type_label}</strong> request for order <strong>{order.order_number}</strong>.
       </p>
-      <div style="background:#FFFBFC;border-left:4px solid {color};border-radius:4px;padding:16px;margin:20px 0;">
+      <div style="background:#FFFCF6;border-left:4px solid {color};border-radius:4px;padding:16px;margin:20px 0;">
         <p style="margin:0;color:{color};font-weight:bold;font-size:14px;">{msg}</p>
       </div>
       {admin_note}
@@ -2183,7 +2200,7 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
         f"""<tr>
           <td style='padding:10px 8px;border-bottom:1px solid #fde8d8;font-size:13px'>
             <b>{i.get('name','')}</b>
-            <br><span style='color:#6B5A60;font-size:11px'>Product ID: #{i.get('product_id','—')}
+            <br><span style='color:#584A39;font-size:11px'>Product ID: #{i.get('product_id','—')}
             {('· ' + i.get('size','')) if i.get('size') else ''}
             {('· ' + i.get('color','')) if i.get('color') else ''}</span>
           </td>
@@ -2224,8 +2241,8 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
             <td style="font-size:13px;color:#555">
               <p style="margin:0 0 4px"><b>Invoice For:</b></p>
               <p style="margin:0;font-size:15px;font-weight:bold;color:#111">{name}</p>
-              <p style="margin:2px 0;color:#2A1F24;font-size:12px">{user_email or email}</p>
-              <p style="margin:2px 0;color:#2A1F24;font-size:12px">📞 {addr.get('phone','')}</p>
+              <p style="margin:2px 0;color:#2B2118;font-size:12px">{user_email or email}</p>
+              <p style="margin:2px 0;color:#2B2118;font-size:12px">📞 {addr.get('phone','')}</p>
             </td>
             <td style="text-align:right;font-size:13px;color:#555">
               <p style="margin:0 0 4px"><b>Order Number:</b> <span style="color:#A21D48;font-weight:bold">{order.order_number}</span></p>
@@ -2236,9 +2253,9 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
         </table>
 
         <!-- Delivery address -->
-        <div style="background:#F7EAEE;border-radius:2px;padding:14px 16px;margin-bottom:20px">
+        <div style="background:#F7F1E8;border-radius:2px;padding:14px 16px;margin-bottom:20px">
           <p style="margin:0 0 6px;font-size:11px;font-weight:bold;color:#A21D48;text-transform:uppercase;letter-spacing:1px">Shipping Address</p>
-          <p style="margin:0;font-size:13px;color:#2A1F24">
+          <p style="margin:0;font-size:13px;color:#2B2118">
             {addr.get('full_name','')}, {addr.get('address_line1','')}{(', ' + addr.get('address_line2','')) if addr.get('address_line2') else ''}<br>
             {addr.get('city','')}, {addr.get('state','')} — {addr.get('pincode','')}<br>
             📞 {addr.get('phone','')}
@@ -2260,10 +2277,10 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
 
         <!-- Totals -->
         <table width="100%" style="border-collapse:collapse;margin-bottom:20px">
-          <tr><td style="padding:5px 8px;font-size:13px;color:#2A1F24">Subtotal</td><td style="text-align:right;font-size:13px;color:#2A1F24;padding:5px 8px">₹{order.subtotal:,.0f}</td></tr>
-          <tr><td style="padding:5px 8px;font-size:13px;color:#2A1F24">Shipping</td><td style="text-align:right;font-size:13px;color:{'#16a34a' if order.shipping_fee == 0 else '#2A1F24'};padding:5px 8px">{'FREE' if order.shipping_fee == 0 else f'₹{order.shipping_fee:,.0f}'}</td></tr>
+          <tr><td style="padding:5px 8px;font-size:13px;color:#2B2118">Subtotal</td><td style="text-align:right;font-size:13px;color:#2B2118;padding:5px 8px">₹{order.subtotal:,.0f}</td></tr>
+          <tr><td style="padding:5px 8px;font-size:13px;color:#2B2118">Shipping</td><td style="text-align:right;font-size:13px;color:{'#16a34a' if order.shipping_fee == 0 else '#2B2118'};padding:5px 8px">{'FREE' if order.shipping_fee == 0 else f'₹{order.shipping_fee:,.0f}'}</td></tr>
           {f"<tr><td style='padding:5px 8px;font-size:13px;color:#16a34a'>Discount</td><td style='text-align:right;font-size:13px;color:#16a34a;padding:5px 8px'>-₹{order.discount:,.0f}</td></tr>" if order.discount > 0 else ""}
-          <tr style="background:#F7EAEE">
+          <tr style="background:#F7F1E8">
             <td style="padding:12px 8px;font-size:16px;font-weight:bold;color:#A21D48">Grand Total</td>
             <td style="text-align:right;font-size:16px;font-weight:bold;color:#A21D48;padding:12px 8px">₹{order.total:,.0f}</td>
           </tr>
@@ -2275,7 +2292,7 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
           <table width="100%" style="border-collapse:collapse;font-size:13px">
             <tr><td style="color:#555;padding:3px 0">Mode</td><td style="text-align:right;font-weight:bold;color:#111">{pay_label}</td></tr>
             <tr><td style="color:#555;padding:3px 0">Status</td><td style="text-align:right;font-weight:bold;color:{'#16a34a' if order.payment_status == 'paid' else '#d97706' if order.payment_status == 'pending' else '#A21D48'}">{order.payment_status.upper()}</td></tr>
-            {f"<tr><td style='color:#555;padding:3px 0'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2A1F24;font-size:12px'>{txn}</td></tr>" if txn and txn.startswith('pay_') else ""}
+            {f"<tr><td style='color:#555;padding:3px 0'>Transaction ID</td><td style='text-align:right;font-family:monospace;color:#2B2118;font-size:12px'>{txn}</td></tr>" if txn and txn.startswith('pay_') else ""}
           </table>
         </div>
 
@@ -2288,9 +2305,9 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
 
       <!-- Footer -->
       <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#FFFBFC;border-top:1px solid #DCC3CB;">
+             style="border-collapse:collapse;background:#FFFCF6;border-top:1px solid #C6B7A1;">
         <tr><td align="center" style="padding:16px 24px;">
-          <p style="margin:0 0 5px;color:#6B5A60;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
+          <p style="margin:0 0 5px;color:#584A39;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;text-decoration:none;">Contact Support</a>
             &nbsp;&middot;&nbsp;
@@ -2298,7 +2315,7 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}/orders" style="color:#A21D48;text-decoration:none;">My Orders</a>
           </p>
-          <p style="margin:0;color:#6B5A60;font-size:11px;font-family:Arial,sans-serif;">
+          <p style="margin:0;color:#584A39;font-size:11px;font-family:Arial,sans-serif;">
             &copy; {YEAR} {STORE_NAME}. All rights reserved.
           </p>
         </td></tr>
@@ -2342,15 +2359,15 @@ def send_support_rating_request_email(email: str, customer_name: str, cs_name: s
         <p style="color:#aaa;font-size:12px;text-align:center">This link is unique to you and can only be used once.</p>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="border-collapse:collapse;background:#FFFBFC;border-top:1px solid #DCC3CB;">
+             style="border-collapse:collapse;background:#FFFCF6;border-top:1px solid #C6B7A1;">
         <tr><td align="center" style="padding:16px 24px;">
-          <p style="margin:0 0 5px;color:#6B5A60;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
+          <p style="margin:0 0 5px;color:#584A39;font-size:12px;font-family:Arial,sans-serif;">{STORE_ADDR}</p>
           <p style="margin:0 0 5px;font-size:12px;font-family:Arial,sans-serif;">
             <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;text-decoration:none;">Contact Support</a>
             &nbsp;&middot;&nbsp;
             <a href="{STORE_URL}" style="color:#A21D48;text-decoration:none;">Visit Store</a>
           </p>
-          <p style="margin:0;color:#6B5A60;font-size:11px;font-family:Arial,sans-serif;">
+          <p style="margin:0;color:#584A39;font-size:11px;font-family:Arial,sans-serif;">
             &copy; {YEAR} {STORE_NAME}. All rights reserved.
           </p>
         </td></tr>
@@ -2382,7 +2399,7 @@ def send_admin_access_email(email: str, name: str):
         <span style="color:#15803d;font-weight:bold;font-size:14px;">✅ Admin Access Granted</span>
       </div>
 
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Hi {first}, you now have Admin Access! 🎉</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Hi {first}, you now have Admin Access! 🎉</h2>
 
       <p style="color:#444;line-height:1.7;font-size:15px;">
         You have been granted <strong>Admin privileges</strong> on <strong>{STORE_NAME}</strong>.
@@ -2390,56 +2407,56 @@ def send_admin_access_email(email: str, name: str):
       </p>
 
       <!-- What you can do -->
-      <div style="background:#F7EAEE;border-radius:2px;padding:20px 24px;margin:20px 0;">
+      <div style="background:#F7F1E8;border-radius:2px;padding:20px 24px;margin:20px 0;">
         <p style="margin:0 0 14px;font-size:13px;font-weight:bold;color:#A21D48;text-transform:uppercase;letter-spacing:1px;">What you can do</p>
         <table style="width:100%;border-collapse:collapse;">
           <tr>
             <td style="padding:8px 0;vertical-align:top;width:36px;font-size:20px;">📦</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Manage Products</span><br>
-              <span style="color:#2A1F24;font-size:13px;">Add, edit, delete products and upload images</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Manage Products</span><br>
+              <span style="color:#2B2118;font-size:13px;">Add, edit, delete products and upload images</span>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;font-size:20px;">🛒</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Manage Orders</span><br>
-              <span style="color:#2A1F24;font-size:13px;">View, update order status, track shipments and initiate refunds</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Manage Orders</span><br>
+              <span style="color:#2B2118;font-size:13px;">View, update order status, track shipments and initiate refunds</span>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;font-size:20px;">👥</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Manage Customers</span><br>
-              <span style="color:#2A1F24;font-size:13px;">View customer accounts and grant admin access</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Manage Customers</span><br>
+              <span style="color:#2B2118;font-size:13px;">View customer accounts and grant admin access</span>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;font-size:20px;">💳</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Payments & Refunds</span><br>
-              <span style="color:#2A1F24;font-size:13px;">View payment status and initiate Razorpay refunds</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Payments & Refunds</span><br>
+              <span style="color:#2B2118;font-size:13px;">View payment status and initiate Razorpay refunds</span>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;font-size:20px;">↩️</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Returns & Exchanges</span><br>
-              <span style="color:#2A1F24;font-size:13px;">Review and process return, exchange and replacement requests</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Returns & Exchanges</span><br>
+              <span style="color:#2B2118;font-size:13px;">Review and process return, exchange and replacement requests</span>
             </td>
           </tr>
           <tr>
             <td style="padding:8px 0;vertical-align:top;font-size:20px;">⭐</td>
             <td style="padding:8px 0;">
-              <span style="font-weight:bold;color:#2A1F24;font-size:14px;">Support & Ratings</span><br>
-              <span style="color:#2A1F24;font-size:13px;">Track customer support interactions and satisfaction ratings</span>
+              <span style="font-weight:bold;color:#2B2118;font-size:14px;">Support & Ratings</span><br>
+              <span style="color:#2B2118;font-size:13px;">Track customer support interactions and satisfaction ratings</span>
             </td>
           </tr>
         </table>
       </div>
 
       <!-- How to access -->
-      <div style="background:#F7EAEE;border-radius:2px;padding:16px 20px;margin-bottom:20px;">
+      <div style="background:#F7F1E8;border-radius:2px;padding:16px 20px;margin-bottom:20px;">
         <p style="margin:0 0 6px;font-size:13px;font-weight:bold;color:#A21D48;">How to access the Admin Dashboard</p>
         <p style="margin:0;font-size:13px;color:#555;line-height:1.6;">
           Log in to <a href="{STORE_URL}" style="color:#A21D48;">{STORE_URL}</a> with your account.
@@ -2449,8 +2466,8 @@ def send_admin_access_email(email: str, name: str):
 
       {_btn("Go to Admin Dashboard →", admin_url)}
 
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:12px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:12px;line-height:1.6;margin:0;">
         This access was granted by the store owner. If you believe this was a mistake, please contact
         <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
       </p>
@@ -2483,18 +2500,18 @@ def send_admin_revoked_email(email: str, name: str):
     first = name.split()[0]
     html = _wrap(f"""
       <!-- Alert badge -->
-      <div style="display:inline-block;background:#F7EAEE;border:1px solid #fecaca;border-radius:2px;padding:10px 20px;margin-bottom:20px;">
+      <div style="display:inline-block;background:#F7F1E8;border:1px solid #fecaca;border-radius:2px;padding:10px 20px;margin-bottom:20px;">
         <span style="color:#b91c1c;font-weight:bold;font-size:14px;">🔒 Admin Access Removed</span>
       </div>
 
-      <h2 style="color:#2A1F24;margin-top:0;font-size:22px;">Hi {first}, your Admin Access has been removed.</h2>
+      <h2 style="color:#2B2118;margin-top:0;font-size:22px;">Hi {first}, your Admin Access has been removed.</h2>
 
       <p style="color:#444;line-height:1.7;font-size:15px;">
         Your <strong>Admin privileges</strong> on <strong>{STORE_NAME}</strong> have been revoked by the store owner.
         Your account remains active as a regular customer — you can still browse and shop as usual.
       </p>
 
-      <div style="background:#F7EAEE;border-radius:2px;padding:20px 24px;margin:20px 0;">
+      <div style="background:#F7F1E8;border-radius:2px;padding:20px 24px;margin:20px 0;">
         <p style="margin:0 0 10px;font-size:13px;font-weight:bold;color:#A21D48;text-transform:uppercase;letter-spacing:1px;">What this means</p>
         <table style="width:100%;border-collapse:collapse;">
           <tr>
@@ -2512,8 +2529,8 @@ def send_admin_revoked_email(email: str, name: str):
         </table>
       </div>
 
-      <div style="background:#F7EAEE;border-radius:2px;padding:16px 20px;margin-bottom:20px;">
-        <p style="margin:0;font-size:13px;color:#2A1F24;line-height:1.6;">
+      <div style="background:#F7F1E8;border-radius:2px;padding:16px 20px;margin-bottom:20px;">
+        <p style="margin:0;font-size:13px;color:#2B2118;line-height:1.6;">
           If you believe this was done in error, please contact us at
           <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;font-weight:bold;">{SUPPORT_EMAIL}</a>.
         </p>
@@ -2521,8 +2538,8 @@ def send_admin_revoked_email(email: str, name: str):
 
       {_btn("Visit Vijey Textile →", STORE_URL)}
 
-      <hr style="border:none;border-top:1px solid #DCC3CB;margin:24px 0;">
-      <p style="color:#6B5A60;font-size:12px;line-height:1.6;margin:0;">
+      <hr style="border:none;border-top:1px solid #C6B7A1;margin:24px 0;">
+      <p style="color:#584A39;font-size:12px;line-height:1.6;margin:0;">
         This action was performed by the store owner. For queries, reach us at
         <a href="mailto:{SUPPORT_EMAIL}" style="color:#A21D48;">{SUPPORT_EMAIL}</a>.
       </p>
@@ -2546,7 +2563,7 @@ def send_admin_return_email(rr, order, user):
     img_links = ""
     if rr.images:
         img_links = (
-            "<p style='margin:8px 0;color:#6B5A60;font-size:13px;'>Customer photos: "
+            "<p style='margin:8px 0;color:#584A39;font-size:13px;'>Customer photos: "
             + " | ".join(
                 f"<a href='{url}' style='color:{color};'>Photo {i+1}</a>"
                 for i, url in enumerate(rr.images)
@@ -2554,55 +2571,55 @@ def send_admin_return_email(rr, order, user):
             + "</p>"
         )
     desc_block = (
-        f"<div style='background:#FFFBFC;border-radius:2px;padding:14px;margin:16px 0;'>"
-        f"<p style='margin:0;color:#6B5A60;font-size:12px;text-transform:uppercase;letter-spacing:1px;'>Description</p>"
+        f"<div style='background:#FFFCF6;border-radius:2px;padding:14px;margin:16px 0;'>"
+        f"<p style='margin:0;color:#584A39;font-size:12px;text-transform:uppercase;letter-spacing:1px;'>Description</p>"
         f"<p style='margin:8px 0 0;color:#444;font-size:14px;line-height:1.6;'>{rr.description}</p></div>"
         if rr.description else ""
     )
     html = _wrap(f"""
       <h2 style="color:{color};margin-top:0;font-size:22px;">New {label}</h2>
       <table style="width:100%;font-size:14px;border-collapse:collapse;margin:16px 0;">
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;width:140px;">Request #</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;width:140px;">Request #</td>
           <td style="color:#111;font-weight:bold;">RET-{rr.id:04d}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Type</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Type</td>
           <td style="color:{color};font-weight:bold;">{label}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Order #</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Order #</td>
           <td style="color:#444;">{order.order_number}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Customer</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Customer</td>
           <td style="color:#444;">{user.full_name}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Phone</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Phone</td>
           <td style="color:#444;">{user.phone}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Email</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Email</td>
           <td style="color:#444;">{user.email}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Reason</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Reason</td>
           <td style="color:#444;">{_REASON_LABEL.get(rr.reason, rr.reason)}</td>
         </tr>
-        <tr style="border-bottom:1px solid #DCC3CB;">
-          <td style="color:#6B5A60;padding:8px 0;">Order Amount</td>
+        <tr style="border-bottom:1px solid #C6B7A1;">
+          <td style="color:#584A39;padding:8px 0;">Order Amount</td>
           <td style="color:#444;font-weight:bold;">Rs.{order.total:.0f}</td>
         </tr>
         <tr>
-          <td style="color:#6B5A60;padding:8px 0;">Payment Method</td>
+          <td style="color:#584A39;padding:8px 0;">Payment Method</td>
           <td style="color:#444;">{order.payment_method.upper()}</td>
         </tr>
       </table>
       {desc_block}
       {img_links}
       {_btn("Review in Admin Dashboard", f"{STORE_URL}/admin")}
-      <p style="color:#6B5A60;font-size:12px;margin-top:20px;">
+      <p style="color:#584A39;font-size:12px;margin-top:20px;">
         Go to the Returns tab in Admin Dashboard to approve, reject or update this request.
       </p>
     """)
