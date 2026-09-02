@@ -43,34 +43,6 @@
   min-height: 100%;
 }
 
-/*
- * The opening's garment lane.
- *
- * The rail holds two identical halves and travels exactly -50%, so the wrap
- * from the end back to the start lands on the same picture in the same place
- * and there is no seam to see. Duration is set per-instance, from the number
- * of cards, so the speed stays the same however many garments are in it.
- *
- * transform only, on one element: this runs on the compositor and cannot
- * stutter the page's own scrolling.
- */
-@keyframes garmentRail {
-  from { transform: translate3d(0, 0, 0); }
-  to   { transform: translate3d(-50%, 0, 0); }
-}
-
-.garment-rail {
-  animation-name: garmentRail;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  will-change: transform;
-}
-
-/* Somebody who has asked for less movement gets a still row of garments. */
-@media (prefers-reduced-motion: reduce) {
-  .garment-rail { animation: none; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .page-transition { animation: none; }
 }
