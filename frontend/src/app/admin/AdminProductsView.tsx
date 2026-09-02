@@ -311,10 +311,26 @@ export default function AdminProductsView() {
         */}
       {editing && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50"
           role="presentation"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setEditing(null); }}
         >
+          {/*
+            * THE SCROLL LIVES ON THE OVERLAY, NOT INSIDE THE PANEL.
+            *
+            * Capping the panel at 90vh and scrolling the fields within it is
+            * correct on a normal screen and poor on a short one: at browser
+            * zoom on a laptop the field area is left a couple of rows tall,
+            * and because the catalogue behind is frozen there is no scrollbar
+            * to fall back on. Scrolling the overlay instead means the panel
+            * takes its natural height and everything stays reachable.
+            *
+            * `min-h-full` on this wrapper is what makes centring safe:
+            * `items-center` applied directly to a scroll container clips
+            * whatever is taller than it, and clips it at the TOP, where it
+            * cannot be scrolled back to.
+            */}
+          <div className="flex min-h-full items-center justify-center p-4">
           <form
             ref={formRef}
             onSubmit={save}
@@ -322,9 +338,9 @@ export default function AdminProductsView() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="editor-title"
-            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden border border-ink-edge bg-ink-deep"
+            className="w-full max-w-4xl border border-ink-edge bg-ink-deep"
           >
-            <div className="flex shrink-0 items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
+            <div className="flex items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
               <h3 id="editor-title" className="font-display text-band font-light text-paper">
                 {editing === 'new' ? 'Add a piece' : 'Edit this piece'}
               </h3>
@@ -338,7 +354,7 @@ export default function AdminProductsView() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-7">
+            <div className="px-8 py-7">
 
           {formError && <p role="alert" className="mb-5 text-sm text-brass-bright">{formError}</p>}
 
@@ -497,7 +513,7 @@ export default function AdminProductsView() {
 
             </div>
 
-            <div className="flex shrink-0 flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
+            <div className="flex flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
               <ActionButton type="submit" arrow={false} disabled={saving || uploading}>
                 {saving ? 'Saving…' : editing === 'new' ? 'Add to the catalogue' : 'Save changes'}
               </ActionButton>
@@ -506,6 +522,7 @@ export default function AdminProductsView() {
               </ActionButton>
             </div>
           </form>
+          </div>
         </div>
       )}
 
