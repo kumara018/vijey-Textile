@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { scrollPageTo } from '@/lib/smoothScroll';
+import { scrollPageTo, markHistoryNavigation, clearHistoryNavigation } from '@/lib/smoothScroll';
 
 /**
  * CLICKING THE SHOP'S NAME TAKES YOU TO THE TOP OF THE SHOP.
@@ -49,6 +49,10 @@ export default function ScrollManager() {
       const href = anchor.getAttribute('href');
       if (!href) return;
 
+      // A deliberate click supersedes any Back that came just before it, so
+      // the route reset applies normally to wherever this link leads.
+      clearHistoryNavigation();
+
       let url: URL;
       try {
         url = new URL(anchor.href, window.location.href);
@@ -85,8 +89,16 @@ export default function ScrollManager() {
      * Capture runs before any of that, which is also what makes it robust
      * against a handler in between that stops propagation.
      */
+    // Back and Forward restore where the visitor was; the route reset is told
+    // to stand down for that one navigation.
+    const onPopState = () => markHistoryNavigation();
+
     document.addEventListener('click', onClick, true);
-    return () => document.removeEventListener('click', onClick, true);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      document.removeEventListener('click', onClick, true);
+      window.removeEventListener('popstate', onPopState);
+    };
   }, [pathname]);
 
   return null;

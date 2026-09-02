@@ -101,6 +101,36 @@ export function scrollPageTo(target: ScrollTarget, options: ScrollOptions = {}):
 }
 
 /**
+ * GOING BACK IS NOT THE SAME AS GOING SOMEWHERE.
+ *
+ * The route-change reset sends every navigation to the top, which is right
+ * for a new page and wrong for the Back button: somebody who was twenty
+ * garments down the shelf, opened one, and pressed Back expects the shelf
+ * exactly where they left it. The browser and Next both restore that
+ * position; the reset would then throw it away.
+ *
+ * This mattered less when the reset was unreliable. Now that it works, it
+ * would reliably lose people's place — so a history navigation is marked as
+ * it happens and the reset stands down for that one route change.
+ *
+ * A timestamp rather than a boolean, cleared by the next real link click, so
+ * a mark can never be left set and silently suppress a later navigation.
+ */
+let lastHistoryNavAt = 0;
+
+export function markHistoryNavigation(): void {
+  lastHistoryNavAt = Date.now();
+}
+
+export function clearHistoryNavigation(): void {
+  lastHistoryNavAt = 0;
+}
+
+export function isHistoryNavigation(withinMs = 1000): boolean {
+  return lastHistoryNavAt > 0 && Date.now() - lastHistoryNavAt < withinMs;
+}
+
+/**
  * Freeze the page behind a dialog.
  *
  * Counted rather than boolean: closing one dialog opened over another must not
