@@ -145,9 +145,30 @@ body {
 .star-filled { color: #eab308; }
 .star-empty  { color: #d1d5db; }
 
-::-webkit-scrollbar { width: 6px; }
+/*
+ * A SCROLLBAR YOU CAN ACTUALLY SEE.
+ *
+ * The thumb was #A88F74 on a #DFD2C0 track — tan on tan, and MEASURED at
+ * 2.06:1, which is below the 3:1 a graphical control needs and close enough
+ * to invisible that the account menu looked like it had no scrollbar at all.
+ * The sister shop's came out at 2.89:1 on the same 6px bar, which is why one
+ * shop appeared to scroll and the other did not: both menus are the same
+ * height and both were scrolling, only one of them showed it.
+ *
+ * #7D6A4F is 3.49:1 on the track and 5.07:1 on the lifted ground a menu sits
+ * on, so it reads wherever a scrollable panel appears. 10px rather than 6
+ * because this is a grip as well as an indicator — 6px is hard to catch with
+ * a pointer, and catching it was how the shop was scrolling dialogs before
+ * the wheel was fixed.
+ *
+ * `scrollbar-width`/`scrollbar-color` carry the same treatment to Firefox,
+ * which ignores ::-webkit-scrollbar entirely and was showing its default
+ * grey bar. Set on html so it inherits to every nested scroller.
+ */
+html { scrollbar-width: thin; scrollbar-color: #7D6A4F #DFD2C0; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #DFD2C0; }
-::-webkit-scrollbar-thumb { background: #A88F74; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #7D6A4F; border-radius: 5px; }
 ::-webkit-scrollbar-thumb:hover { background: #A21D48; }
 
 /* ── Capture mode ─────────────────────────────────────────────────────
