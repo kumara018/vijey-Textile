@@ -8,7 +8,7 @@ import { CATEGORY_ORDER } from '@/lib/categories';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
-import { scrollPageTo } from '@/lib/smoothScroll';
+import { lockPageScroll, unlockPageScroll } from '@/lib/smoothScroll';
 
 /**
  * Admin — products.
@@ -101,22 +101,29 @@ export default function AdminProductsView() {
   }, [announcement]);
 
   /**
-   * Opening the editor has to bring you TO the editor.
+   * While the editor is open the catalogue behind it holds still.
    *
-   * The catalogue runs long and the form renders above it, so clicking the
-   * pencil on a piece near the bottom changed something thousands of pixels
-   * off screen and nothing else — the click looked ignored. focus() does
-   * scroll its element into view by itself, but Lenis owns the scroll
-   * position and writes its own offset back on the next frame, so the
-   * browser's correction was undone about as fast as it was applied.
+   * This replaces a scroll-into-view: the form used to render inline, so
+   * opening it had to carry the page to wherever it was. A dialog arrives
+   * over the row instead, so the page should not move at all — and it must
+   * not scroll underneath either, which is what lockPageScroll prevents (it
+   * stops the smooth-scroll layer as well as setting overflow, because that
+   * layer keeps writing positions on its own otherwise).
    *
-   * So: move the page through Lenis, and then take focus WITHOUT letting the
-   * browser make a second, conflicting attempt at the same thing.
+   * Escape closes it, which a dialog owes the keyboard. Focus goes to the
+   * first field with preventScroll, so the browser does not make its own
+   * conflicting attempt to bring the element into view.
    */
   useEffect(() => {
     if (!editing) return;
-    if (formRef.current) scrollPageTo(formRef.current, { offset: -24 });
+    lockPageScroll();
     nameRef.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setEditing(null); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      unlockPageScroll();
+    };
   }, [editing]);
 
   /** Out of stock first — the only state here that costs money hourly. */
@@ -282,16 +289,60 @@ export default function AdminProductsView() {
       <Announce message={announcement} />
       <h2 ref={heading} tabIndex={-1} className="sr-only focus:outline-none">Catalogue</h2>
 
-      {/* ── The form ─────────────────────────────────────────────────── */}
+      {/*
+        * ── The editor ────────────────────────────────────────────────
+        *
+        * A DIALOG NOW, NOT A PANEL ABOVE THE LIST.
+        *
+        * The form used to render inline at the top of the catalogue, which
+        * had one unavoidable flaw on a list this long: pressing Edit on a
+        * piece near the bottom changed something thousands of pixels away and
+        * appeared to do nothing. That was patched by scrolling the page to the
+        * form, which worked and still asked the shop to leave the row it was
+        * working on.
+        *
+        * The sister shop has always used a centred dialog for the same job and
+        * it is plainly the better answer: the editor arrives over the row you
+        * pressed, the catalogue stays where it was underneath, and closing
+        * puts you back exactly where you were. It is the same structure used
+        * there — a panel capped at 90vh with the title and the buttons pinned
+        * and only the fields scrolling — dressed in this shop's own palette
+        * rather than the sister's.
+        */}
       {editing && (
-        <form ref={formRef} onSubmit={save} noValidate className="mb-[6vh] border-b border-ink-edge pb-10">
-          <h3 className="font-display text-band font-light text-paper">
-            {editing === 'new' ? 'Add a piece' : 'Edit this piece'}
-          </h3>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setEditing(null); }}
+        >
+          <form
+            ref={formRef}
+            onSubmit={save}
+            noValidate
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editor-title"
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden border border-ink-edge bg-ink-deep"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
+              <h3 id="editor-title" className="font-display text-band font-light text-paper">
+                {editing === 'new' ? 'Add a piece' : 'Edit this piece'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditing(null)}
+                aria-label="Close the editor"
+                className="text-xs uppercase tracking-[0.18em] text-paper-faint transition-colors hover:text-brass focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                Close
+              </button>
+            </div>
 
-          {formError && <p role="alert" className="mt-5 text-sm text-brass-bright">{formError}</p>}
+            <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-7">
 
-          <div className="mt-8 grid gap-x-10 gap-y-6 lg:grid-cols-3">
+          {formError && <p role="alert" className="mb-5 text-sm text-brass-bright">{formError}</p>}
+
+          <div className="grid gap-x-10 gap-y-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <label htmlFor="p-name" className={lab}>Name</label>
               <input id="p-name" ref={nameRef} value={form.name} className={input}
@@ -444,15 +495,18 @@ export default function AdminProductsView() {
             exchanged unless it arrives damaged, and the product page says so to the customer.
           </p>
 
-          <div className="mt-9 flex flex-wrap items-center gap-x-10 gap-y-4">
-            <ActionButton type="submit" arrow={false} disabled={saving || uploading}>
-              {saving ? 'Saving…' : editing === 'new' ? 'Add to the catalogue' : 'Save changes'}
-            </ActionButton>
-            <ActionButton tone="quiet" arrow={false} onClick={() => setEditing(null)}>
-              Cancel
-            </ActionButton>
-          </div>
-        </form>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
+              <ActionButton type="submit" arrow={false} disabled={saving || uploading}>
+                {saving ? 'Saving…' : editing === 'new' ? 'Add to the catalogue' : 'Save changes'}
+              </ActionButton>
+              <ActionButton tone="quiet" arrow={false} onClick={() => setEditing(null)}>
+                Cancel
+              </ActionButton>
+            </div>
+          </form>
+        </div>
       )}
 
       {/* ── The catalogue ────────────────────────────────────────────── */}
