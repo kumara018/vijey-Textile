@@ -4,11 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { adminAPI } from '@/lib/api';
+import { mediaUrl } from '@/lib/media';
 import { CATEGORY_ORDER } from '@/lib/categories';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
-import { lockPageScroll, unlockPageScroll } from '@/lib/smoothScroll';
 
 /**
  * Admin — products.
@@ -38,6 +38,19 @@ import { lockPageScroll, unlockPageScroll } from '@/lib/smoothScroll';
  */
 
 const money = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
+
+/**
+ * The row's thumbnail, or nothing.
+ *
+ * Placeholder paths are treated as absent on purpose: a piece that has not
+ * been photographed should show the empty frame, not a picture of a missing
+ * picture. Same rule the shelf uses.
+ */
+function thumbOf(p: { images?: string[] }): string | null {
+  const first = p.images?.[0];
+  if (!first || first.includes('placeholder')) return null;
+  return mediaUrl(first);
+}
 
 const EMPTY_FORM = {
   name: '', description: '', price: '', compare_price: '', category: CATEGORY_ORDER[0],
@@ -72,6 +85,7 @@ export default function AdminProductsView() {
   const heading = useRef<HTMLHeadingElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [featuringId, setFeaturingId] = useState<number | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -101,29 +115,28 @@ export default function AdminProductsView() {
   }, [announcement]);
 
   /**
-   * While the editor is open the catalogue behind it holds still.
+   * The page keeps its own scrollbar while the editor is open.
    *
-   * This replaces a scroll-into-view: the form used to render inline, so
-   * opening it had to carry the page to wherever it was. A dialog arrives
-   * over the row instead, so the page should not move at all — and it must
-   * not scroll underneath either, which is what lockPageScroll prevents (it
-   * stops the smooth-scroll layer as well as setting overflow, because that
-   * layer keeps writing positions on its own otherwise).
+   * It used to be frozen, which is the usual convention and wrong for the way
+   * this shop works. Asked for directly: two scrollbars, one in the form and
+   * one for the page. Freezing the page removes the second, and on a short
+   * window that leaves nothing to drag when the form does not fit.
    *
-   * Escape closes it, which a dialog owes the keyboard. Focus goes to the
-   * first field with preventScroll, so the browser does not make its own
-   * conflicting attempt to bring the element into view.
+   * So the form keeps its own scroll area — the panel is capped and the
+   * fields scroll inside it — and the catalogue behind keeps its scrollbar.
+   * The dialog is `fixed`, so it stays put on screen while the catalogue
+   * moves behind it.
+   *
+   * Escape still closes it, and focus still goes to the first field with
+   * preventScroll so the browser does not make its own conflicting attempt to
+   * scroll the element into view.
    */
   useEffect(() => {
     if (!editing) return;
-    lockPageScroll();
     nameRef.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setEditing(null); };
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      unlockPageScroll();
-    };
+    return () => document.removeEventListener('keydown', onKey);
   }, [editing]);
 
   /** Out of stock first — the only state here that costs money hourly. */
@@ -145,6 +158,28 @@ export default function AdminProductsView() {
   const openNew = () => {
     setForm(EMPTY_FORM); setImages([]); setVideoUrl(''); setVideoOrientation('portrait');
     setFormError(''); setEditing('new');
+  };
+
+  /**
+   * Featured, toggled from the row.
+   *
+   * Optimistic, and it puts the row back if the server refuses — this flag
+   * decides what the homepage shows, so a row that says Featured while the
+   * shop is not would be worse than a moment's delay.
+   */
+  const toggleFeatured = async (p: any) => {
+    const next = !p.is_featured;
+    setFeaturingId(p.id);
+    setRows((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_featured: next } : x)));
+    try {
+      await adminAPI.updateProduct(p.id, { is_featured: next });
+      setAnnouncement(next ? `${p.name} is now featured.` : `${p.name} is no longer featured.`);
+    } catch {
+      setRows((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_featured: !next } : x)));
+      setAnnouncement('That change did not save. Please try again.');
+    } finally {
+      setFeaturingId(null);
+    }
   };
 
   const openEdit = (p: any) => {
@@ -311,26 +346,10 @@ export default function AdminProductsView() {
         */}
       {editing && (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           role="presentation"
           onMouseDown={(e) => { if (e.target === e.currentTarget) setEditing(null); }}
         >
-          {/*
-            * THE SCROLL LIVES ON THE OVERLAY, NOT INSIDE THE PANEL.
-            *
-            * Capping the panel at 90vh and scrolling the fields within it is
-            * correct on a normal screen and poor on a short one: at browser
-            * zoom on a laptop the field area is left a couple of rows tall,
-            * and because the catalogue behind is frozen there is no scrollbar
-            * to fall back on. Scrolling the overlay instead means the panel
-            * takes its natural height and everything stays reachable.
-            *
-            * `min-h-full` on this wrapper is what makes centring safe:
-            * `items-center` applied directly to a scroll container clips
-            * whatever is taller than it, and clips it at the TOP, where it
-            * cannot be scrolled back to.
-            */}
-          <div className="flex min-h-full items-center justify-center p-4">
           <form
             ref={formRef}
             onSubmit={save}
@@ -338,9 +357,9 @@ export default function AdminProductsView() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="editor-title"
-            className="w-full max-w-4xl border border-ink-edge bg-ink-deep"
+            className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden border border-ink-edge bg-ink-deep"
           >
-            <div className="flex items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
+            <div className="flex shrink-0 items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
               <h3 id="editor-title" className="font-display text-band font-light text-paper">
                 {editing === 'new' ? 'Add a piece' : 'Edit this piece'}
               </h3>
@@ -354,7 +373,7 @@ export default function AdminProductsView() {
               </button>
             </div>
 
-            <div className="px-8 py-7">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-7">
 
           {formError && <p role="alert" className="mb-5 text-sm text-brass-bright">{formError}</p>}
 
@@ -513,7 +532,7 @@ export default function AdminProductsView() {
 
             </div>
 
-            <div className="flex flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
+            <div className="flex shrink-0 flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
               <ActionButton type="submit" arrow={false} disabled={saving || uploading}>
                 {saving ? 'Saving…' : editing === 'new' ? 'Add to the catalogue' : 'Save changes'}
               </ActionButton>
@@ -522,7 +541,6 @@ export default function AdminProductsView() {
               </ActionButton>
             </div>
           </form>
-          </div>
         </div>
       )}
 
@@ -557,9 +575,9 @@ export default function AdminProductsView() {
             <caption className="sr-only">The catalogue, out of stock first</caption>
             <thead>
               <tr className="border-b border-ink-edge">
-                {['Piece', 'Category', 'Price', 'Stock', ''].map((h, i) => (
+                {['ID', 'Piece', 'Category', 'Price', 'Stock', 'Status', ''].map((h, i) => (
                   <th key={h || 'actions'} scope="col"
-                    className={`py-3 text-rule uppercase text-paper-faint ${i === 2 || i === 3 ? 'text-right' : 'text-left'}`}>
+                    className={`py-3 text-rule uppercase text-paper-faint ${i === 3 || i === 4 ? 'text-right' : 'text-left'} ${i === 0 ? 'pr-4' : ''}`}>
                     {h}
                   </th>
                 ))}
@@ -570,15 +588,50 @@ export default function AdminProductsView() {
                 const busy = busyId === p.id;
                 const confirming = confirmId === p.id;
                 return (
-                  <tr key={p.id} className="border-b border-ink-edge/40">
+                  <tr key={p.id} className={`border-b border-ink-edge/40 ${p.is_active === false ? 'opacity-55' : ''}`}>
+                    {/* The id, because it is what the shop and the courier
+                        both quote when something is wrong with a piece. */}
+                    <td className="py-3 pr-4 whitespace-nowrap font-mono text-xs text-paper-faint">#{p.id}</td>
+
+                    {/* THE PIECE, WITH ITS PHOTOGRAPH.
+                        A catalogue of names is hard to work in — the sister
+                        shop has always shown the thumbnail, and the shop
+                        recognises a frock far faster than it reads one. The
+                        badges say the three things that change how a piece
+                        behaves on the site, so they do not have to be opened
+                        to be checked. */}
                     <th scope="row" className="py-3 pr-4 text-left font-normal text-paper">
-                      {p.name}
-                      {p.sku && <span className="mt-0.5 block font-mono text-xs text-paper-faint">{p.sku}</span>}
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden border border-ink-edge bg-ink-raised">
+                          {thumbOf(p) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={thumbOf(p)!} alt="" loading="lazy" className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-rule uppercase text-paper-faint">—</span>
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block">{p.name}</span>
+                          {p.sku && <span className="mt-0.5 block font-mono text-xs text-paper-faint">{p.sku}</span>}
+                          <span className="mt-1 flex flex-wrap gap-1.5">
+                            {p.is_featured && <span className="bg-brass/15 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-brass">Featured</span>}
+                            {p.is_new_arrival && <span className="bg-ink-raised px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-paper-muted">New</span>}
+                            {p.is_returnable === false && <span className="bg-ink-raised px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-brass-dim">No returns</span>}
+                          </span>
+                        </span>
+                      </div>
                     </th>
                     <td className="py-3 pr-4 text-paper-muted">{p.category}</td>
                     <td className="py-3 pr-4 text-right tabular-nums text-paper-muted">{money(p.price)}</td>
-                    <td className={`py-3 pr-4 text-right tabular-nums ${p.stock === 0 ? 'text-brass-bright' : 'text-paper-muted'}`}>
+                    {/* Stock reads as a state, not just a number: nothing to
+                        sell is the one row that costs money every hour. */}
+                    <td className={`py-3 pr-4 text-right tabular-nums ${p.stock === 0 ? 'text-brass-bright' : p.stock <= 3 ? 'text-brass' : 'text-paper-muted'}`}>
                       {p.stock === 0 ? 'Out of stock' : p.stock}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span className={`text-rule uppercase ${p.is_active === false ? 'text-paper-faint' : 'text-paper-muted'}`}>
+                        {p.is_active === false ? 'Hidden' : 'Active'}
+                      </span>
                     </td>
                     <td className="py-3">
                       <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
@@ -595,6 +648,21 @@ export default function AdminProductsView() {
                           </>
                         ) : (
                           <>
+                            {/* Featured is toggled from the row because it is
+                                the one flag the shop changes daily, and
+                                opening the editor to tick a box for it was
+                                four steps for one bit. */}
+                            <button
+                              type="button"
+                              onClick={() => toggleFeatured(p)}
+                              disabled={featuringId === p.id}
+                              aria-pressed={p.is_featured}
+                              aria-label={p.is_featured ? `Remove ${p.name} from featured` : `Mark ${p.name} as featured`}
+                              title={p.is_featured ? 'Remove from featured' : 'Mark as featured'}
+                              className={`text-lg leading-none transition-colors disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright ${p.is_featured ? 'text-brass hover:text-brass-bright' : 'text-ink-edge hover:text-brass'}`}
+                            >
+                              {p.is_featured ? '★' : '☆'}
+                            </button>
                             <ActionButton tone="quiet" arrow={false} onClick={() => openEdit(p)}
                               aria-label={`Edit ${p.name}`}>
                               Edit

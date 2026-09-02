@@ -115,7 +115,25 @@ export default function AccountMenu() {
                  left sixteen pixels between the menu and the bottom edge, so
                  the scrollbar existed but had nowhere to be seen and the last
                  row read as cut off rather than scrollable. */
-              className="absolute right-0 top-12 z-50 flex max-h-[calc(100dvh-9rem)] w-64 flex-col overflow-y-auto overscroll-contain border border-ink-edge bg-night py-2"
+              /*
+                 * A DROPDOWN'S HEIGHT, NOT THE WINDOW'S.
+                 *
+                 * The cap was `calc(100dvh-9rem)`, which on a tall screen lets
+                 * this menu run 800px down the page — that is a panel, not a
+                 * menu, and it meant the scroll area existed but almost never
+                 * engaged. Measured: the menu's natural height is 435px here,
+                 * so it only scrolled on a window shorter than 579px. The
+                 * sister shop's is shorter still, and whichever of the two
+                 * happened to be carrying extra saved accounts was the only
+                 * one that ever showed a scrollbar. That is the difference
+                 * that was reported, several times, as one shop scrolling and
+                 * the other not.
+                 *
+                 * 22rem is a normal dropdown — about eight rows — so the list
+                 * scrolls in ordinary use on both shops, and the viewport
+                 * guard stays inside the min() for short windows.
+                 */
+                className="absolute right-0 top-12 z-50 flex max-h-[min(22rem,calc(100dvh-9rem))] w-64 flex-col overflow-y-auto overscroll-contain border border-ink-edge bg-night py-2"
         >
           <p className="px-5 pb-2 pt-1 text-rule uppercase text-paper-faint">
             Hello, {first}
