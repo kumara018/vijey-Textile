@@ -8,6 +8,7 @@ import { CATEGORY_ORDER } from '@/lib/categories';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
+import { scrollPageTo } from '@/lib/smoothScroll';
 
 /**
  * Admin — products.
@@ -70,6 +71,7 @@ export default function AdminProductsView() {
 
   const heading = useRef<HTMLHeadingElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -98,7 +100,24 @@ export default function AdminProductsView() {
     return () => clearTimeout(t);
   }, [announcement]);
 
-  useEffect(() => { if (editing) nameRef.current?.focus(); }, [editing]);
+  /**
+   * Opening the editor has to bring you TO the editor.
+   *
+   * The catalogue runs long and the form renders above it, so clicking the
+   * pencil on a piece near the bottom changed something thousands of pixels
+   * off screen and nothing else — the click looked ignored. focus() does
+   * scroll its element into view by itself, but Lenis owns the scroll
+   * position and writes its own offset back on the next frame, so the
+   * browser's correction was undone about as fast as it was applied.
+   *
+   * So: move the page through Lenis, and then take focus WITHOUT letting the
+   * browser make a second, conflicting attempt at the same thing.
+   */
+  useEffect(() => {
+    if (!editing) return;
+    if (formRef.current) scrollPageTo(formRef.current, { offset: -24 });
+    nameRef.current?.focus({ preventScroll: true });
+  }, [editing]);
 
   /** Out of stock first — the only state here that costs money hourly. */
   const visible = useMemo(() => {
@@ -265,7 +284,7 @@ export default function AdminProductsView() {
 
       {/* ── The form ─────────────────────────────────────────────────── */}
       {editing && (
-        <form onSubmit={save} noValidate className="mb-[6vh] border-b border-ink-edge pb-10">
+        <form ref={formRef} onSubmit={save} noValidate className="mb-[6vh] border-b border-ink-edge pb-10">
           <h3 className="font-display text-band font-light text-paper">
             {editing === 'new' ? 'Add a piece' : 'Edit this piece'}
           </h3>

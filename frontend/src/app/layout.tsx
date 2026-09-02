@@ -14,6 +14,7 @@ import QueryProvider from '@/components/QueryProvider';
 import ThreeProvider from '@/three/ThreeProvider';
 import CaptureMode from '@/components/CaptureMode';
 import ErrorReporting from '@/components/ErrorReporting';
+import ScrollManager from '@/components/system/ScrollManager';
 import SiteToaster from '@/components/system/SiteToaster';
 import { STORE } from '@/lib/config';
 
@@ -91,6 +92,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             rejected promises from handlers, failed dynamic imports, the scene
             loader and the sequence decoder. */}
         <ErrorReporting />
+        {/* Takes you to the top when you click through to the page you are
+            already on — the masthead, a footer link, a shelf filter. Renders
+            nothing; it is one listener on the document. */}
+        <ScrollManager />
         <Suspense fallback={null}><CaptureMode /></Suspense>
         <ThreeProvider />
         {/* Outermost of the data providers: AuthContext, CartContext and

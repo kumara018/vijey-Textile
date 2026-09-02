@@ -295,13 +295,29 @@ export default function ProductDetail({ id }: { id: number }) {
             Photographs of {product.name}
           </h2>
 
-          <figure className="relative aspect-[4/5] w-full overflow-hidden bg-ink-raised">
+          {/*
+            * THE WHOLE PIECE, NOT AS MUCH OF IT AS FITS.
+            *
+            * This was a 4/5 frame filled with object-cover, which trims a
+            * taller photograph top and bottom — on a clothes shop, the child's
+            * face and the hem of the dress being sold. The shelf card has
+            * always been 3/4, which is why the same piece looked complete on
+            * the shelf and cut short on its own page.
+            *
+            * Measured rather than assumed: the catalogue's photographs are NOT
+            * one shape — 675x900, 646x900, 478x900 and 693x693 are all in
+            * there. No single frame can hold that spread with `cover` without
+            * cropping something, so the frame takes the commonest ratio (3/4,
+            * the card's) and `contain` guarantees every piece arrives whole
+            * whatever shape it was shot in.
+            */}
+          <figure className="relative aspect-[3/4] w-full overflow-hidden bg-ink-raised">
             {images[frame] ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={images[frame]}
                 alt={`${product.name} — view ${frame + 1} of ${images.length}`}
-                className="h-full w-full object-cover"
+                className="h-full w-full object-contain"
                 fetchPriority={frame === 0 ? 'high' : 'auto'}
               />
             ) : (
@@ -345,7 +361,7 @@ export default function ProductDetail({ id }: { id: number }) {
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  <img src={src} alt="" className="h-full w-full object-contain" loading="lazy" />
                 </button>
               ))}
             </div>
