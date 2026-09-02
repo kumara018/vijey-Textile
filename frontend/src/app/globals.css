@@ -7,15 +7,70 @@
   to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
+/*
+ * OPACITY ONLY, AND THE MISSING 10px RISE IS THE POINT.
+ *
+ * This used to fade in AND lift: `transform: translateY(10px)` to
+ * `translateY(0)`. It cost every dialog on the site its position.
+ *
+ * A transformed element becomes the containing block for any `position:
+ * fixed` descendant. `.page-transition` wraps the whole of every page, so
+ * while it held a transform, `fixed inset-0` stopped meaning "the screen" and
+ * started meaning "this page".
+ *
+ * MEASURED on the sister shop, which carries the identical rule: scrolled to
+ * 1500px, a `fixed inset-0` probe appended inside `.page-transition` came back
+ * 3607px tall — the document's height — at top: -1285. Its centre was the
+ * centre of the DOCUMENT, not the screen. Reported there as a dialog that
+ * opened "in top", and then, once it was centred, "in down".
+ *
+ * `animation-fill-mode: both` made it permanent rather than momentary: the
+ * transform was retained after the animation finished, so the containing
+ * block never went away.
+ *
+ * The alternative was to portal every dialog out to <body> — the textbook
+ * fix, and one that means editing each dialog and remembering it for the
+ * next. Dropping the lift is one line and fixes every dialog on the site at
+ * once, including ones not written yet.
+ */
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .page-transition {
   animation: pageFadeIn 0.25s ease-out both;
   min-height: 100%;
 }
+
+/*
+ * The opening's garment lane.
+ *
+ * The rail holds two identical halves and travels exactly -50%, so the wrap
+ * from the end back to the start lands on the same picture in the same place
+ * and there is no seam to see. Duration is set per-instance, from the number
+ * of cards, so the speed stays the same however many garments are in it.
+ *
+ * transform only, on one element: this runs on the compositor and cannot
+ * stutter the page's own scrolling.
+ */
+@keyframes garmentRail {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.garment-rail {
+  animation-name: garmentRail;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+/* Somebody who has asked for less movement gets a still row of garments. */
+@media (prefers-reduced-motion: reduce) {
+  .garment-rail { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-transition { animation: none; }
 }
