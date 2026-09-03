@@ -14,7 +14,7 @@ export const STORE = {
   phone1:      '+91 94439 47853',
   phone2:      '+91 75981 86790',
   /* THE ORDER MATTERS: `email` is what the footer and the invoice print, and
-     the pages that list both show `email` then `email2`.
+     `email` is what the footer, the invoice and the policy pages print.
      It was the domain address, while the server's SUPPORT_EMAIL — the reply-to
      on every message the shop sends — was already the Gmail. So a customer read
      one address on the page, wrote to it, and got an answer from another; and
@@ -24,7 +24,13 @@ export const STORE = {
      job: it is SMTP_EMAIL, the sending identity Brevo's domain authentication
      signs. It must keep working — it just should not be the one advertised. */
   email:       'vijeytextile@gmail.com',
-  email2:      'admin@vijeytextile.com',
+  /* admin@vijeytextile.com IS GONE FROM THE SITE. It was a paid Hostinger
+     mailbox, the plan was not renewed, and mail to it now bounces — so it is
+     removed from the footer, the support page and the policy pages rather than
+     left advertised. Sending is unaffected: Brevo sends over its HTTP API,
+     authorised by DNS (SPF include, brevo1/brevo2 DKIM, brevo-code TXT), and
+     never used the mailbox. SMTP_EMAIL stays on the domain so DKIM stays
+     aligned; replies already go to the Gmail below. */
   supportEmail:'vijeytextile@gmail.com',
   whatsapp:    '919443947853',   // primary WhatsApp — country code + number, no + or spaces
   whatsapp2:   '917598186790',   // secondary WhatsApp
@@ -59,6 +65,5 @@ export const SHORT_ADDRESS = `${STORE.shopNo}, ${STORE.area}`;
 export const WHATSAPP_URL  = `https://wa.me/${STORE.whatsapp}?text=${encodeURIComponent('Hi! I\'m interested in your products at Vijey Textile.')}`;
 export const WHATSAPP_URL2 = `https://wa.me/${STORE.whatsapp2}?text=${encodeURIComponent('Hi! I\'m interested in your products at Vijey Textile.')}`;
 export const MAIL_URL      = `mailto:${STORE.email}`;
-export const MAIL_URL2     = `mailto:${STORE.email2}`;
 export const CALL_URL      = `tel:${STORE.phone1}`;
 export const CALL_URL2     = `tel:${STORE.phone2}`;

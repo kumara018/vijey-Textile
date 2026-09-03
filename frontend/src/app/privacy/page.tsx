@@ -128,7 +128,7 @@ const SECTIONS: PolicySection[] = [
         body: (
           <>
             Write to <a href={`mailto:${STORE.supportEmail}`}>{STORE.supportEmail}</a> or{' '}
-            <a href={`mailto:${STORE.email2}`}>{STORE.email2}</a>. You can also delete your account
+            <a href={`mailto:${STORE.email}`}>{STORE.email}</a>. You can also delete your account
             yourself from <a href="/account/delete">your account settings</a>.
           </>
         ),
@@ -152,7 +152,7 @@ const SECTIONS: PolicySection[] = [
             <br />
             <a href={`mailto:${STORE.supportEmail}`}>{STORE.supportEmail}</a>
             <br />
-            <a href={`mailto:${STORE.email2}`}>{STORE.email2}</a>
+            <a href={`mailto:${STORE.email}`}>{STORE.email}</a>
             <br />
             <a href={`tel:${STORE.phone1}`}>{STORE.phone1}</a>
           </>

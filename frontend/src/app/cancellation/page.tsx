@@ -185,7 +185,7 @@ const SECTIONS: PolicySection[] = [
         body: (
           <>
             <a href={`mailto:${STORE.supportEmail}`}>{STORE.supportEmail}</a> ·{' '}
-            <a href={`mailto:${STORE.email2}`}>{STORE.email2}</a>
+            <a href={`mailto:${STORE.email}`}>{STORE.email}</a>
           </>
         ),
       },

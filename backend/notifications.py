@@ -24,7 +24,12 @@ STORE_NAME    = "Vijey Textile"
 # Kept beside the name so the mail masthead cannot drift from the site.
 STORE_TAGLINE = "Grand treat for girls"
 STORE_URL     = os.getenv("FRONTEND_URL", "https://vijeytextile.com")
-SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "admin@vijeytextile.com")
+# The FALLBACK is the Gmail on purpose. This used to default to the shop's
+# admin@ mailbox, which was a paid Hostinger plan that has not been renewed —
+# so if SUPPORT_EMAIL were ever unset, every message the shop sends would
+# carry a reply-to that bounces. Sending itself is unaffected: Brevo is
+# authorised by DNS, not by that mailbox.
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL", "vijeytextile@gmail.com")
 STORE_ADDR    = "Shop Ground Floor No 131, Texvalley Gangapuram"
 YEAR          = datetime.now().year
 

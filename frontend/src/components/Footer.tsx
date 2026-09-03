@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {
-  STORE, WHATSAPP_URL, WHATSAPP_URL2, CALL_URL, CALL_URL2, MAIL_URL, MAIL_URL2,
+  STORE, WHATSAPP_URL, WHATSAPP_URL2, CALL_URL, CALL_URL2, MAIL_URL,
 } from '@/lib/config';
 
 /**
@@ -422,7 +422,6 @@ export default function Footer() {
                 <Envelope />
                 <span className="flex min-w-0 flex-col gap-1.5 break-words">
                   <FooterLink href={MAIL_URL}>{STORE.email}</FooterLink>
-                  <FooterLink href={MAIL_URL2}>{STORE.email2}</FooterLink>
                 </span>
               </p>
             </address>

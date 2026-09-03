@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { productListQuery } from '@/lib/query';
 import { useHeroStore } from '@/store/useHeroStore';
-import { STORE, MAIL_URL, MAIL_URL2 } from '@/lib/config';
+import { STORE, MAIL_URL } from '@/lib/config';
 import { HERO_FIXTURE } from '@/lib/heroFixture';
 import type { Product } from '@/types';
 import GarmentSlide from '@/components/home/GarmentSlide';

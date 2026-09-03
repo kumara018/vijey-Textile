@@ -3,7 +3,7 @@ import PageShell from '@/components/system/PageShell';
 import PageHeader from '@/components/system/PageHeader';
 import Disclosure from '@/components/system/Disclosure';
 import { ActionLink } from '@/components/system/Action';
-import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL, MAIL_URL2 } from '@/lib/config';
+import { STORE, WHATSAPP_URL, WHATSAPP_URL2, MAIL_URL } from '@/lib/config';
 
 /**
  * Support.
@@ -319,9 +319,6 @@ export default function SupportPage() {
             <dd className="mt-3 space-y-1">
               <a href={MAIL_URL} className="block break-words text-paper-muted underline underline-offset-4 transition-colors duration-500 hover:text-paper motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
                 {STORE.email}
-              </a>
-              <a href={MAIL_URL2} className="block break-words text-paper-muted underline underline-offset-4 transition-colors duration-500 hover:text-paper motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright">
-                {STORE.email2}
               </a>
             </dd>
           </div>
