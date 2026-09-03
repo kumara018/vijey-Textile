@@ -204,7 +204,7 @@ export default function SupportPage() {
 
               {/* Wide content scrolls inside its own container so the page body
                   never scrolls sideways on a narrow phone. */}
-              <div className="mt-6 overflow-x-auto">
+              <div className="mt-6 overflow-x-auto overflow-y-hidden">
                 <table className="w-full min-w-[20rem] border-collapse text-sm">
                   <caption className="sr-only">
                     {group.label} sizes, {group.range}, with chest, waist and hip measurements

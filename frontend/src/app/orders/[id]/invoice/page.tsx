@@ -128,7 +128,7 @@ function InvoiceInner({ id }: { id: number }) {
           </section>
         </div>
 
-        <div className="mt-10 overflow-x-auto">
+        <div className="mt-10 overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[28rem] border-collapse text-sm">
             <caption className="sr-only">Items in order {order.order_number}</caption>
             <thead>

@@ -220,7 +220,7 @@ export default function AdminOrdersView() {
       )}
 
       {!loading && !failed && rows.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[56rem] border-collapse text-sm">
             <caption className="sr-only">
               Orders, those needing attention first

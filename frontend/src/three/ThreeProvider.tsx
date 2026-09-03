@@ -219,9 +219,41 @@ export default function ThreeProvider() {
   // overwrites the position every frame for the whole animation. See the note
   // in lib/smoothScroll.ts — it was measured, not assumed.
   useEffect(() => {
-    // Back and Forward restore the visitor's place; only a new destination
-    // starts at the top.
-    if (!isHistoryNavigation()) scrollPageTo(0);
+    if (isHistoryNavigation()) {
+      // Back and Forward restore the visitor's place.
+      useSceneStore.getState().setScroll(0);
+      return;
+    }
+
+    /*
+     * A LINK THAT CARRIES A #HASH WANTS THAT SECTION, NOT THE TOP.
+     *
+     * This unconditionally sent every new page to 0, which is right for a
+     * plain link and wrong for one like `/support#returns` — the footer's
+     * "Cancel, return & exchange FAQ" landed on the SUPPORT PAGE correctly
+     * and then this effect fired on the pathname change and reset it to 0,
+     * overwriting whatever the browser was about to do with the hash.
+     * Reported as the link "redirecting to Size Guide" — Size Guide is
+     * simply whatever sits at the top of that page. Measured before writing
+     * the fix: location.hash was '#returns', but scrollY came back 0.
+     *
+     * document.querySelector(hash) rather than getElementById: it is the same
+     * DOM lookup the browser's own anchor navigation uses, so anything that
+     * would work as a manual link target works here too.
+     *
+     * scroll-margin-top is read off the element and passed through as an
+     * offset — the sister shop's policy sections carry `scroll-mt-32` to
+     * clear a fixed header, and computing this generically means neither
+     * shop's number has to be hardcoded here or kept in sync by hand.
+     */
+    const hash = window.location.hash;
+    const target = hash ? document.querySelector(hash) : null;
+    if (target) {
+      const marginTop = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+      scrollPageTo(hash, { offset: -marginTop });
+    } else {
+      scrollPageTo(0);
+    }
     useSceneStore.getState().setScroll(0);
   }, [pathname]);
 

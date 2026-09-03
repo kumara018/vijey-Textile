@@ -74,7 +74,7 @@ function Table({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-hidden">
       <table className="w-full min-w-[44rem] border-collapse text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>

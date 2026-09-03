@@ -191,7 +191,7 @@ export default function AdminDashboardView() {
             </div>
 
             {dash.recent_orders?.length ? (
-              <div className="mt-6 overflow-x-auto">
+              <div className="mt-6 overflow-x-auto overflow-y-hidden">
                 <table className="w-full min-w-[36rem] border-collapse text-sm">
                   <caption className="sr-only">The most recent orders</caption>
                   <thead>

@@ -381,7 +381,17 @@ export default function Footer() {
 
           {/* ── Reach us ─────────────────────────────────────────────── */}
           <div className="min-w-0 min-[900px]:col-span-4">
-            <h2 className="text-rule uppercase text-brass-bright">Reach us</h2>
+            {/* The rows beneath already repeat every one of these facts — this
+                heading is the one thing here that can point at the page where
+                a person, rather than a link, actually answers. */}
+            <h2 className="text-rule uppercase text-brass-bright">
+              <Link
+                href="/support#contact"
+                className="transition-colors duration-500 hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                Reach us
+              </Link>
+            </h2>
             {/**
               * EACH ROW GETS ITS SYMBOL.
               *

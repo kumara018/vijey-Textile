@@ -570,7 +570,7 @@ export default function AdminProductsView() {
       )}
 
       {!loading && !failed && visible.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-hidden">
           <table className="w-full min-w-[52rem] border-collapse text-sm">
             <caption className="sr-only">The catalogue, out of stock first</caption>
             <thead>
