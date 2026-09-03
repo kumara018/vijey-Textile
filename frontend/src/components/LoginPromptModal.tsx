@@ -40,7 +40,7 @@ export default function LoginPromptModal() {
         {/* Close button */}
         <button
           onClick={close}
-          className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+          className="absolute top-4 right-4 p-1.5 text-paper-faint hover:text-paper hover:bg-ink-raised rounded-full transition-colors"
         >
           <X size={18} />
         </button>
@@ -56,14 +56,14 @@ export default function LoginPromptModal() {
         <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
           Sign in to continue
         </h2>
-        <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+        <p className="text-sm text-paper-muted text-center mb-6 leading-relaxed">
           {message || 'Please sign in or create a free account to add items to your cart and place orders.'}
         </p>
 
         {/* Trust badges */}
         <div className="flex justify-center gap-4 mb-6">
           {['Fast Delivery', 'Easy Exchange', 'Secure Payments'].map(b => (
-            <div key={b} className="flex items-center gap-1 text-[10px] text-gray-500">
+            <div key={b} className="flex items-center gap-1 text-[10px] text-paper-muted">
               <ShieldCheck size={11} className="text-green-500 flex-shrink-0" />
               {b}
             </div>
@@ -91,7 +91,7 @@ export default function LoginPromptModal() {
         {/* Continue browsing */}
         <button
           onClick={close}
-          className="w-full mt-4 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          className="w-full mt-4 text-xs text-paper-faint hover:text-paper transition-colors"
         >
           Continue Browsing
         </button>

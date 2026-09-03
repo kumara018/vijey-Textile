@@ -50,7 +50,7 @@ export default function OccasionBand({
     <article className="border-t border-ink-edge first:border-t-0">
       <div className="mx-auto w-full max-w-[112rem] px-6 sm:px-10">
         <div className="flex flex-wrap items-baseline gap-x-8 gap-y-3 py-6">
-          <span className="font-display text-[0.82rem] tabular-nums text-brass-bright/70">
+          <span className="font-display text-[0.82rem] tabular-nums text-brass">
             {index}
           </span>
 

@@ -421,12 +421,12 @@ export default function ProductCard({ product }: Props) {
                   />
                 ))}
               </div>
-              <span className="text-xs text-gray-500">({product.rating_count})</span>
+              <span className="text-xs text-paper-muted">({product.rating_count})</span>
             </div>
           )}
 
           {product.fabric && (
-            <p className="text-xs text-gray-500 mb-2">{product.fabric}</p>
+            <p className="text-xs text-paper-muted mb-2">{product.fabric}</p>
           )}
 
           {/* Price + cart */}
@@ -434,7 +434,7 @@ export default function ProductCard({ product }: Props) {
             <div className="flex items-baseline gap-2 mb-2">
               <span className="text-lg font-bold text-maroon-900">₹{product.price.toLocaleString()}</span>
               {product.compare_price && (
-                <span className="text-sm text-gray-400 line-through">
+                <span className="text-sm text-paper-faint line-through">
                   ₹{product.compare_price.toLocaleString()}
                 </span>
               )}
