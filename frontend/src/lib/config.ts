@@ -13,24 +13,24 @@ export const STORE = {
   // ── Contact Details ──────────────────────────────
   phone1:      '+91 94439 47853',
   phone2:      '+91 75981 86790',
-  /* THE ORDER MATTERS: `email` is what the footer and the invoice print, and
-     `email` is what the footer, the invoice and the policy pages print.
-     It was the domain address, while the server's SUPPORT_EMAIL — the reply-to
-     on every message the shop sends — was already the Gmail. So a customer read
-     one address on the page, wrote to it, and got an answer from another; and
-     what they wrote to landed in the Hostinger mailbox that has been the
-     unreliable one. The address shown is now the mailbox that is actually read.
-     admin@vijeytextile.com stays, second, because it is real and still has a
-     job: it is SMTP_EMAIL, the sending identity Brevo's domain authentication
-     signs. It must keep working — it just should not be the one advertised. */
+  /* `email` is what the footer, the invoice and the policy pages print — the
+     mailbox the shop actually reads. It was the domain address at first,
+     while SUPPORT_EMAIL — the reply-to on every message the shop sends — was
+     already the Gmail, so a customer read one address on the page, wrote to
+     it, and got an answer from another.
+
+     admin@vijeytextile.com is gone from the site entirely now. It was a paid
+     Hostinger mailbox and the plan was not renewed, so mail sent to it
+     bounces — removed from the footer, the support page and the policy pages
+     rather than left advertised.
+
+     Sending is unaffected. Brevo sends over its HTTP API, authorised by DNS
+     (the SPF include, the brevo1/brevo2 DKIM records, the brevo-code TXT),
+     and never used the mailbox. `SMTP_EMAIL` on the server stays set to the
+     domain address on purpose — a From on the shop's own domain is what keeps
+     DKIM aligned. Replies land here, in the Gmail, which is where they
+     already went. */
   email:       'vijeytextile@gmail.com',
-  /* admin@vijeytextile.com IS GONE FROM THE SITE. It was a paid Hostinger
-     mailbox, the plan was not renewed, and mail to it now bounces — so it is
-     removed from the footer, the support page and the policy pages rather than
-     left advertised. Sending is unaffected: Brevo sends over its HTTP API,
-     authorised by DNS (SPF include, brevo1/brevo2 DKIM, brevo-code TXT), and
-     never used the mailbox. SMTP_EMAIL stays on the domain so DKIM stays
-     aligned; replies already go to the Gmail below. */
   supportEmail:'vijeytextile@gmail.com',
   whatsapp:    '919443947853',   // primary WhatsApp — country code + number, no + or spaces
   whatsapp2:   '917598186790',   // secondary WhatsApp
