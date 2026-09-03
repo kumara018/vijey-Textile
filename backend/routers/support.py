@@ -28,8 +28,17 @@ def create_interaction(
         models.User.email == payload.customer_email
     ).first()
 
+    # WHO ANSWERED. The shop, unless somebody says otherwise.
+    #
+    # This used to be a required field on the form, so logging a conversation
+    # meant naming a support engineer. There isn't one — the owner answers the
+    # phone — and the customer then got an email crediting "our support team".
+    # The column is NOT NULL and older rows carry real names, so it is filled
+    # rather than dropped.
+    answered_by = (payload.cs_name or "").strip() or notifications.STORE_NAME
+
     interaction = models.SupportInteraction(
-        cs_name          = payload.cs_name,
+        cs_name          = answered_by,
         cs_email         = payload.cs_email,
         cs_phone         = payload.cs_phone,
         customer_name    = payload.customer_name,
@@ -47,7 +56,7 @@ def create_interaction(
     try:
         notifications.send_support_rating_request_email(
             payload.customer_email, payload.customer_name,
-            payload.cs_name, token, payload.issue_summary or ""
+            answered_by, token, payload.issue_summary or ""
         )
     except Exception as e:
         print(f"[Support] Email error: {e}")
@@ -56,7 +65,7 @@ def create_interaction(
         try:
             notifications.send_support_rating_request_whatsapp(
                 payload.customer_phone, payload.customer_name,
-                payload.cs_name, token
+                answered_by, token
             )
         except Exception as e:
             print(f"[Support] WhatsApp error: {e}")
@@ -113,6 +122,6 @@ def submit_rating(
     interaction.rated_at       = datetime.now(timezone.utc)
     db.commit()
 
-    print(f"[Support] ✅ Rating {payload.rating}/5 received for CS {interaction.cs_name} from {interaction.customer_name}")
+    print(f"[Support] Rating {payload.rating}/5 received, answered by {interaction.cs_name}, from {interaction.customer_name}")
 
     return {"message": "Thank you for your feedback!"}

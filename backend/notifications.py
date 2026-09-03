@@ -2334,7 +2334,13 @@ def send_invoice_email(email: str, name: str, order, user_email: str = ""):
 def send_support_rating_request_email(email: str, customer_name: str, cs_name: str, token: str, issue: str = ""):
     first = customer_name.split()[0]
     rating_url = f"{STORE_URL}/support/rate/{token}"
-    issue_row = f"<tr><td style='color:#555;padding:5px 0'>Topic</td><td style='text-align:right;color:#111'>{issue}</td></tr>" if issue else ""
+    # One optional line, so the panel is only drawn when there is
+    # something to put in it — otherwise the mail carried an empty box.
+    issue_panel = (
+        f'<div style="background:#F7F1E8;border:1px solid #C6B7A1;border-radius:2px;'
+        f'padding:16px;margin:20px 0;font-size:14px;color:#555">'
+        f'Topic: <span style="color:#111">{issue}</span></div>'
+    ) if issue else ""
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;background:#fff;border-radius:2px;overflow:hidden;border:1px solid #eee">
       {_HEADER_HTML}
@@ -2350,13 +2356,8 @@ def send_support_rating_request_email(email: str, customer_name: str, cs_name: s
           <div style="width:64px;height:64px;background:#fff7ed;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:32px">⭐</div>
         </div>
         <h2 style="color:#111;margin-top:0;text-align:center">How was your support experience?</h2>
-        <p style="color:#555;text-align:center">Hi {first}, <b>{cs_name}</b> from our support team helped you recently. We'd love to know how we did!</p>
-        <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:2px;padding:16px;margin:20px 0">
-          <table width="100%" style="border-collapse:collapse;font-size:14px">
-            <tr><td style="color:#555;padding:5px 0">Support Agent</td><td style="text-align:right;font-weight:bold;color:#A21D48">{cs_name}</td></tr>
-            {issue_row}
-          </table>
-        </div>
+        <p style="color:#555;text-align:center">Hi {first}, you spoke with us recently. We'd love to know how we did.</p>
+        {issue_panel}
         <p style="color:#555;text-align:center;font-size:14px">Click below to rate your experience — it only takes 2 seconds:</p>
         <div style="text-align:center;margin:24px 0">
           <a href="{rating_url}" style="background:#A21D48;color:#fff;padding:14px 36px;border-radius:2px;text-decoration:none;font-weight:bold;font-size:16px">⭐ Rate My Experience</a>

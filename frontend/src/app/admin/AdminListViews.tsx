@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { adminAPI } from '@/lib/api';
+import { adminAPI, supportAPI } from '@/lib/api';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { Announce, ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
@@ -189,59 +189,201 @@ export function AdminUsersView() {
 /* ── Support ratings ────────────────────────────────────────────────────── */
 
 export function AdminRatingsView() {
-  const { rows, loading, failed, load, ready } = useAdminList<any>(adminAPI.getSupportRatings);
-
   /**
-   * The average is the number this page exists to produce, so it is stated
-   * rather than left for someone to work out from a column of digits.
+   * TWO SYSTEMS USED TO LIVE HERE, AND THIS VIEW WAS READING THE DEAD ONE.
+   *
+   * The table below came from `adminAPI.getSupportRatings`, which reads the
+   * `SupportRating` model. Nothing in either shop writes a row to it — it
+   * belonged to a feedback widget removed some time ago, and a search of both
+   * backends finds exactly one reference: the query that reads it. So this
+   * page was guaranteed to be empty forever, while its own empty state
+   * promised "ratings arrive from the link sent after each one" — describing
+   * a different system entirely.
+   *
+   * That other system is `SupportInteraction`: the shop logs a conversation,
+   * the customer gets a one-time link, and their score lands on that row. The
+   * sister shop has always read it. This now reads the same one, so both
+   * shops show the same thing and the empty state is finally true.
+   *
+   * The form is the other half. Without it there was no way to send a link
+   * from this shop at all, so no rating could ever exist to display.
    */
-  const average = useMemo(() => {
-    if (!rows.length) return null;
-    return rows.reduce((n, r) => n + (r.rating ?? 0), 0) / rows.length;
-  }, [rows]);
+  const { rows, loading, failed, load, ready } = useAdminList<any>(supportAPI.listInteractions);
+
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [announcement, setAnnouncement] = useState('');
+  const [form, setForm] = useState({
+    customer_name: '', customer_email: '', customer_phone: '', issue_summary: '',
+  });
+
+  const rated = useMemo(() => rows.filter((r) => r.rating != null), [rows]);
+  const average = useMemo(
+    () => (rated.length ? rated.reduce((n, r) => n + r.rating, 0) / rated.length : null),
+    [rated],
+  );
+
+  const send = useCallback(async () => {
+    if (!form.customer_name.trim()) { setFormError('The customer name is needed.'); return; }
+    if (!form.customer_email.trim()) { setFormError('The customer email is needed — the link goes there.'); return; }
+    setSaving(true);
+    setFormError('');
+    try {
+      await supportAPI.createInteraction(form);
+      setAnnouncement('The rating link is on its way to ' + form.customer_email + '.');
+      setShowForm(false);
+      setForm({ customer_name: '', customer_email: '', customer_phone: '', issue_summary: '' });
+      await load();
+    } catch (e: any) {
+      setFormError(e?.response?.data?.detail || 'That did not send. Nothing has been logged.');
+    } finally {
+      setSaving(false);
+    }
+  }, [form, load]);
 
   if (!ready) return null;
+
+  const field = 'w-full border border-ink-edge bg-transparent px-4 py-3 text-paper placeholder:text-paper-faint focus:border-brass-bright focus:outline-none';
+  const lab = 'block text-rule uppercase text-paper-faint mb-2';
 
   return (
     <AdminShell
       title="Support ratings"
       standfirst={
-        loading ? undefined
+        loading
+          ? undefined
           : average === null
-            ? undefined
-            : `${average.toFixed(1)} out of 5 across ${rows.length} ${rows.length === 1 ? 'rating' : 'ratings'}.`
+            ? 'No one has rated a conversation yet.'
+            : average.toFixed(1) + ' out of 5 across ' + rated.length + (rated.length === 1 ? ' rating' : ' ratings') + ', from ' + rows.length + ' logged.'
       }
-      actions={<ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Refresh</ActionButton>}
+      actions={
+        <>
+          <ActionButton arrow={false} onClick={() => setShowForm(true)}>Log a conversation</ActionButton>
+          <ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Refresh</ActionButton>
+        </>
+      }
     >
+      <Announce message={announcement} />
+
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="log-title"
+            className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden border border-ink-edge bg-ink-deep"
+          >
+            <div className="flex shrink-0 items-center justify-between gap-6 border-b border-ink-edge px-8 py-6">
+              <h3 id="log-title" className="font-display text-band font-light text-paper">Log a conversation</h3>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                aria-label="Close"
+                className="text-xs uppercase tracking-[0.18em] text-paper-faint transition-colors hover:text-brass focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-7">
+              <p className="mb-7 max-w-[54ch] text-sm leading-relaxed text-paper-muted">
+                The customer gets a one-time link by email asking how the
+                conversation went. Nobody is named in it — it comes from the shop.
+              </p>
+
+              {formError && <p role="alert" className="mb-6 text-sm text-brass-bright">{formError}</p>}
+
+              <div className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="c-name" className={lab}>Their name</label>
+                  <input
+                    id="c-name"
+                    className={field}
+                    value={form.customer_name}
+                    onChange={(e) => setForm((f) => ({ ...f, customer_name: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="c-phone" className={lab}>Their number (optional)</label>
+                  <input
+                    id="c-phone"
+                    className={field}
+                    value={form.customer_phone}
+                    onChange={(e) => setForm((f) => ({ ...f, customer_phone: e.target.value }))}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="c-mail" className={lab}>Their email — the link goes here</label>
+                  <input
+                    id="c-mail"
+                    type="email"
+                    className={field}
+                    value={form.customer_email}
+                    onChange={(e) => setForm((f) => ({ ...f, customer_email: e.target.value }))}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="c-topic" className={lab}>What it was about (optional)</label>
+                  <input
+                    id="c-topic"
+                    className={field}
+                    placeholder="A size question, a delivery date..."
+                    value={form.issue_summary}
+                    onChange={(e) => setForm((f) => ({ ...f, issue_summary: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 flex-wrap items-center gap-x-10 gap-y-4 border-t border-ink-edge px-8 py-6">
+              <ActionButton arrow={false} onClick={send} disabled={saving}>
+                {saving ? 'Sending...' : 'Send the rating link'}
+              </ActionButton>
+              <ActionButton tone="quiet" arrow={false} onClick={() => setShowForm(false)}>Cancel</ActionButton>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Body
         loading={loading}
         failed={failed}
         empty={rows.length === 0}
-        emptyCopy="Nobody has rated a support conversation yet. Ratings arrive from the link sent after each one."
+        emptyCopy="No conversations logged yet. Log one and the customer is sent a link asking how it went."
         onRetry={load}
       >
         <Table
-          caption="Support ratings, newest first"
-          columns={[{ label: 'Rating' }, { label: 'From' }, { label: 'About' }, { label: 'When' }]}
+          caption="Logged conversations, newest first"
+          columns={[{ label: 'Rating' }, { label: 'Customer' }, { label: 'About' }, { label: 'When' }]}
         >
           {rows.map((r) => (
             <tr key={r.id} className="border-b border-ink-edge/40 align-top">
               <th scope="row" className="py-3 pr-4 text-left font-normal">
-                {/* Low scores are the ones worth finding, so those are marked. */}
-                <span className={`tabular-nums ${r.rating <= 2 ? 'text-brass-bright' : 'text-paper'}`}>
-                  {r.rating}
-                </span>
-                <span className="text-paper-faint"> / 5</span>
+                {r.rating == null ? (
+                  <span className="text-paper-faint">Not yet</span>
+                ) : (
+                  <>
+                    {/* Low scores are the ones worth finding, so those are marked. */}
+                    <span className={r.rating <= 2 ? 'tabular-nums text-brass-bright' : 'tabular-nums text-paper'}>{r.rating}</span>
+                    <span className="text-paper-faint"> / 5</span>
+                  </>
+                )}
               </th>
               <td className="py-3 pr-4 text-paper-muted">
-                {r.name || '—'}
-                {r.email && <span className="mt-0.5 block text-xs text-paper-faint">{r.email}</span>}
+                {r.customer_name || '—'}
+                {r.customer_email && <span className="mt-0.5 block text-xs text-paper-faint">{r.customer_email}</span>}
               </td>
               <td className="py-3 pr-4 text-paper-muted">
-                {r.category && <span className="block capitalize">{r.category}</span>}
-                {r.message && <span className="mt-1 block max-w-[46ch] text-xs text-paper-faint">{r.message}</span>}
+                {r.issue_summary && <span className="block max-w-[46ch]">{r.issue_summary}</span>}
+                {r.rating_comment && <span className="mt-1 block max-w-[46ch] text-xs text-paper-faint">{r.rating_comment}</span>}
+                {!r.issue_summary && !r.rating_comment && '—'}
               </td>
-              <td className="py-3 tabular-nums text-paper-faint">{shortDate(r.created_at)}</td>
+              <td className="py-3 tabular-nums text-paper-faint">{shortDate(r.rated_at || r.created_at)}</td>
             </tr>
           ))}
         </Table>
@@ -249,6 +391,7 @@ export function AdminRatingsView() {
     </AdminShell>
   );
 }
+
 
 /* ── Cancelled orders ───────────────────────────────────────────────────── */
 

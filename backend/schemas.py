@@ -740,7 +740,20 @@ class ReturnRequestOut(BaseModel):
 # ─── SUPPORT INTERACTION SCHEMAS ──────────────────────────────────────────────
 
 class SupportInteractionCreate(BaseModel):
-    cs_name:        str
+    """
+    WHO ANSWERED IS NO LONGER ASKED FOR.
+
+    This required `cs_name` — the name of the support engineer who took the
+    call. That is the shape of a company with a support desk, and this is a
+    shop where the owner answers the phone. Asking for it meant inventing an
+    employee before a conversation could be logged.
+
+    The field stays optional rather than being deleted: the column is NOT NULL
+    and already holds real values on rows logged before this, so removing it
+    would mean a migration on a live database to gain nothing. The router
+    fills it with the shop's own name when it is not supplied.
+    """
+    cs_name:        Optional[str] = None
     cs_email:       Optional[str] = None
     cs_phone:       Optional[str] = None
     customer_name:  str
@@ -748,7 +761,7 @@ class SupportInteractionCreate(BaseModel):
     customer_phone: Optional[str] = None
     issue_summary:  Optional[str] = None
 
-    @field_validator("cs_name", "customer_name")
+    @field_validator("customer_name")
     @classmethod
     def name_required(cls, v):
         if not v or not v.strip():
