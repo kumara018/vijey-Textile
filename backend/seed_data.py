@@ -279,7 +279,7 @@ PRODUCTS = [
 def seed():
     db = SessionLocal()
     try:
-        admin_email = os.getenv("ADMIN_EMAIL", "admin@vijeytextile.com")
+        admin_email = os.getenv("ADMIN_EMAIL", "vijeytextile@gmail.com")
         admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123456")
 
         existing_admin = db.query(models.User).filter(models.User.email == admin_email).first()
