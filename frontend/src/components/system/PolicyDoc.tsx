@@ -1,25 +1,34 @@
 import type { ReactNode } from 'react';
-import Reveal from '@/components/home/Reveal';
 import PageShell from './PageShell';
 import PageHeader from './PageHeader';
+import Disclosure from './Disclosure';
 import { ActionLink } from './Action';
 
 /**
  * The shape every policy document on the site takes.
  *
- * These pages are read in one of two ways and the design has to serve both: a
- * customer scanning for the one fact they came for ("how long does delivery
- * take"), and a customer reading the whole thing before they trust the shop
- * with money. So: numbered sections with the number set as a visible marker,
- * a standing measure of ~68 characters, and hairline rules between clauses.
+ * OPENS AS A LIST OF QUESTIONS, NOT AS A DOCUMENT. Every section used to be
+ * expanded at once, so the shipping policy was five screens of prose and the
+ * cancellation policy eight. A customer arriving with one question — how long
+ * have I got, who pays the postage — had to read past everything else to reach
+ * it. The first screen is now the figures that matter and a short stack of
+ * headings; you open the one you want.
  *
- * The numbering is not decoration. A policy genuinely is a numbered reference
- * document — support can say "point 4 of the shipping policy" and the customer
- * can find it. That is the test for whether a numbered marker earns its place,
- * and it is the reason the product grid does not get one.
+ * That is the same reasoning as the support page, and this uses the same
+ * component, which brings its deep-link behaviour with it: a link to
+ * /cancellation#not-eligible opens that section and scrolls to it instead of
+ * landing on a shut heading.
  *
- * Replaces a layout of coloured pill badges, emoji and maroon gradient banners
- * that belonged to the previous design and had no equivalent here.
+ * THE CONTENTS LIST IS GONE, and it went for the reason it existed. It was a
+ * sticky column repeating all eight section titles beside eight section
+ * titles — the same information twice, once as navigation and once as the
+ * document. Closed disclosures ARE the contents: the titles are the only
+ * thing on screen, and clicking one is what the sidebar link did anyway.
+ *
+ * THE FIGURES GO ABOVE, IN `summary`. The one or two numbers a page exists to
+ * answer — 5–7 days, flat ₹49, 1 hour / 4 hours / 12 hours — belong on the
+ * first screen, set large, before anything is opened. Pages without a figure
+ * worth leading on simply omit it.
  */
 
 export interface PolicyClause {
@@ -32,11 +41,20 @@ export interface PolicySection {
   clauses: PolicyClause[];
 }
 
+/** `Who pays the shipping` → `who-pays-the-shipping`, for deep links. */
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 export default function PolicyDoc({
   eyebrow,
   title,
   standfirst,
   updated,
+  summary,
   sections,
   footnote,
 }: {
@@ -45,6 +63,8 @@ export default function PolicyDoc({
   standfirst: ReactNode;
   /** Absolute date. "Recently updated" tells a reader nothing they can use. */
   updated: string;
+  /** The figures this page exists to answer, shown before anything is opened. */
+  summary?: ReactNode;
   sections: PolicySection[];
   footnote?: ReactNode;
 }) {
@@ -54,71 +74,37 @@ export default function PolicyDoc({
         <p className="text-rule uppercase text-paper-faint">Last updated · {updated}</p>
       </PageHeader>
 
-      <div className="grid gap-x-16 gap-y-[4vh] lg:grid-cols-12">
-        {/* Contents. Sticky on wide screens because these documents are long
-            and a reader who scrolled to clause 9 should still be able to get
-            back to clause 2 without scrolling up. */}
-        <nav aria-label="Contents" className="lg:col-span-3">
-          <div className="lg:sticky lg:top-32">
-            <h2 className="text-rule uppercase text-paper-faint">Contents</h2>
-            <ol className="mt-6 space-y-3">
-              {sections.map((s, i) => (
-                <li key={s.title}>
-                  <a
-                    href={`#section-${i + 1}`}
-                    className="group flex items-baseline gap-3 text-sm text-paper-muted transition-colors duration-500 hover:text-paper motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
-                  >
-                    <span className="text-rule tabular-nums text-paper-faint transition-colors duration-500 group-hover:text-brass-bright motion-reduce:transition-none">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    {s.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </nav>
+      {summary && <div className="mb-[clamp(3rem,9vh,6rem)]">{summary}</div>}
 
-        <div className="lg:col-span-8 lg:col-start-5">
-          {sections.map((section, i) => (
-            <section
-              key={section.title}
-              id={`section-${i + 1}`}
-              // scroll-mt clears the fixed overlay nav — without it an anchor
-              // jump lands with the heading hidden underneath it.
-              className="scroll-mt-32 border-t border-ink-edge/60 pt-10 first:border-t-0 first:pt-0 [&+section]:mt-[7vh]"
-            >
-              <Reveal>
-                <div className="flex items-baseline gap-5">
-                  <span className="text-rule tabular-nums text-brass-bright">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <h2 className="font-display text-doc-head font-normal text-paper">{section.title}</h2>
+      <div className="max-w-[76ch]">
+        {sections.map((section, i) => (
+          <Disclosure
+            key={section.title}
+            id={slugify(section.title)}
+            index={String(i + 1).padStart(2, '0')}
+            title={section.title}
+          >
+            <dl className="mt-2 space-y-8">
+              {section.clauses.map((c) => (
+                <div key={c.heading}>
+                  <dt className="text-rule uppercase text-paper-faint">{c.heading}</dt>
+                  <dd className="mt-3 max-w-[62ch] leading-relaxed text-paper-muted [&_a]:text-brass-bright [&_a]:underline [&_a]:underline-offset-4 [&_li]:mt-2 [&_ol]:mt-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-paper [&_ul]:mt-1 [&_ul]:list-disc [&_ul]:pl-5">
+                    {c.body}
+                  </dd>
                 </div>
-              </Reveal>
+              ))}
+            </dl>
+          </Disclosure>
+        ))}
 
-              <dl className="mt-9 space-y-9">
-                {section.clauses.map((c) => (
-                  <div key={c.heading}>
-                    <dt className="text-rule uppercase text-paper-faint">{c.heading}</dt>
-                    <dd className="mt-3 max-w-[68ch] text-lede text-paper-muted [&_a]:text-paper [&_a]:underline [&_a]:underline-offset-4 [&_strong]:font-normal [&_strong]:text-paper">
-                      {c.body}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ))}
-
-          {footnote && (
-            <div className="mt-[5vh] border-t border-ink-edge/60 pt-10">
-              <p className="max-w-[62ch] text-lede text-paper-muted">{footnote}</p>
-              <div className="mt-8">
-                <ActionLink href="/support">Speak to us</ActionLink>
-              </div>
+        {footnote && (
+          <div className="mt-[5vh] border-t border-ink-edge/60 pt-10">
+            <p className="max-w-[62ch] text-lede text-paper-muted">{footnote}</p>
+            <div className="mt-8">
+              <ActionLink href="/support">Speak to us</ActionLink>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </PageShell>
   );

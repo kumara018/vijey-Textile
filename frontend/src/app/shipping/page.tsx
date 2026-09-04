@@ -4,70 +4,62 @@ import { STORE } from '@/lib/config';
 /**
  * Shipping policy.
  *
- * Every fact here is carried over unchanged from the previous version — the
- * timelines, the flat fee, the coverage list, the tracking channels and the
- * packaging note. Only the presentation is new: the emoji, the maroon gradient
- * banner, the coloured pill and the three-button footer belonged to a design
- * this one replaced.
+ * WRITTEN AS POINTS, NOT PARAGRAPHS. Somebody opening this page wants one of
+ * four things — how long, how much, where to, how do I follow it — and the
+ * previous version answered each of them inside a sentence. Every clause is a
+ * list now, each line one fact, so the answer is found by looking rather than
+ * by reading.
+ *
+ * EACH FACT APPEARS ONCE. The old version said "pan-India including remote
+ * areas" under Standard delivery and then said it again under Coverage and a
+ * third time under Rural addresses; the fee was stated twice and the two
+ * statements disagreed. A fact repeated in three places is three places to
+ * update and two chances to contradict yourself, which is exactly what
+ * happened. So the fee is stated once, coverage once, timelines once.
+ *
+ * THE WEIGHT CLAIM WAS FALSE AND IS GONE. This page said the cost "is
+ * calculated from the parcel's weight and shown at checkout". It is not:
+ * `routers/orders.py` sets `shipping_fee = 49.0` outright, and weight appears
+ * nowhere in order pricing on either shop. A policy page describing a pricing
+ * model the shop does not operate is worse than a vague one, so it now states
+ * what is actually charged.
  */
 
 export const metadata = {
   title: 'Shipping Policy — Vijey Textile',
   description:
-    'Standard delivery 5–7 business days across India. Shipping charged based on order weight via Delhivery.',
+    `Flat ₹${STORE.shippingFee} shipping across India. Standard 5–7 business days, express 1–3 in select cities, tracked by Delhivery.`,
 };
 
 const SECTIONS: PolicySection[] = [
   {
-    title: 'Timelines and cost',
+    title: 'What it costs and how long it takes',
     clauses: [
       {
-        heading: 'Standard delivery',
+        heading: 'The fee',
         body: (
-          <>
-            <strong>5–7 business days.</strong> A flat ₹{STORE.shippingFee} shipping fee applies to
-            all orders. Available pan-India including remote areas, via Delhivery.
-          </>
+          <ul>
+            <li>
+              <strong>Flat ₹{STORE.shippingFee}</strong> on every order, whatever it weighs.
+            </li>
+            <li>Shown at checkout before you pay.</li>
+            <li>Nothing is added afterwards.</li>
+          </ul>
         ),
       },
       {
-        heading: 'Express delivery',
+        heading: 'How long',
         body: (
-          <>
-            <strong>1–3 business days,</strong> in select cities, with additional charges. Choose it
-            at checkout if it is available for your address.
-          </>
-        ),
-      },
-      {
-        heading: 'What you are charged',
-        body: (
-          <>
-            The final shipping cost is calculated from the parcel’s weight and shown at checkout
-            before you pay. You will never be asked for more after an order is placed.
-          </>
-        ),
-      },
-    ],
-  },
-  {
-    title: 'What happens after you order',
-    clauses: [
-      {
-        heading: 'Within 24 hours',
-        body: 'We confirm the order and begin processing it. If anything is out of stock we contact you rather than substituting a piece.',
-      },
-      {
-        heading: 'Dispatch',
-        body: 'The order is packed and handed to Delhivery. Your tracking number is sent by SMS and email at this point, not before — a number that does not yet resolve is worse than no number.',
-      },
-      {
-        heading: 'In transit',
-        body: (
-          <>
-            Real-time updates come from Delhivery and appear under <a href="/orders">My Orders</a>.
-            On the delivery day the agent’s contact details are shared with you.
-          </>
+          <ul>
+            <li>
+              <strong>Standard — 5–7 business days.</strong> Everywhere in India.
+            </li>
+            <li>
+              <strong>Express — 1–3 business days.</strong> Select cities, costs extra, offered at
+              checkout when your address qualifies.
+            </li>
+            <li>Rural and remote addresses add one to two days.</li>
+          </ul>
         ),
       },
     ],
@@ -77,24 +69,68 @@ const SECTIONS: PolicySection[] = [
     clauses: [
       {
         heading: 'Coverage',
-        body: 'All 28 states and 8 union territories. Tier 1, Tier 2 and Tier 3 cities are all served.',
+        body: (
+          <ul>
+            <li>All 28 states and 8 union territories.</li>
+            <li>Tier 1, tier 2 and tier 3 cities.</li>
+            <li>Rural and remote addresses.</li>
+            <li>Jammu &amp; Kashmir and the North-East, on standard timelines.</li>
+          </ul>
+        ),
       },
       {
-        heading: 'Rural and remote addresses',
-        body: 'Delivered, with one to two additional days. Jammu & Kashmir and the North-East are on standard timelines.',
+        heading: 'Carried by',
+        body: 'Delhivery, on every order.',
       },
     ],
   },
   {
-    title: 'How your order is packed',
+    title: 'After you pay',
+    clauses: [
+      {
+        heading: 'The four steps',
+        body: (
+          <ol>
+            <li>
+              <strong>Ordered.</strong> Your bag becomes an order the moment payment succeeds.
+            </li>
+            <li>
+              <strong>Confirmed.</strong> Within 24 hours. If a piece is out of stock we call you
+              rather than substituting it.
+            </li>
+            <li>
+              <strong>Dispatched.</strong> Packed at the counter and handed to Delhivery.
+            </li>
+            <li>
+              <strong>Delivered.</strong> To your door, against the code sent to you.
+            </li>
+          </ol>
+        ),
+      },
+      {
+        heading: 'Following it',
+        body: (
+          <ul>
+            <li>Tracking number by SMS and email — sent at dispatch, not before.</li>
+            <li>
+              Live status under <a href="/orders">My orders</a>, read from Delhivery directly.
+            </li>
+            <li>The agent&rsquo;s contact is shared on the delivery day.</li>
+          </ul>
+        ),
+      },
+    ],
+  },
+  {
+    title: 'How it is packed',
     clauses: [
       {
         heading: 'Every garment',
-        body: 'Carefully folded and packed in a protective cover, so it arrives in the condition it left the shop in.',
+        body: 'Folded into a protective cover, so it arrives as it left the shop.',
       },
       {
         heading: 'Silk and embroidered pieces',
-        body: 'Individually wrapped in tissue paper and placed in a rigid box. A heavy zari border does not travel well loose, and these are pieces people keep.',
+        body: 'Wrapped individually in tissue and boxed rigid — a heavy zari border does not travel well loose.',
       },
     ],
   },
@@ -105,10 +141,10 @@ export default function ShippingPage() {
     <PolicyDoc
       eyebrow="Shipping"
       title="How your order reaches you"
-      standfirst="We ship across India through Delhivery. This is what that costs, how long it takes, and what happens between placing the order and opening the box."
-      updated="16 August 2026"
+      standfirst={`Flat ₹${STORE.shippingFee} anywhere in India, 5–7 business days, carried by Delhivery.`}
+      updated="3 September 2026"
       sections={SECTIONS}
-      footnote="If a delivery is late, damaged, or has not moved for several days, tell us and we will chase it with the courier ourselves rather than sending you to them."
+      footnote="If a delivery is late, damaged, or has not moved for days, tell us and we will chase Delhivery ourselves rather than sending you to them."
     />
   );
 }
