@@ -282,7 +282,6 @@ export const adminAPI = {
   getClientErrors:         ()                           => api.get('/api/client-errors/recent'),
   revokeAdmin:             (id: number)                 => api.patch(`/api/admin/users/${id}/revoke-admin`),
   updateSettings:          (data: object)               => api.put('/api/admin/settings', data),
-  getSupportRatings:       ()                           => api.get('/api/admin/support-ratings'),
 };
 
 export const supportAPI = {
