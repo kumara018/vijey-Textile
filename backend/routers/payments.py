@@ -106,11 +106,29 @@ async def razorpay_webhook(request: Request, db: Session = Depends(get_db)):
     signature = request.headers.get("X-Razorpay-Signature", "")
     webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET", "")
 
-    # Verify signature if webhook secret is configured
-    if webhook_secret and signature:
+    # A CONFIGURED SECRET MEANS THE SIGNATURE IS REQUIRED, NOT OPTIONAL.
+    #
+    # This read `if webhook_secret and signature:`, so a POST arriving with NO
+    # X-Razorpay-Signature header skipped verification entirely and was then
+    # processed as genuine. Measured against the live endpoint before the fix:
+    # an unsigned POST returned 200 and the handler ran.
+    #
+    # That is forgeable. The events here move money-state — refund.processed
+    # sets an order to `refunded` — so anyone who knew the URL and a payment id
+    # could mark refunds that never happened. The endpoint is public by
+    # necessity; the signature is the only thing separating Razorpay from
+    # everyone else.
+    #
+    # Missing signature is now refused whenever a secret is configured. If no
+    # secret is set the endpoint stays open, which is the documented setup
+    # path and is why the check is conditional at all rather than absolute.
+    if webhook_secret:
+        if not signature:
+            print("[Webhook] Rejected: no X-Razorpay-Signature header")
+            raise HTTPException(400, "Missing webhook signature")
         expected = hmac.new(webhook_secret.encode(), body, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, signature):
-            print(f"[Webhook] ❌ Invalid Razorpay signature")
+            print("[Webhook] Rejected: invalid Razorpay signature")
             raise HTTPException(400, "Invalid webhook signature")
 
     try:
