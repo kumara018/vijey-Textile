@@ -34,7 +34,21 @@ const VIEWS = [
   { href: '/admin/returns', label: 'Returns', match: (p: string) => p === '/admin/returns' },
   { href: '/admin/cancellations', label: 'Cancelled', match: (p: string) => p === '/admin/cancellations' },
   { href: '/admin/users', label: 'Customers', match: (p: string) => p === '/admin/users' },
-  { href: '/admin/ratings', label: 'Ratings', match: (p: string) => p === '/admin/ratings' },
+  /*
+   * RATINGS IS HIDDEN, NOT REMOVED.
+   *
+   * It was built for a company with several support agents, where the point is
+   * knowing which agent is doing well. This shop is the owner and a phone, so
+   * it amounted to collecting ratings of yourself — and it cost real work:
+   * after every call, open the panel, type the customer's name and email, send
+   * a link, and hope they click it. Product reviews already give the same
+   * signal from verified buyers for no work at all.
+   *
+   * Everything behind it still runs. /admin/ratings still resolves and still
+   * works if you go there directly; the customer's rating page, the one-time
+   * link and the endpoints are all untouched. Only this line is gone, so
+   * restoring it is putting the line back.
+   */
   { href: '/admin/admins', label: 'Admins', match: (p: string) => p === '/admin/admins' },
   { href: '/admin/errors', label: 'Errors', match: (p: string) => p === '/admin/errors' },
 ];
