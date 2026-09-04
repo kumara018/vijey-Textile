@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { scrollPageTo } from '@/lib/smoothScroll';
 
 /**
  * A section heading that opens and closes.
@@ -48,16 +49,59 @@ export default function Disclosure({
   const ref = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
-    if (!id) return;
+    /*
+     * THE ANCHOR MAY ADDRESS SOMETHING *INSIDE* THIS SECTION, NOT THIS SECTION.
+     *
+     * This only opened when the hash equalled its own id, which covered
+     * #size-guide, #faq and #contact and silently missed the four that
+     * matter most. The policies live in a disclosure with NO id — the
+     * summaries for #shipping, #returns, #terms and #privacy are divs nested
+     * inside it — so a footer link to /support#returns addressed an element
+     * sitting in a collapsed <details>. Nothing opened, and the page landed
+     * on whatever happened to be at that offset. Reported as the shipping
+     * and returns links "not showing the correct section".
+     *
+     * Some browsers now auto-expand a <details> when a fragment inside it is
+     * navigated to, which is why this can look like it works on one machine
+     * and not another. That is not something to depend on: `open` here is a
+     * controlled React prop, so the browser and the component disagree about
+     * who owns the state.
+     *
+     * So the test is containment rather than equality — does this section
+     * hold the thing being addressed — and the scroll goes to the ADDRESSED
+     * element, not to this heading, since the heading is the wrong place when
+     * the target is one of four summaries inside it.
+     */
     const check = () => {
       if (typeof window === 'undefined') return;
-      if (window.location.hash !== `#${id}`) return;
+      const host = ref.current;
+      if (!host) return;
+
+      const hash = window.location.hash;
+      if (hash.length < 2) return;
+
+      let target: Element | null = null;
+      try {
+        target = document.querySelector(hash);
+      } catch {
+        return; // a hash that is not a valid selector is not ours to handle
+      }
+
+      const addressesSelf = !!id && hash === `#${id}`;
+      // contains() reads the DOM, which exists even while <details> is shut.
+      const addressesChild = !!target && target !== host && host.contains(target);
+      if (!addressesSelf && !addressesChild) return;
+
       setOpen(true);
-      /* The browser scrolled to this heading while the section was still
-         collapsed, so the landing position is wrong by the height of whatever
-         just expanded. Re-run it on the next frame, once layout has settled. */
+
+      /* The browser scrolled while the section was still collapsed, so the
+         landing position is wrong by the height of whatever just expanded.
+         Re-run it on the next frame, once layout has settled. */
       requestAnimationFrame(() => {
-        ref.current?.scrollIntoView({ block: 'start', behavior: 'auto' });
+        const landing = (addressesChild ? target : host) as HTMLElement | null;
+        if (!landing) return;
+        const margin = parseFloat(getComputedStyle(landing).scrollMarginTop) || 0;
+        scrollPageTo(landing, { offset: -margin });
       });
     };
     check();
