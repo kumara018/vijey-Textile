@@ -85,43 +85,41 @@ const SECTIONS: PolicySection[] = [
     ],
   },
   {
+    /*
+     * THE WINDOWS, AND A LINK. This section used to restate the whole
+     * cancellation policy — the reasons, the proof, how the refund settles,
+     * the non-returnable rule — and then link to it. Two copies of a
+     * contractual term is two places to amend and one chance to disagree with
+     * itself. The binding periods stay here because they are terms; the rest
+     * lives in one place.
+     */
     title: 'Cancellation, return and exchange',
     clauses: [
       {
-        heading: 'Cancelling',
+        heading: 'The three periods',
         body: (
-          <>
-            Orders can be <strong>cancelled within 1 hour</strong> of purchase — instant, automatic,
-            no reason required.
-          </>
+          <ul>
+            <li>
+              <strong>1 hour</strong> from purchase to cancel.
+            </li>
+            <li>
+              <strong>4 hours</strong> from delivery to return for a refund.
+            </li>
+            <li>
+              <strong>12 hours</strong> from delivery to exchange.
+            </li>
+          </ul>
         ),
       },
       {
-        heading: 'After delivery',
+        heading: 'Conditions and settlement',
         body: (
           <>
-            A <strong>return (for refund)</strong> can be requested within <strong>4 hours</strong>,
-            or an <strong>exchange</strong> within <strong>12 hours</strong>. Both require a valid
-            reason (size issue or damage) with 2–3 photos as proof, and admin approval.
+            Set out in full in the{' '}
+            <Link href="/cancellation">cancellation, return &amp; exchange policy</Link>, which
+            forms part of these terms.
           </>
         ),
-      },
-      {
-        heading: 'How each is settled',
-        body: 'Approved returns are refunded via Razorpay to the original payment method once the item is picked up. Exchanges can be swapped for any product of equal or higher value — the price difference is payable online, and there is no refund for choosing something cheaper.',
-      },
-      {
-        heading: 'Non-returnable items',
-        body: (
-          <>
-            Certain products are marked <strong>Non-Returnable</strong> and are not eligible for
-            return or exchange, except where the item received is genuinely damaged.
-          </>
-        ),
-      },
-      {
-        heading: 'Full policy',
-        body: <Link href="/cancellation">Cancellation, Return &amp; Exchange Policy</Link>,
       },
     ],
   },

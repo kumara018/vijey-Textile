@@ -24,16 +24,24 @@ const SECTIONS: PolicySection[] = [
     title: 'Where the pieces come from',
     clauses: [
       {
-        heading: 'Direct from weavers',
-        body: 'We work directly with skilled weavers and manufacturers in Tamil Nadu and the major textile hubs across India. No middlemen, no markups.',
+        heading: 'Direct from the makers',
+        body: (
+          <ul>
+            <li>Weavers and manufacturers in Tamil Nadu and India&rsquo;s textile hubs.</li>
+            <li>No middlemen. No markups.</li>
+            <li>Fair trade, supporting the artisans themselves.</li>
+          </ul>
+        ),
       },
       {
-        heading: 'Genuine fabrics',
-        body: 'Cotton, silk, georgette, crepe — every fabric is sourced from certified suppliers and labelled accurately on its product page. What the page says it is, is what it is.',
-      },
-      {
-        heading: 'Ethical sourcing',
-        body: 'We support local artisans and fair trade practices. Shopping here supports real craftspeople and their livelihoods.',
+        heading: 'Genuine fabric',
+        body: (
+          <ul>
+            <li>Cotton, silk, georgette, crepe — all from certified suppliers.</li>
+            <li>Labelled accurately on the product page.</li>
+            <li>What the page says it is, is what it is.</li>
+          </ul>
+        ),
       },
     ],
   },
@@ -41,30 +49,26 @@ const SECTIONS: PolicySection[] = [
     title: 'What we promise about the listing',
     clauses: [
       {
-        heading: 'True-to-photo colours',
-        body: 'We photograph in natural light to show the most accurate colour we can. Slight screen variation is unavoidable — no display renders a dyed silk exactly — but the photograph is never enhanced to flatter the cloth.',
+        heading: 'The colour',
+        body: 'Photographed in natural light, never enhanced to flatter the cloth. Screens vary — no display renders a dyed silk exactly.',
       },
       {
-        heading: 'Accurate sizing',
-        body: 'Our size guide, in inches and centimetres, is calibrated against actual garment measurements rather than generic standards. That is why sizes 12–40 mean something specific here.',
-      },
-      {
-        heading: 'Every piece inspected',
-        body: 'Each garment goes through a quality check before it reaches the store — fabric quality, stitching, colour fastness and finishing.',
+        heading: 'The size',
+        body: 'Measured from the actual garment, not a generic chart. In inches and centimetres. That is why sizes 12–40 mean something specific here.',
       },
     ],
   },
   {
     title: 'The eight checks before dispatch',
     clauses: [
-      { heading: '01 · Composition', body: 'Fabric composition matches the product description.' },
-      { heading: '02 · Stitching', body: 'No loose threads or stitching defects.' },
-      { heading: '03 · Colour', body: 'Colour matches the product photograph.' },
-      { heading: '04 · Sizing', body: 'Correct sizing as per our size guide.' },
-      { heading: '05 · Embellishment', body: 'Embroidery and embellishments are secure.' },
-      { heading: '06 · Fastenings', body: 'Zippers, buttons and hooks all function properly.' },
-      { heading: '07 · Condition', body: 'No stains or damage from storage.' },
-      { heading: '08 · Presentation', body: 'Properly ironed and presented, so it arrives ready to wear.' },
+      { heading: '01 · Composition', body: 'Fabric matches the description.' },
+      { heading: '02 · Stitching', body: 'No loose threads or defects.' },
+      { heading: '03 · Colour', body: 'Matches the photograph.' },
+      { heading: '04 · Sizing', body: 'Correct against our size guide.' },
+      { heading: '05 · Embellishment', body: 'Embroidery and beadwork secure.' },
+      { heading: '06 · Fastenings', body: 'Zips, buttons and hooks work.' },
+      { heading: '07 · Condition', body: 'No stains or storage damage.' },
+      { heading: '08 · Presentation', body: 'Ironed, ready to wear.' },
     ],
   },
 ];
@@ -74,8 +78,8 @@ export default function AuthenticPage() {
     <PolicyDoc
       eyebrow="Authenticity"
       title="Everything here is what it says it is"
-      standfirst="A shop that sells heirloom pieces cannot afford to be vague about what they are made of. This is what we check, and what we guarantee."
-      updated="21 May 2026"
+      standfirst="What we check, and what we guarantee."
+      updated="3 September 2026"
       sections={SECTIONS}
       footnote="If a piece ever arrives and does not match its description, that is a genuine fault and we treat it as one — tell us and we will make it right."
     />

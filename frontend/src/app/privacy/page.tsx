@@ -4,14 +4,26 @@ import { STORE } from '@/lib/config';
 /**
  * Privacy policy.
  *
- * Content carried over clause for clause — the named processors (Delhivery,
- * Razorpay, SendGrid), the data categories, the rights list and the minors
- * clause are all legal statements and are reproduced exactly. Only the
- * presentation changed.
+ * THE PROCESSOR LIST WAS WRONG, AND THAT IS WHY THE DATE MOVED.
  *
- * The "last updated" date is deliberately unchanged at 21 May 2026: restyling
- * a document does not amend it, and moving the date would tell every reader
- * the terms had changed when they had not.
+ * It named SendGrid, which does not send this shop's mail — notifications.py
+ * reaches for BREVO_API_KEY first and Brevo is what is configured on the
+ * server, so Brevo is the processor that receives a customer's name and email.
+ * SendGrid sits behind it as a standby that has not been used.
+ *
+ * Worse, it did not name Twilio at all, while stating that data is shared
+ * "only with the parties below". Twilio receives every customer's phone
+ * number, for the SMS and WhatsApp updates this shop sends on every order.
+ * A privacy policy that omits a processor holding phone numbers is not a
+ * wording problem.
+ *
+ * So the list is Delhivery, Razorpay, Brevo and Twilio, each with what it
+ * actually receives beside it. The data categories, the rights list and the
+ * minors clause are legal statements and are reproduced exactly; only their
+ * wording is shorter.
+ *
+ * The date moved because this time the document genuinely changed. Restyling
+ * alone would not have justified it.
  */
 
 export const metadata = {
@@ -28,10 +40,8 @@ const SECTIONS: PolicySection[] = [
         heading: 'Introduction',
         body: (
           <>
-            <strong>{STORE.name}</strong> (“we”, “our”, “us”) is committed to protecting your
-            personal information and your right to privacy. This policy explains how we collect,
-            use, disclose and safeguard your information when you visit{' '}
-            <strong>vijeytextile.com</strong> and make purchases from us.
+            What <strong>{STORE.name}</strong> collects when you shop at{' '}
+            <strong>vijeytextile.com</strong>, what we do with it, and who else sees it.
           </>
         ),
       },
@@ -88,18 +98,31 @@ const SECTIONS: PolicySection[] = [
     title: 'Who we share it with',
     clauses: [
       {
-        heading: 'We do not sell or rent your data',
-        body: 'It is shared only with the parties below, and only with what each one needs.',
+        heading: 'Never sold, never rented',
+        body: 'Shared only with these, and only with what each one needs.',
       },
       {
-        heading: 'Delhivery',
-        body: 'Our shipping partner, for delivery — your name, address and phone number.',
+        heading: 'The four',
+        body: (
+          <ul>
+            <li>
+              <strong>Delhivery</strong> — delivery. Your name, address and phone number.
+            </li>
+            <li>
+              <strong>Razorpay</strong> — payment. Card and UPI details go straight to them.
+            </li>
+            <li>
+              <strong>Brevo</strong> — order emails. Your name and email address.
+            </li>
+            <li>
+              <strong>Twilio</strong> — SMS and WhatsApp updates. Your phone number.
+            </li>
+          </ul>
+        ),
       },
-      { heading: 'Razorpay', body: 'Our payment gateway, for processing payments securely.' },
-      { heading: 'SendGrid', body: 'For sending transactional emails.' },
       {
-        heading: 'Legal authorities',
-        body: 'Government or legal authorities, when required by law.',
+        heading: 'And the law',
+        body: 'Government or legal authorities, where we are required to.',
       },
     ],
   },
@@ -108,11 +131,11 @@ const SECTIONS: PolicySection[] = [
     clauses: [
       {
         heading: 'How we protect it',
-        body: 'We use industry-standard measures including SSL encryption, secure servers and access controls. No method of transmission over the internet is 100% secure, and we will not claim otherwise.',
+        body: 'SSL encryption, secure servers, access controls. No transmission over the internet is 100% secure, and we will not claim otherwise.',
       },
       {
         heading: 'Cookies',
-        body: 'We use cookies and similar technologies to maintain your session, remember your cart and analyse traffic. You can disable them in your browser, though parts of the site will stop working.',
+        body: 'To keep you signed in, remember your bag, and count visits. Disable them in your browser and parts of the site stop working.',
       },
     ],
   },
@@ -121,14 +144,20 @@ const SECTIONS: PolicySection[] = [
     clauses: [
       {
         heading: 'What you can ask for',
-        body: 'Access to the personal data we hold about you; correction of anything inaccurate; deletion of your account and data; and to opt out of promotional communications.',
+        body: (
+          <ul>
+            <li>See what we hold about you.</li>
+            <li>Correct anything wrong.</li>
+            <li>Delete your account and its data.</li>
+            <li>Opt out of promotional messages.</li>
+          </ul>
+        ),
       },
       {
         heading: 'How to exercise them',
         body: (
           <>
-            Write to <a href={`mailto:${STORE.supportEmail}`}>{STORE.supportEmail}</a> or{' '}
-            <a href={`mailto:${STORE.email}`}>{STORE.email}</a>. You can also delete your account
+            Write to <a href={`mailto:${STORE.email}`}>{STORE.email}</a>, or delete the account
             yourself from <a href="/account/delete">your account settings</a>.
           </>
         ),
@@ -150,8 +179,6 @@ const SECTIONS: PolicySection[] = [
             <br />
             {STORE.city}, {STORE.state} — {STORE.pincode}
             <br />
-            <a href={`mailto:${STORE.supportEmail}`}>{STORE.supportEmail}</a>
-            <br />
             <a href={`mailto:${STORE.email}`}>{STORE.email}</a>
             <br />
             <a href={`tel:${STORE.phone1}`}>{STORE.phone1}</a>
@@ -167,8 +194,8 @@ export default function PrivacyPage() {
     <PolicyDoc
       eyebrow="Privacy"
       title="What we know about you, and why"
-      standfirst="A family shop needs your address to send a parcel and your number to call if something is wrong. That is most of it. This page sets out the rest precisely."
-      updated="21 May 2026"
+      standfirst="We need your address to send a parcel and your number to call if something is wrong. That is most of it."
+      updated="3 September 2026"
       sections={SECTIONS}
       footnote="If anything here is unclear, ask us rather than guessing — we would rather answer the question than have you agree to something you have not understood."
     />

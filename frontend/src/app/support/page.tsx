@@ -172,7 +172,7 @@ const POLICY_SUMMARIES = [
     id: 'privacy',
     title: 'Privacy',
     summary:
-      'What we collect, why, and the three processors we share it with — Delhivery to deliver, Razorpay to take payment, SendGrid to email you. We never sell your data and we do not store card details.',
+      'What we collect, why, and the four we share it with — Delhivery to deliver, Razorpay to take payment, Brevo to email you, Twilio to message you. Never sold, and no card details stored.',
     href: '/privacy',
     label: 'Read the privacy policy',
   },
