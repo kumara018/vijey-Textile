@@ -208,13 +208,24 @@ function CheckoutInner() {
    * has parsed is how you get a button that does nothing.
    */
   useEffect(() => {
+    const markReady = () => setScriptReady(true);
+
+    // Already parsed and running from an earlier visit to this route.
+    if (window.Razorpay) { markReady(); return; }
+
+    // A tag that is still downloading is not a tag that is ready — waiting on
+    // its load event is the difference between this gate and no gate at all.
     const existing = document.querySelector<HTMLScriptElement>('script[data-razorpay]');
-    if (existing) { setScriptReady(true); return; }
+    if (existing) {
+      existing.addEventListener('load', markReady);
+      return () => existing.removeEventListener('load', markReady);
+    }
+
     const s = document.createElement('script');
     s.src = 'https://checkout.razorpay.com/v1/checkout.js';
     s.async = true;
     s.dataset.razorpay = 'true';
-    s.onload = () => setScriptReady(true);
+    s.onload = markReady;
     s.onerror = () => setOutcome({ kind: 'offline' });
     document.body.appendChild(s);
     return () => { s.remove(); };
