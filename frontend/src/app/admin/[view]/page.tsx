@@ -16,12 +16,27 @@ import AdminProductsView from '../AdminProductsView';
  * a mistyped admin URL should say so, not quietly show something else.
  */
 
+/*
+ * 'ratings' IS NOT HERE, AND THAT IS WHAT ACTUALLY HIDES IT.
+ *
+ * Taking the entry out of the nav was not enough on its own: anyone sitting on
+ * /admin/ratings stayed on it, seeing the panel with no link to it in the bar
+ * above — which reads as the change not having worked rather than as the page
+ * being retired.
+ *
+ * With the segment out of this list and `dynamicParams = false` below, the
+ * router answers a real 404 before the component runs, so there is no way back
+ * to it by URL either.
+ *
+ * AdminRatingsView, the customer's rating page, the one-time link and every
+ * endpoint behind them are untouched. Put the string back here and in
+ * AdminShell's VIEWS and the page returns exactly as it was.
+ */
 const VIEWS = [
   'products',
   'orders',
   'returns',
   'users',
-  'ratings',
   'cancellations',
   'admins',
   'errors',
