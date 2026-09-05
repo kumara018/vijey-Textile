@@ -24,24 +24,30 @@ import DeviceChoice, { type DeviceSession } from '@/components/auth/DeviceChoice
  * is echoed back as a quiet caption with an Edit affordance, so the customer
  * can see what they typed without it occupying a form control.
  *
- * WHY THE BRANCH TO REGISTRATION SITS AFTER THE PASSWORD, NOT BEFORE
+ * WHY THE BRANCH TO REGISTRATION NOW SITS ON THE FIRST STEP
  *
- * Amazon asks the server "does this account exist?" the moment you press
- * Continue, and branches immediately. That endpoint is an account-enumeration
- * oracle: anyone can walk a list of phone numbers and learn which belong to
- * customers. Amazon accepts that trade because they have rate limiting, bot
- * detection and device fingerprinting; this backend currently has none of
- * those, and its identifier is an Indian mobile number — densely packed and
- * cheap to enumerate — rather than a sparse email address.
+ * It used to sit after the password: everyone went to the password screen, and
+ * a customer with no account learned that only by getting one wrong and being
+ * offered "Create an account with this" underneath the error. The reason was
+ * that asking the server "does this account exist?" is an enumeration oracle,
+ * and this backend was described here as having no rate limiting.
  *
- * So the branch happens where the server already gives a uniform answer: the
- * existing 401 on `send-login-otp`, which is identical for "no such account"
- * and "wrong password". A returning customer signs in. A new one types one
- * wrong password and is then offered "Create an account with this number",
- * carrying the identifier forward. One extra keystroke, no new oracle.
+ * That is no longer true — rate_limit.py enforces per-IP and per-identifier
+ * budgets in the database. And the oracle was never actually withheld:
+ * /register has always replied "An account with this email already exists" on
+ * a more generous budget than the lookup now used. Refusing to answer on the
+ * sign-in form did not deny anyone the answer; it only made new customers fail
+ * a password before being told they needed to register.
  *
- * See AUTH-SPEC.md — the endpoint-based version is specified there and waits
- * on backend work.
+ * The blind alternative the backend also offers — /begin + /continue, which
+ * proves control of the identifier before it says anything — costs an SMS per
+ * attempt, and this shop's Twilio account is a trial that can only message
+ * numbers verified with Twilio. Routing sign-in through it would leave every
+ * customer who types a phone number waiting for a code that never arrives.
+ *
+ * So: identifier -> lookup -> password or Create Account, and if the lookup
+ * itself fails the form carries on to the password screen exactly as before.
+ * A branch that cannot be taken must never be a wall.
  */
 
 type Stage = 'identifier' | 'password' | 'code' | 'device';
@@ -147,11 +153,42 @@ function SignInInner() {
     setPassword('');
   };
 
-  const submitIdentifier = (e: React.FormEvent) => {
+  /**
+   * Step one: find out which screen this person belongs on.
+   *
+   * A miss goes to Create Account carrying the identifier, so nothing is typed
+   * twice. A hit goes to the password.
+   *
+   * ANY FAILURE TO ASK FALLS THROUGH TO THE PASSWORD. Rate limited, offline,
+   * backend asleep, endpoint not deployed yet — none of those are reasons to
+   * stop a returning customer signing in, and all of them would if the branch
+   * were treated as required. The old behaviour is the fallback, which means
+   * the worst case here is the behaviour that shipped for months.
+   */
+  const submitIdentifier = async (e: React.FormEvent) => {
     e.preventDefault();
     const v = identifier.trim();
     if (!v) { setError('Enter your phone number or email to continue.'); return; }
     setError('');
+    setBusy(true);
+    try {
+      const res = await authAPI.lookup({ identifier: v });
+      if (res.data?.exists === false) {
+        router.push(`/auth/register?identifier=${encodeURIComponent(v)}`);
+        return;
+      }
+    } catch (err: any) {
+      // 400 is the one answer worth stopping on: the server is saying this is
+      // neither a phone number nor an email, and the password screen cannot
+      // help with that.
+      if (err?.response?.status === 400) {
+        setError('That does not look like a phone number or an email address.');
+        setBusy(false);
+        return;
+      }
+      /* everything else: carry on to the password */
+    }
+    setBusy(false);
     setStage('password');
   };
 
@@ -305,6 +342,22 @@ function SignInInner() {
 
   return (
     <AuthShell
+      /**
+       * One step back, every step of the way.
+       *
+       * The device chooser is the exception and gets none: the code has already
+       * been accepted at that point, so there is no earlier state to return to
+       * — going "back" would mean throwing away a proven sign-in.
+       */
+      back={
+        stage === 'identifier'
+          ? { label: 'Back to the shop', href: '/' }
+          : stage === 'password'
+            ? { label: 'Use a different phone or email', onClick: editIdentifier }
+            : stage === 'code'
+              ? { label: 'Back to your password', onClick: () => { setStage('password'); setCode(''); setError(''); } }
+              : undefined
+      }
       title={titles[stage]}
       standfirst={
         stage === 'identifier'
@@ -355,7 +408,9 @@ function SignInInner() {
               error={error || undefined}
             />
             <div className="mt-9">
-              <ActionButton type="submit">Continue</ActionButton>
+              <ActionButton type="submit" disabled={busy}>
+                {busy ? 'Checking…' : 'Continue'}
+              </ActionButton>
             </div>
           </form>
         </Step>

@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import { authAPI, getApiBase } from '@/lib/api';
+import { sessionsAfterSignIn } from '@/lib/auth';
 
 export interface SavedSession {
   token: string;
@@ -74,14 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!fresh) return;
           setUser(fresh);
           localStorage.setItem('user', JSON.stringify(fresh));
-          // Keep all sessions in sync — update current user's entry
-          setSessions(prev => {
-            const updated = prev.map(s =>
-              s.user.id === fresh.id ? { ...s, user: fresh } : s
-            );
-            localStorage.setItem('sessions', JSON.stringify(updated));
-            return updated;
-          });
+          _syncSessionUser(fresh);
         })
         .catch(() => {});
     } else {
@@ -114,9 +108,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const _clearCookie = () => {
     document.cookie = 'auth_token=; path=/; max-age=0';
   };
-  const _persistSessions = (list: SavedSession[]) => {
-    setSessions(list);
-    localStorage.setItem('sessions', JSON.stringify(list));
+  /**
+   * Save one account into the list — synchronously, and from storage.
+   *
+   * BOTH OF THOSE MATTER, and neither was true before.
+   *
+   * Synchronously: every caller navigates immediately afterwards, with a full
+   * document load. The old code did this work inside a `setSessions(prev => …)`
+   * updater, which React defers to the next render; the navigation preempted it
+   * and the write was simply lost. `token` and `user` were written directly and
+   * so survived, which is why the account looked signed in while being absent
+   * from the list — and absent from the list means the next switch drops it.
+   *
+   * From storage rather than from `sessions` state: state is a snapshot of what
+   * this tab read at mount. Storage is what the next page load will actually
+   * read, and — with two tabs open on the same shop — what the other tab has
+   * been writing. Computing from the state would quietly discard an account
+   * signed in elsewhere.
+   */
+  const _rememberSession = (entry: SavedSession) => {
+    let stored: unknown = [];
+    try { stored = JSON.parse(localStorage.getItem('sessions') || '[]'); } catch {}
+    const updated = sessionsAfterSignIn(stored, entry as never) as unknown as SavedSession[];
+    localStorage.setItem('sessions', JSON.stringify(updated));
+    setSessions(updated);
+    return updated;
+  };
+
+  /** Refresh one account's cached user record wherever it appears in the list. */
+  const _syncSessionUser = (fresh: User) => {
+    let stored: SavedSession[] = [];
+    try {
+      const raw = JSON.parse(localStorage.getItem('sessions') || '[]');
+      if (Array.isArray(raw)) stored = raw;
+    } catch {}
+    const updated = stored.map((s) => (s?.user?.id === fresh.id ? { ...s, user: fresh } : s));
+    localStorage.setItem('sessions', JSON.stringify(updated));
+    setSessions(updated);
   };
 
   // ── Login (also called after OTP verify) ──────────────────────────────────
@@ -127,13 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(newToken);
     setUser(newUser);
 
-    // Upsert this session — replace existing entry for same user, prepend otherwise
-    setSessions(prev => {
-      const without = prev.filter(s => s.user.id !== newUser.id);
-      const updated = [{ token: newToken, user: newUser }, ...without];
-      localStorage.setItem('sessions', JSON.stringify(updated));
-      return updated;
-    });
+    // Written before this returns, because the caller's next statement is a
+    // full page navigation. See _rememberSession.
+    _rememberSession({ token: newToken, user: newUser });
   };
 
   // ── Instant account switch — fetches fresh user data to pick up role changes ─
@@ -156,13 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('user', JSON.stringify(freshUser));
     setUser(freshUser);
 
-    // Bring switched account to front of list with fresh data
-    setSessions(prev => {
-      const others  = prev.filter(s => s.user.id !== session.user.id);
-      const updated = [{ token: session.token, user: freshUser }, ...others];
-      localStorage.setItem('sessions', JSON.stringify(updated));
-      return updated;
-    });
+    // Bring the switched-to account to the front, with fresh data. Written
+    // synchronously for the same reason as login: the caller reloads the page
+    // the moment this resolves.
+    _rememberSession({ token: session.token, user: freshUser });
   };
 
   // ── Remove one saved session (without affecting the active one) ───────────
@@ -223,13 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fresh = res.data as User;
       setUser(fresh);
       localStorage.setItem('user', JSON.stringify(fresh));
-      setSessions(prev => {
-        const updated = prev.map(s =>
-          s.user.id === fresh.id ? { ...s, user: fresh } : s
-        );
-        localStorage.setItem('sessions', JSON.stringify(updated));
-        return updated;
-      });
+      _syncSessionUser(fresh);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) {

@@ -239,3 +239,118 @@ class TestR5RevokeAll:
         assert r.status_code == 200, r.text
         assert r.json()["current_session_kept"] is False
         assert client.get("/api/auth/sessions", headers=me).status_code == 401
+
+
+class TestLookupBranchesTheSignInForm:
+    """
+    /auth/lookup — the one bit the sign-in form needs to send a new customer to
+    Create Account instead of failing them on a password they never had.
+
+    Unlike /begin this DOES answer whether an account exists, deliberately and
+    with its reasoning written at the endpoint. What these tests hold down is
+    the boundary of that decision: one bit and a masked echo, nothing more, and
+    never a real answer for an account that cannot actually sign in.
+    """
+
+    def test_says_yes_for_a_real_account(self, client, make_user):
+        user, _ = make_user(email="found@test.local", phone="9000008801")
+        r = client.post("/api/auth/lookup", json={"identifier": "found@test.local"})
+        assert r.status_code == 200, r.text
+        assert r.json()["exists"] is True
+
+    def test_finds_the_same_account_by_phone(self, client, make_user):
+        # The single field takes either, so both must resolve to one account.
+        make_user(email="byphone@test.local", phone="9000008802")
+        r = client.post("/api/auth/lookup", json={"identifier": "9000008802"})
+        assert r.status_code == 200, r.text
+        assert r.json()["exists"] is True
+
+    def test_says_no_for_an_account_that_does_not_exist(self, client):
+        r = client.post("/api/auth/lookup", json={"identifier": "nobody@test.local"})
+        assert r.status_code == 200, r.text
+        assert r.json()["exists"] is False
+
+    def test_an_unverified_signup_is_not_an_account_yet(self, client, db):
+        # /register resumes an abandoned signup, so this customer belongs on the
+        # create-account form — not on a password screen no password will open.
+        import models, auth as auth_utils
+        db.add(models.User(
+            full_name="Half Done", email="halfway@test.local", phone="9000008803",
+            password_hash=auth_utils.hash_password("whatever"), is_verified=False,
+        ))
+        db.commit()
+        r = client.post("/api/auth/lookup", json={"identifier": "halfway@test.local"})
+        assert r.status_code == 200, r.text
+        assert r.json()["exists"] is False
+
+    def test_answers_one_bit_and_a_hint_and_nothing_else(self, client, make_user):
+        # The guard against this quietly growing into a profile lookup. A name
+        # or an email here would hand anyone who can guess a phone number the
+        # identity behind it.
+        user, _ = make_user(email="minimal@test.local", phone="9000008804")
+        body = client.post("/api/auth/lookup", json={"identifier": "9000008804"}).json()
+        assert set(body) == {"exists", "hint"}, body
+        assert user.full_name not in str(body)
+        assert "minimal@test.local" not in str(body)
+
+    def test_rejects_something_that_is_neither(self, client):
+        r = client.post("/api/auth/lookup", json={"identifier": "not-a-contact"})
+        assert r.status_code == 400, r.text
+
+    def test_walking_the_number_space_runs_out(self, client):
+        # The whole justification for shipping an oracle is that it is bounded.
+        # If the limiter is ever removed this test is what notices.
+        codes = {
+            client.post("/api/auth/lookup", json={"identifier": f"9333{i:06d}"}).status_code
+            for i in range(30)
+        }
+        assert 429 in codes, "lookup answered 30 identifiers without ever throttling"
+
+
+class TestR5RevokeAll:
+    """AUTH-SPEC R5. One transaction, and the caller's own choice honoured."""
+
+    def _sign_in(self, client, user, ua):
+        r = client.post("/api/auth/login",
+                        json={"identifier": user.email, "password": "Customer@2026"},
+                        headers={"User-Agent": ua})
+        assert r.status_code == 200, r.text
+        return {"Authorization": f"Bearer {r.json()['access_token']}", "User-Agent": ua}
+
+    UAS = [
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Mobile/15E148",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 Version/17.0",
+    ]
+
+    def test_revokes_every_other_device_and_keeps_this_one(self, client, make_user, db):
+        import models
+        user, _ = make_user(email="devices@test.local", phone="9000009994")
+        headers = [self._sign_in(client, user, ua) for ua in self.UAS]
+
+        me = headers[-1]
+        before = client.get("/api/auth/sessions", headers=me)
+        assert before.status_code == 200
+        assert len(before.json()) >= 2, "the test needs more than one device to be meaningful"
+
+        r = client.post("/api/auth/sessions/revoke-all", json={"except_current": True}, headers=me)
+        assert r.status_code == 200, r.text
+        assert r.json()["revoked"] >= 1
+        assert r.json()["current_session_kept"] is True
+
+        after = client.get("/api/auth/sessions", headers=me)
+        assert after.status_code == 200, "the caller was signed out despite except_current"
+        assert len(after.json()) == 1
+
+        for old in headers[:-1]:
+            assert client.get("/api/auth/sessions", headers=old).status_code == 401, (
+                "a revoked device can still use its token"
+            )
+
+    def test_except_current_false_signs_the_caller_out_too(self, client, make_user):
+        user, _ = make_user(email="devices2@test.local", phone="9000009995")
+        me = self._sign_in(client, user, self.UAS[0])
+        r = client.post("/api/auth/sessions/revoke-all", json={"except_current": False}, headers=me)
+        assert r.status_code == 200, r.text
+        assert r.json()["current_session_kept"] is False
+        assert client.get("/api/auth/sessions", headers=me).status_code == 401

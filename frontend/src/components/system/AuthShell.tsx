@@ -22,17 +22,39 @@ import { LogoMark } from '@/components/Logo';
  * All three screens use this, so they read as one flow rather than three
  * pages that happen to be adjacent.
  */
+/** Quiet, but a real target — 44px of height, not a 12px line of text. */
+const BACK_CLS =
+  'mb-5 -ml-1 inline-flex items-center gap-2 px-1 py-2 text-[0.7rem] uppercase tracking-[0.18em] ' +
+  'text-paper-faint transition-colors duration-500 hover:text-paper-muted ' +
+  'motion-reduce:transition-none focus-visible:outline focus-visible:outline-2 ' +
+  'focus-visible:outline-offset-4 focus-visible:outline-brass-bright';
+
 export default function AuthShell({
   title,
   standfirst,
   children,
   footer,
+  back,
 }: {
   title: string;
   standfirst?: ReactNode;
   children: ReactNode;
   /** Flow-required actions only — never general navigation. */
   footer?: ReactNode;
+  /**
+   * The way out, one step at a time.
+   *
+   * A progressive form replaces the page's contents without touching the URL,
+   * so the browser's own Back button leaves the whole flow instead of undoing
+   * the last step — and the wordmark, which was the only marked exit, does the
+   * same. Somebody who mistyped their number and wanted to correct it had no
+   * visible way to do it except starting over.
+   *
+   * `label` says where it goes rather than just "Back", because on the first
+   * step it leaves the flow and on the others it does not, and those should not
+   * look like the same action.
+   */
+  back?: { label: string; onClick?: () => void; href?: string };
 }) {
   return (
     <div className="relative flex min-h-[100svh] flex-col items-center justify-center px-6 py-16">
@@ -61,6 +83,19 @@ export default function AuthShell({
         </div>
 
         <main className="border border-ink-edge/70 bg-ink-deep/80 px-7 py-9 backdrop-blur-sm sm:px-9">
+          {/* Inside the card and above the title, because it undoes the step
+              the title names. */}
+          {back && (
+            back.href ? (
+              <Link href={back.href} className={BACK_CLS}>
+                <span aria-hidden="true">&larr;</span> {back.label}
+              </Link>
+            ) : (
+              <button type="button" onClick={back.onClick} className={BACK_CLS}>
+                <span aria-hidden="true">&larr;</span> {back.label}
+              </button>
+            )
+          )}
           <h1 className="font-display text-3xl font-light text-paper">{title}</h1>
           {standfirst && (
             <p className="mt-3 text-sm leading-relaxed text-paper-muted">{standfirst}</p>

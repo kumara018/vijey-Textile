@@ -12,6 +12,7 @@ from rate_limit import (
     enforce_ip_limit, enforce_identifier_limit,
     SEND_CODE, VERIFY_CODE, REGISTER, SESSION_SWAP,
     BEGIN_PER_IP, BEGIN_PER_IDENTIFIER,
+    LOOKUP_PER_IP, LOOKUP_PER_IDENTIFIER,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -675,6 +676,26 @@ def confirm_deactivate_account(
 # pointed at any number an attacker likes.
 
 
+#: A normalised phone number that could actually belong to somebody: digits,
+#: optionally with a country code, in the length range E.164 allows.
+_PHONE_SHAPE = re.compile(r"^\+?\d{7,15}$")
+
+
+def _looks_like_contact(raw: str) -> bool:
+    """
+    Whether this is even a phone number or an email address.
+
+    `_normalize_phone` does not answer that — it strips separators and known
+    Indian prefixes and hands back whatever is left, so "not-a-contact" comes
+    out as the perfectly truthy "notacontact". Every caller that tested it for
+    truthiness was therefore accepting free text as a phone number.
+    """
+    value = (raw or "").strip()
+    if not value:
+        return False
+    return _is_email(value) or bool(_PHONE_SHAPE.match(_normalize_phone(value)))
+
+
 def _identifier_hint(identifier: str) -> str:
     """
     A masked echo of what the caller typed. Never of what is stored.
@@ -694,6 +715,54 @@ def _identifier_hint(identifier: str) -> str:
     if len(digits) >= 4:
         return f"{digits[:2]}***{digits[-2:]}"
     return "***"
+
+
+@router.post("/lookup", response_model=schemas.AuthLookupOut)
+def auth_lookup(request: Request, payload: schemas.AuthLookupIn, db: Session = Depends(get_db)):
+    """
+    Does this phone or email have an account? Asked by the sign-in form's first
+    step, so a new customer is offered Create Account instead of being failed on
+    a password they were never going to have.
+
+    THIS IS AN ENUMERATION ORACLE AND IS MEANT TO BE ONE. It is worth being
+    plain about that rather than letting a future reader discover it.
+
+    What makes it acceptable here is that it is not a new capability. /register
+    already answers the identical question — "An account with this email already
+    exists", "This phone number is already registered" — on a cheaper budget
+    (20/hour per IP). Anyone who wanted this answer has always had it. The
+    alternative on offer was the /begin + /continue blind branch, which proves
+    control of the identifier before it says anything; that costs an SMS per
+    attempt, and this shop's Twilio account is a trial that can only message
+    verified numbers, so routing sign-in through it would leave every customer
+    who types a phone number waiting for a code that is never coming.
+
+    So: rate limited no more permissively than the endpoint that already leaks
+    this, and the reply carries EXACTLY one bit plus a masked echo of what was
+    typed. No name, no email, no clue whether the miss was the number or the
+    domain. `_identifier_hint` is built from the submitted string and never from
+    a stored record, so the hint cannot leak either.
+
+    An account that exists but was never verified answers `false` on purpose.
+    /register resumes an abandoned signup, so that customer is better served by
+    the create-account form than by a password screen their password will not
+    open.
+    """
+    enforce_ip_limit(db, request, "auth-lookup", LOOKUP_PER_IP)
+    enforce_identifier_limit(db, payload.identifier, LOOKUP_PER_IDENTIFIER)
+
+    raw = (payload.identifier or "").strip()
+    if not raw:
+        raise HTTPException(400, "Enter your mobile number or email address.")
+
+    if not _looks_like_contact(raw):
+        raise HTTPException(400, "That does not look like a mobile number or an email address.")
+
+    user = _find_user(db, raw)
+    return {
+        "exists": bool(user and user.is_verified),
+        "hint": _identifier_hint(raw),
+    }
 
 
 @router.post("/begin", response_model=schemas.AuthBeginOut)

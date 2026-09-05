@@ -190,6 +190,16 @@ function RegisterInner() {
 
   return (
     <AuthShell
+      /* Most people arrive here from the sign-in form, sent by the lookup —
+         so back means back to signing in, not out to the shop. The device
+         chooser gets none: the code is already accepted by then. */
+      back={
+        stage === 'details'
+          ? { label: prefill ? 'Back to signing in' : 'Back to the shop', href: prefill ? '/auth/login' : '/' }
+          : stage === 'code'
+            ? { label: 'Back to your details', onClick: () => { setStage('details'); setErrors({}); } }
+            : undefined
+      }
       title={stage === 'details' ? 'Create an account' : stage === 'code' ? 'Check your email' : 'One more thing'}
       standfirst={
         stage === 'details'

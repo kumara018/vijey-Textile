@@ -111,6 +111,22 @@ PER_IDENTIFIER = "5/hour"
 # own suggestion: 3 per identifier per hour, 10 per IP per hour.
 BEGIN_PER_IP = "10/hour"
 BEGIN_PER_IDENTIFIER = "3/hour"
+# /auth/lookup answers "is this registered?" so the sign-in form can send a new
+# customer to Create Account instead of failing them on a password they were
+# never going to have. That answer is an enumeration oracle, and these are the
+# numbers that keep it from being a useful one.
+#
+# It is not a NEW oracle: /register already replies "An account with this email
+# already exists" and "This phone number is already registered", at 20/hour per
+# IP. Anything reachable through lookup was reachable there first, and more
+# cheaply — so this is deliberately no more permissive than REGISTER per hour.
+#
+# Sends nothing, so there is no per-message cost to bound, only walking. The
+# per-minute allowance is generous because Indian mobile networks put whole
+# cities behind shared addresses: a limit that stops enumeration from one IP
+# must not stop a street of customers signing in from another.
+LOOKUP_PER_IP = "20/minute;120/hour"
+LOOKUP_PER_IDENTIFIER = "10/hour"
 
 _UNITS = {
     "second": 1,

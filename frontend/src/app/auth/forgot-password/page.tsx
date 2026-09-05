@@ -112,6 +112,13 @@ function ForgotInner() {
 
   return (
     <AuthShell
+      /* Arriving here is nearly always a detour off the password step, so the
+         way back is to signing in rather than out to the shop. */
+      back={
+        stage === 'identifier'
+          ? { label: 'Back to signing in', href: '/auth/login' }
+          : { label: 'Use a different phone or email', onClick: () => { setStage('identifier'); setError(''); } }
+      }
       title={stage === 'identifier' ? 'Reset your password' : 'Choose a new password'}
       standfirst={
         stage === 'identifier'

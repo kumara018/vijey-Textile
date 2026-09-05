@@ -223,6 +223,21 @@ class DeviceEvictLogin(BaseModel):
     session_id:    int
 
 
+class AuthLookupIn(BaseModel):
+    """One field: a mobile number or an email address."""
+    identifier: str
+
+class AuthLookupOut(BaseModel):
+    """
+    One bit, and a masked echo of what was typed.
+
+    Deliberately no name and no contact detail. The sign-in form only needs to
+    know which of two screens to show; anything more would turn a branch into a
+    profile lookup for anyone who can guess a phone number.
+    """
+    exists: bool
+    hint: str             # masked echo of the submitted identifier, e.g. "94***53"
+
 class AuthBeginIn(BaseModel):
     """One field: a mobile number or an email address."""
     identifier: str

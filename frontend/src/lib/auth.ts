@@ -69,6 +69,45 @@ export function sessionsAfterSignOut(
 }
 
 /**
+ * The saved list after an account is signed into, or switched to.
+ *
+ * THE BUG THIS EXISTS TO KILL: signing in as a second account did not save that
+ * account, so the moment you switched away from it you were signed out of it.
+ *
+ * `login()` wrote the new list inside a `setSessions(prev => …)` updater, which
+ * React runs on the NEXT RENDER — and the very next statement was
+ * `redirectAfterLogin`, a full document navigation. React schedules that render
+ * through the Scheduler, which posts a macrotask; a pending navigation
+ * preempts it. So the write usually never happened, and the account that had
+ * just proven its password was missing from `sessions` on the other side of the
+ * reload. It looked signed in, because `token` and `user` ARE written
+ * synchronously. It was simply not in the list — so the next switch dropped it.
+ *
+ * The list is therefore computed here, from the value in storage rather than
+ * from React state, and written synchronously by the caller before it navigates.
+ *
+ * Upsert-to-front, by id: an account already held is replaced rather than
+ * duplicated (its token may have been refreshed), and the most recent one leads
+ * the list, which is the order the switcher and `performLogout` both assume.
+ */
+export function sessionsAfterSignIn(
+  sessions: unknown,
+  entry: StoredSession,
+): StoredSession[] {
+  const list = Array.isArray(sessions) ? sessions : [];
+  const id = entry?.user?.id;
+  const others = list.filter(
+    (s): s is StoredSession =>
+      Boolean(s) && typeof s?.token === 'string' && s.token.length > 0 &&
+      s?.user?.id !== id,
+  );
+  // An entry with no usable token is not a session. Returning the list
+  // unchanged beats corrupting it with a row that can never authenticate.
+  if (!entry || typeof entry.token !== 'string' || !entry.token) return others;
+  return [entry, ...others];
+}
+
+/**
  * Sign out of the CURRENT account, and land wherever that leaves you.
  *
  * `to` is only used when this was the last account on the device. It once
