@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-import models, schemas, auth as auth_utils, notifications
+import models, schemas, auth as auth_utils, notifications, pricing, refunds
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
@@ -202,7 +202,7 @@ def place_order(
             )
         raise HTTPException(status_code=400, detail=stock_error)
 
-    shipping_fee = 49.0
+    shipping_fee = pricing.SHIPPING_FEE
     total = subtotal + shipping_fee
 
     order_number = generate_order_number()
@@ -347,39 +347,52 @@ def cancel_order(
         except Exception as e:
             print(f"[Courier cancel error] {e}")
 
-    # ── Auto-refund via Razorpay for paid online orders ───────────────────────
+    # ── The refund, which is not optional and is not an admin's job ──────────
+    #
+    # Cancelling a paid order refunds it. There is no button, no queue and no
+    # step where somebody has to remember: the customer pressed cancel, so the
+    # money goes back.
+    #
+    # The failure this replaces is worth naming. The amount asked for was
+    # `order.total`, Razorpay will not return more than it captured, and the
+    # rejection was caught by a bare `except` that only printed. So an order
+    # whose captured amount was a rupee short went to "cancelled" with the
+    # money kept, no refund, and nothing on screen admitting it — the shop
+    # looked like it had refunded and had not. refunds.refund_payment reads the
+    # outstanding amount back from Razorpay, so it cannot ask for the wrong
+    # figure, and the outcome is recorded either way rather than swallowed.
     refund_status = None
+    refund_error = None
     if (
-        order.payment_status == "paid"
+        order.payment_method != "cod"
+        and order.payment_status == "paid"
         and order.payment_transaction_id
-        and order.payment_transaction_id.startswith("pay_")
     ):
-        key_id     = os.getenv("RAZORPAY_KEY_ID", "")
-        key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
-        if not key_id or not key_secret:
-            print(f"[Razorpay] ⚠️  REFUND SKIPPED — RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET not set in env vars. "
-                  f"Order {order.order_number} txn {order.payment_transaction_id} "
-                  f"₹{order.total} must be refunded MANUALLY from Razorpay Dashboard.")
+        refund_status, refund_error = refunds.refund_payment(
+            order.payment_transaction_id,
+            order.cancel_reason or "Cancelled by customer",
+            {"order_number": order.order_number},
+        )
+        if refund_status == "already_refunded":
+            order.payment_status = "refunded"
+        elif refund_status:
+            order.payment_status = "refund_initiated"
         else:
+            # Kept as an explicit state rather than left reading "paid", so the
+            # workroom can show it and the customer is not told money is coming
+            # back when it is not.
+            order.payment_status = "refund_failed"
+            print(f"[Cancel] refund failed for {order.order_number}: {refund_error}")
             try:
-                import razorpay as _rp
-                client = _rp.Client(auth=(key_id, key_secret))
-                refund = client.payment.refund(
-                    order.payment_transaction_id,
-                    {
-                        "amount": int(order.total * 100),   # paise
-                        "speed":  "normal",
-                        "notes":  {
-                            "order_number": order.order_number,
-                            "reason":       order.cancel_reason,
-                        },
-                    },
-                )
-                order.payment_status = "refund_initiated"
-                refund_status = refund.get("id", "initiated")
-                print(f"[Razorpay] ✅ Refund {refund_status} initiated for {order.order_number} ₹{order.total}")
+                db.add(models.AdminNotification(
+                    type="refund_failed",
+                    title=f"Refund failed — {order.order_number}",
+                    message=(f"₹{order.total} could not be refunded automatically: "
+                             f"{refund_error}. Refund it from the Razorpay dashboard."),
+                    order_id=order.id,
+                ))
             except Exception as e:
-                print(f"[Razorpay] ❌ Refund FAILED for {order.order_number} txn {order.payment_transaction_id}: {e}")
+                print(f"[Cancel] could not raise refund-failed alert: {e}")
 
     db.commit()
     db.refresh(order)

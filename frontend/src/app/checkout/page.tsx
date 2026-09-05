@@ -178,6 +178,14 @@ function CheckoutInner() {
     ? (buyNowProduct ? buyNowProduct.price * (buyNow?.quantity ?? 1) : 0)
     : total;
   const grandTotal = subtotal + shipping;
+  /**
+   * Whether the total on screen is the real one.
+   *
+   * A direct purchase is priced from `buyNowProduct`, which is fetched — so
+   * before it lands `subtotal` is 0 and `grandTotal` is just the shipping fee.
+   * The bag route always knows its own total.
+   */
+  const priceKnown = !isDirect || buyNowProduct !== null;
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/auth/login');
@@ -325,12 +333,23 @@ function CheckoutInner() {
 
     setPlacing(true);
     try {
-      const orderRes = await api.post('/api/payments/create-order', { amount: grandTotal });
+      /*
+       * `buy_now` says WHAT is being bought; the server works out what it
+       * costs. `amount` used to BE the price, taken as sent — so a request
+       * with a different number in it bought a full bag for a rupee. It is
+       * sent now only so a disagreement shows up in the log.
+       */
+      const orderRes = await api.post('/api/payments/create-order', {
+        amount: grandTotal,
+        ...(buyNow ? { buy_now: buyNow } : {}),
+      });
       const { order_id, key_id } = orderRes.data;
+      // The authoritative figure, straight from the priced order.
+      const chargeable: number = orderRes.data.total ?? grandTotal;
 
       const rzp = new window.Razorpay({
         key: key_id,
-        amount: grandTotal * 100,
+        amount: Math.round(chargeable * 100),
         currency: 'INR',
         name: STORE.name,
         description: 'Order',
@@ -527,8 +546,15 @@ function CheckoutInner() {
               </label>
 
               <div className="mt-10">
-                <ActionButton tone="primary" type="submit" disabled={placing || !scriptReady || atRisk}>
-                  {placing ? 'Opening payment…' : !scriptReady ? 'Preparing…' : `Pay ${money(grandTotal)}`}
+                {/* `priceKnown` is not decoration: a direct purchase prices
+                    from buyNowProduct, and until that arrives the subtotal is
+                    0 — so an ungated button would offer to charge the shipping
+                    fee on its own. */}
+                <ActionButton tone="primary" type="submit"
+                  disabled={placing || !scriptReady || atRisk || !priceKnown}>
+                  {placing
+                    ? 'Opening payment…'
+                    : (!scriptReady || !priceKnown) ? 'Preparing…' : `Pay ${money(grandTotal)}`}
                 </ActionButton>
                 {atRisk && (
                   <p className="mt-4 max-w-[46ch] text-xs text-paper-faint">

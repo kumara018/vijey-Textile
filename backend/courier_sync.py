@@ -32,6 +32,7 @@ import os, random
 from datetime import datetime, timezone
 import models
 import notifications
+import refunds
 import delhivery as dl
 
 # Canonical order-status lifecycle. Both the admin dropdown (routers/admin.py)
@@ -395,36 +396,32 @@ def _attempt_refund(rr, order) -> bool:
     itself failed) — rr stays at 'picked_up' either way, for the admin to
     refund manually.
     """
-    if not (
-        order.payment_status == "paid"
-        and order.payment_transaction_id
-        and order.payment_transaction_id.startswith("pay_")
-    ):
+    if not (order.payment_status == "paid" and order.payment_transaction_id):
         return False
-    key_id     = os.getenv("RAZORPAY_KEY_ID", "")
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
-    if not (key_id and key_secret):
-        print(f"[Returns] ⚠️ REFUND SKIPPED — Razorpay not configured. Return #{rr.id} must be refunded manually.")
+
+    # Through refunds.refund_payment, which reads the outstanding amount back
+    # from Razorpay. This asked for `order.total`, and Razorpay rejects a
+    # refund larger than it captured — so a return on an order whose captured
+    # figure differed by even a rupee failed here and left the customer's money
+    # with the shop after the goods had already been collected.
+    refund_id, error = refunds.refund_payment(
+        order.payment_transaction_id,
+        rr.reason or "Return approved",
+        {"order_number": order.order_number, "return_id": str(rr.id)},
+    )
+    if error:
+        print(f"[Returns] auto-refund FAILED for return #{rr.id}: {error}")
         return False
-    try:
-        import razorpay as _rp
-        client = _rp.Client(auth=(key_id, key_secret))
-        refund = client.payment.refund(
-            order.payment_transaction_id,
-            {
-                "amount": int(order.total * 100),
-                "speed":  "normal",
-                "notes":  {"order_number": order.order_number, "reason": rr.reason},
-            },
-        )
-        rr.refund_id = refund.get("id", "")
+
+    rr.refund_id = "" if refund_id == "already_refunded" else refund_id
+    if refund_id == "already_refunded":
+        rr.status = "refunded"
+        order.payment_status = "refunded"
+    else:
         rr.status = "refund_initiated"
         order.payment_status = "refund_initiated"
-        print(f"[Returns] ✅ Refund {rr.refund_id} auto-initiated for return #{rr.id}")
-        return True
-    except Exception as e:
-        print(f"[Returns] ❌ Auto-refund FAILED for return #{rr.id}: {e}")
-        return False
+    print(f"[Returns] refund auto-initiated for return #{rr.id} ({refund_id})")
+    return True
 
 
 def _process_picked_up(rr, order, user) -> list[str]:

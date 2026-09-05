@@ -6,7 +6,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
-import models, auth as auth_utils, notifications
+import models, schemas, auth as auth_utils, notifications, pricing, refunds
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/payments", tags=["Payments"])
@@ -22,7 +22,20 @@ def get_razorpay_client():
 
 
 class CreateOrderRequest(BaseModel):
-    amount: float  # in rupees
+    """
+    What the customer is buying — NOT what it costs.
+
+    `amount` used to be the price, taken as sent, and it is now ignored: the
+    total is computed from Product rows in pricing.py. It is kept on the schema
+    only so an older cached bundle does not 422 mid-checkout, and so the value
+    the page believed can be logged when it disagrees with the truth.
+
+    `buy_now` says whether to price the single piece or the whole bag, and has
+    to be here because the two produce different totals and the browser is no
+    longer trusted to tell us which one it charged for.
+    """
+    amount: float | None = None      # ignored; see the docstring
+    buy_now: schemas.BuyNowItem | None = None
 
 
 class VerifyRequest(BaseModel):
@@ -34,10 +47,39 @@ class VerifyRequest(BaseModel):
 @router.post("/create-order")
 def create_razorpay_order(
     payload: CreateOrderRequest,
+    db: Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
+    """
+    Open a Razorpay order for what this customer is actually buying.
+
+    THE AMOUNT IS COMPUTED HERE, NOT ACCEPTED. See pricing.py for the two live
+    faults that came from taking it off the request — a flat 49-rupee charge on
+    every Buy It Now, and any bag purchasable for one rupee.
+
+    Stock is checked before the customer is sent to Razorpay rather than after.
+    place_order still re-checks and refunds if it lost a race, but that path
+    means taking money and handing it back; refusing here is the version where
+    nobody is charged for something the shop cannot send.
+    """
     client = get_razorpay_client()
-    amount_paise = int(payload.amount * 100)  # Razorpay uses paise
+
+    snapshot, subtotal, shipping_fee, total, stock_error, _ = pricing.price_order(
+        db, current_user.id, payload.buy_now
+    )
+    if stock_error:
+        raise HTTPException(status_code=400, detail=stock_error)
+
+    amount_paise = pricing.to_paise(total)
+
+    # Not an error — an older bundle may still send its own figure, and a
+    # mismatch is worth seeing in the log without failing the sale.
+    if payload.amount is not None and pricing.to_paise(payload.amount) != amount_paise:
+        print(
+            f"[payments] amount from browser ({payload.amount}) disagrees with "
+            f"the priced total ({total}) for user {current_user.id} — charging {total}"
+        )
+
     order = client.order.create({
         "amount":   amount_paise,
         "currency": "INR",
@@ -48,6 +90,11 @@ def create_razorpay_order(
         "amount":    order["amount"],
         "currency":  order["currency"],
         "key_id":    RAZORPAY_KEY_ID,
+        # The page displays and charges this, rather than its own arithmetic.
+        "subtotal":  subtotal,
+        "shipping":  shipping_fee,
+        "total":     total,
+        "items":     snapshot,
     }
 
 
@@ -232,34 +279,23 @@ def admin_initiate_refund(
         raise HTTPException(400, "Order is already fully refunded")
     if order.payment_status == "refund_initiated":
         raise HTTPException(400, "Refund is already initiated for this order")
-    if not order.payment_transaction_id or not order.payment_transaction_id.startswith("pay_"):
-        raise HTTPException(400, "No valid Razorpay payment ID found for this order")
 
-    key_id     = os.getenv("RAZORPAY_KEY_ID", "")
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
-    if not key_id or not key_secret:
-        raise HTTPException(503, "Razorpay credentials not configured in environment variables")
+    # The amount comes back from Razorpay rather than from order.total. Asking
+    # for order.total is what made this button fail with "the refund amount
+    # provided is greater than amount captured" on any order whose captured
+    # figure differed — see refunds.py.
+    refund_id, error = refunds.refund_payment(
+        order.payment_transaction_id,
+        order.cancel_reason or "Admin initiated refund",
+        {"order_number": order.order_number},
+    )
+    if error:
+        raise HTTPException(400, f"Razorpay refund failed: {error}")
 
-    try:
-        client = razorpay.Client(auth=(key_id, key_secret))
-        refund = client.payment.refund(
-            order.payment_transaction_id,
-            {
-                "amount": int(order.total * 100),  # paise
-                "speed":  "normal",
-                "notes":  {
-                    "order_number": order.order_number,
-                    "reason":       order.cancel_reason or "Admin initiated refund",
-                },
-            },
-        )
-        refund_id = refund.get("id", "")
-        print(f"[Admin Refund] ✅ Refund {refund_id} initiated for {order.order_number} ₹{order.total}")
-    except Exception as e:
-        print(f"[Admin Refund] ❌ Razorpay refund failed: {e}")
-        raise HTTPException(500, f"Razorpay refund failed: {str(e)}")
-
-    order.payment_status = "refund_initiated"
+    # Nothing was outstanding — the money is already back. Recording it as
+    # refunded is the honest state, and beats reporting a failure for an
+    # outcome that is what the admin wanted.
+    order.payment_status = "refunded" if refund_id == "already_refunded" else "refund_initiated"
     db.commit()
     db.refresh(order)
 
