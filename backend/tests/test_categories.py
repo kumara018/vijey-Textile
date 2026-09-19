@@ -221,6 +221,52 @@ class TestDeleting:
         assert "hide" in r.json()["detail"].lower()
 
 
+class TestEmailIcons:
+    """
+    Emails had their own category→icon map, and in both shops it was Ammalu
+    Tex's — so Vijey Textile's own categories never got an icon in an email.
+    """
+
+    def test_the_icon_the_admin_set_is_the_one_emails_use(self, client, admin):
+        import category_store
+        name = _name("Iconic")
+        client.post("/api/admin/categories", json={"name": name, "emoji": "🪷"}, headers=admin)
+        assert category_store.icon_for(name) == "🪷"
+        assert category_store.icon_for(name.upper()) == "🪷"
+
+    def test_an_icon_change_reaches_emails_without_waiting(self, client, admin):
+        import category_store
+        name = _name("Changing")
+        listing = client.post("/api/admin/categories", json={"name": name, "emoji": "🧵"}, headers=admin).json()
+        assert category_store.icon_for(name) == "🧵"
+        client.put(f"/api/admin/categories/{_by_name(listing, name)['id']}",
+                   json={"emoji": "🎀"}, headers=admin)
+        assert category_store.icon_for(name) == "🎀", "the cached icon outlived the edit"
+
+    def test_both_shops_categories_have_a_built_in_icon(self):
+        """The cross-shop bug: Vijey's names were missing from the email map."""
+        import category_store
+        category_store.forget_icons()
+        for name in ("Baby Frocks", "Frocks", "Western Dresses", "Party Wear",
+                     "Half Saree", "Crop Tops", "Tops", "Party Wears"):
+            assert category_store.icon_for(name) != "🛍️", f"{name} has no icon"
+
+    def test_anything_unknown_gets_the_bag_rather_than_an_error(self):
+        import category_store
+        assert category_store.icon_for("Nothing Like This") == "🛍️"
+        assert category_store.icon_for(None) == "🛍️"
+        assert category_store.icon_for("") == "🛍️"
+
+    def test_an_email_line_carries_the_icon(self, client, admin):
+        import notifications
+        name = _name("Mailed")
+        client.post("/api/admin/categories", json={"name": name, "emoji": "🪷"}, headers=admin)
+        html = notifications._cart_summary_html([
+            {"name": "A piece", "category": name, "quantity": 1, "price": 100.0},
+        ])
+        assert "🪷" in html
+
+
 class TestSelfHealing:
 
     def test_a_category_products_use_is_put_back_in_the_list(self, db):

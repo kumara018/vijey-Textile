@@ -200,10 +200,10 @@ def _smtp_send(to: str, subject: str, mime_message) -> bool:
         _remember_email(False, "authentication rejected", host)
         print(f"[Email AUTH REJECTED by {host}] the address and password were not accepted. {e}")
     except smtplib.SMTPException as e:
-        _remember_email(False, type(e, host).__name__)
+        _remember_email(False, type(e).__name__, host)
         print(f"[Email SMTP ERROR via {host}] {type(e).__name__}: {e}")
     except Exception as e:
-        _remember_email(False, type(e, host).__name__)
+        _remember_email(False, type(e).__name__, host)
         print(f"[Email ERROR via {host}] {type(e).__name__}: {e}")
     return False
 
@@ -222,35 +222,61 @@ def _send_email(to: str, subject: str, html: str):
 
     # ── Path A: Brevo (recommended — free tier, no card required) ──────────────
     if brevo_key:
-        from_email = SMTP_EMAIL or "noreply@vijeytextile.com"
-        payload = _json.dumps({
-            "sender":      {"name": STORE_NAME, "email": from_email},
-            "to":          [{"email": to}],
-            "replyTo":     {"email": SUPPORT_EMAIL},
-            "subject":     subject,
-            "htmlContent": html,
-        }).encode()
-        try:
-            request = _req.Request(
-                "https://api.brevo.com/v3/smtp/email",
-                data=payload,
-                headers={
-                    "api-key":      brevo_key,
-                    "Content-Type": "application/json",
-                    "Accept":       "application/json",
-                },
-            )
-            with _req.urlopen(request, timeout=15) as resp:
-                _remember_email(True, None, "brevo")
-                print(f"[Email SENT via Brevo {resp.status}] {subject} -> {to}")
-                return True
-        except _uerr.HTTPError as e:
-            body = e.read().decode(errors="ignore")
-            _remember_email(False, _brevo_reason(e.code, "brevo"))
-            print(f"[Email REJECTED by Brevo {e.code}] {subject} -> {to} | {body}")
-        except Exception as e:
-            _remember_email(False, type(e, "brevo").__name__)
-            print(f"[Email Brevo ERROR] {type(e).__name__}: {e}")
+        # WHO THE EMAIL IS FROM. SMTP_EMAIL, or noreply@ on the shop's own
+        # domain. Brevo sends on the domain's behalf (it is authorised in DNS),
+        # so the address needs no mailbox — which is why it could move off the
+        # admin@ mailbox that is no longer paid for.
+        #
+        # SMTP_EMAIL_FALLBACK is the safety net for that move: if Brevo ever
+        # refuses the sender, the email is retried ONCE from the fallback and
+        # the health page records which address was used and why. A refused
+        # sender would otherwise stop every email the shop sends, sign-in codes
+        # included, with nothing on screen to say so.
+        primary  = SMTP_EMAIL or "noreply@vijeytextile.com"
+        fallback = os.getenv("SMTP_EMAIL_FALLBACK", "").strip()
+        senders  = [primary] + ([fallback] if fallback and fallback.lower() != primary.lower() else [])
+
+        for attempt, from_email in enumerate(senders):
+            payload = _json.dumps({
+                "sender":      {"name": STORE_NAME, "email": from_email},
+                "to":          [{"email": to}],
+                "replyTo":     {"email": SUPPORT_EMAIL},
+                "subject":     subject,
+                "htmlContent": html,
+            }).encode()
+            try:
+                request = _req.Request(
+                    "https://api.brevo.com/v3/smtp/email",
+                    data=payload,
+                    headers={
+                        "api-key":      brevo_key,
+                        "Content-Type": "application/json",
+                        "Accept":       "application/json",
+                    },
+                )
+                with _req.urlopen(request, timeout=15) as resp:
+                    note = None if attempt == 0 else (
+                        f"sent as {from_email} because Brevo refused {primary} — "
+                        f"authorise {primary} in Brevo, or change SMTP_EMAIL"
+                    )
+                    _remember_email(True, note, "brevo")
+                    print(f"[Email SENT via Brevo {resp.status} as {from_email}] {subject} -> {to}")
+                    return True
+            except _uerr.HTTPError as e:
+                body = e.read().decode(errors="ignore")
+                reason = _brevo_reason(e.code, body)
+                print(f"[Email REJECTED by Brevo {e.code} as {from_email}] {subject} -> {to} | {body}")
+                about_sender = reason in (
+                    "sender address not authorised in Brevo",
+                    "sending domain not authenticated (add Brevo's DNS records)",
+                )
+                if about_sender and attempt + 1 < len(senders):
+                    continue   # the next sender; the reason is recorded if that fails too
+                _remember_email(False, reason, "brevo")
+            except Exception as e:
+                _remember_email(False, type(e).__name__, "brevo")
+                print(f"[Email Brevo ERROR] {type(e).__name__}: {e}")
+            return False
         return False  # never fall through when Brevo key is set
 
     # ── Path B: SendGrid (fallback) ─────────────────────────────────────────────
@@ -299,7 +325,7 @@ def _send_email(to: str, subject: str, html: str):
             _remember_email(False, f"rejected with HTTP {e.code}", "sendgrid")
             print(f"[Email REJECTED by SendGrid {e.code}] {subject} -> {to} | {body}")
         except Exception as e:
-            _remember_email(False, type(e, "sendgrid").__name__)
+            _remember_email(False, type(e).__name__, "sendgrid")
             print(f"[Email SendGrid ERROR] {type(e).__name__}: {e}")
         return False  # never fall through to SMTP when API key is set
 
@@ -1012,10 +1038,20 @@ def send_password_reset_otp_email(email: str, name: str, otp: str):
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-_EMOJI_MAP = {
-    "Lehenga": "👗", "Chudithar": "👘", "Half Saree": "🥻",
-    "Crop Tops": "🎽", "Tops": "👕", "Party Wears": "✨",
-}
+def _icon(category: str | None) -> str:
+    """
+    The category's icon for an email line.
+
+    There was a hard-coded map here, and in BOTH shops it was Ammalu Tex's —
+    so a Vijey Textile email never showed the icon for Baby Frocks, Frocks,
+    Western Dresses or Party Wear, and a category added from the workroom never
+    got one in either shop. It is the icon the admin set on the category now.
+    """
+    try:
+        import category_store
+        return category_store.icon_for(category)
+    except Exception:
+        return "🛍️"
 
 def _cart_summary_html(cart_items: list) -> str:
     """Build an HTML table of all items currently in the cart."""
@@ -1025,7 +1061,7 @@ def _cart_summary_html(cart_items: list) -> str:
     total_qty   = 0
     total_price = 0.0
     for item in cart_items:
-        emoji    = _EMOJI_MAP.get(item.get("category", ""), "🛍️")
+        emoji    = _icon(item.get("category"))
         name     = item.get("name", "")
         qty      = item.get("quantity", 1)
         price    = item.get("price", 0)
@@ -1082,7 +1118,7 @@ def send_cart_add_email(email: str, name: str, product_name: str,
                         product_category: str, quantity: int,
                         size: str, color: str, cart_items: list):
     first = name.split()[0]
-    emoji   = _EMOJI_MAP.get(product_category, "🛍️")
+    emoji   = _icon(product_category)
     details = []
     if size:  details.append(f"Size: <strong>{size}</strong>")
     if color: details.append(f"Colour: <strong>{color}</strong>")
@@ -1123,7 +1159,7 @@ def send_cart_add_email(email: str, name: str, product_name: str,
 def send_cart_remove_email(email: str, name: str, product_name: str,
                            product_category: str, cart_items: list):
     first     = name.split()[0]
-    emoji     = _EMOJI_MAP.get(product_category, "🛍️")
+    emoji     = _icon(product_category)
     summary_html = _cart_summary_html(cart_items)
     remaining = len(cart_items)
     html = _wrap(f"""

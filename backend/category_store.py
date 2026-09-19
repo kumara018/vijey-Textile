@@ -115,6 +115,67 @@ def seed_defaults(db: Session, defaults: list[dict]) -> int:
     return len(defaults)
 
 
+# ── Icons for emails and messages ────────────────────────────────────────────
+#
+# THE EMAILS HAD THEIR OWN LIST TOO. notifications.py kept a category→icon map,
+# and in BOTH shops it was Ammalu Tex's map — so on Vijey Textile a Baby Frocks,
+# Frocks, Western Dresses or Party Wear line in a cart email never got its icon,
+# and a category added from the workroom never would in either shop.
+#
+# Emails now use the icon the admin set on the category. Read through a short
+# cache: an email is sent per cart change, and a database round trip per line
+# of every one of them is load for no benefit. Five minutes is how long an icon
+# edit can take to reach emails; the admin router clears it on every write so
+# in practice it is immediate on this worker.
+
+import time as _time
+
+_BUILT_IN_ICONS = {
+    # Both shops' names, so either shop's email is right before the table has
+    # an icon for a category, or if the database cannot be reached.
+    "baby frocks": "👶", "frocks": "👗", "western dresses": "👒", "party wear": "✨",
+    "lehenga": "💃", "chudithar": "👘", "sharara": "🪷",
+    "half saree": "🥻", "crop tops": "🎽", "tops": "👕", "party wears": "✨",
+}
+_ICON_TTL_SECONDS = 300
+_icon_cache: dict = {"at": 0.0, "map": {}}
+
+
+def forget_icons() -> None:
+    """Drop the cached icons. Called after every category write."""
+    _icon_cache["at"] = 0.0
+
+
+def _icons() -> dict[str, str]:
+    if _time.monotonic() - _icon_cache["at"] < _ICON_TTL_SECONDS:
+        return _icon_cache["map"]
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            fresh = {
+                c.name.lower(): c.emoji
+                for c in db.query(models.Category).all()
+                if c.emoji
+            }
+        finally:
+            db.close()
+        _icon_cache.update(at=_time.monotonic(), map=fresh)
+    except Exception as e:
+        # An email must never fail because the icon could not be looked up.
+        # Keep the last good map, and try again on the next send.
+        print(f"[category icons] lookup failed, using the last known set: {e}")
+    return _icon_cache["map"]
+
+
+def icon_for(name: str | None, default: str = "🛍️") -> str:
+    """The icon for a category: the admin's, else a built-in one, else a bag."""
+    key = _clean(name).lower()
+    if not key:
+        return default
+    return _icons().get(key) or _BUILT_IN_ICONS.get(key) or default
+
+
 def reconcile_with_products(db: Session) -> list[str]:
     """
     Add any category a product uses that the table does not list.

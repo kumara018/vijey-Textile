@@ -132,6 +132,7 @@ def create_category(
         sort_order=(top[0] if top and top[0] is not None else 0) + 1,
     ))
     db.commit()
+    category_store.forget_icons()   # so emails pick up an icon change at once
     return _listing(db)
 
 
@@ -158,6 +159,7 @@ def reorder_categories(
     for position, cid in enumerate(payload.ids, start=1):
         cats[cid].sort_order = position
     db.commit()
+    category_store.forget_icons()   # so emails pick up an icon change at once
     return _listing(db)
 
 
@@ -197,6 +199,7 @@ def update_category(
             setattr(cat, field, changes[field])
 
     db.commit()
+    category_store.forget_icons()   # so emails pick up an icon change at once
     return _listing(db)
 
 
@@ -231,4 +234,5 @@ def delete_category(
 
     db.delete(cat)
     db.commit()
+    category_store.forget_icons()   # so emails pick up an icon change at once
     return _listing(db)
