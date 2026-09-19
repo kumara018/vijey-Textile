@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
 import { codeTimer, formatRemaining, CODE_TTL_SECONDS } from '@/lib/otpTimer';
 import { redirectAfterLogin } from '@/lib/auth';
+import { returnPath } from '@/lib/returnPath';
 import AuthShell from '@/components/system/AuthShell';
 import { Field, Step } from '@/components/system/Field';
 import { ActionButton, ActionLink } from '@/components/system/Action';
@@ -107,6 +108,16 @@ function SignInInner() {
   const isAddMode = params.get('add') === '1';
   const isSwitchMode = params.get('switch') === '1';
   const staysSignedIn = isAddMode || isSwitchMode;
+
+  /**
+   * WHERE BACK GOES: the page the customer was on before they came to sign in
+   * — a product, the bag, a category — not the homepage. See lib/returnPath.
+   * Read after mount because it lives in sessionStorage, which the server
+   * render cannot see; until then it is the homepage, which is also the answer
+   * when there is nowhere to go back to.
+   */
+  const [backHref, setBackHref] = useState('/');
+  useEffect(() => { setBackHref(returnPath()); }, []);
 
   // Already signed in, and not deliberately adding another account.
   useEffect(() => {
@@ -232,7 +243,7 @@ function SignInInner() {
    */
   const finish = (token: string, u: { is_admin?: boolean }) => {
     login(token, u as never);
-    redirectAfterLogin(Boolean(u?.is_admin));
+    redirectAfterLogin(Boolean(u?.is_admin), { newAccount: staysSignedIn });
   };
 
   /**
@@ -351,7 +362,7 @@ function SignInInner() {
        */
       back={
         stage === 'identifier'
-          ? { label: 'Back to the shop', href: '/' }
+          ? { label: 'Back', href: backHref }
           : stage === 'password'
             ? { label: 'Use a different phone or email', onClick: editIdentifier }
             : stage === 'code'

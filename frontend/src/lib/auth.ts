@@ -8,6 +8,7 @@
  */
 
 import { authAPI } from './api';
+import { returnPath } from './returnPath';
 
 export interface LoginResult {
   success: boolean;
@@ -180,8 +181,19 @@ export function performLogout(to: string = '/') {
   window.location.href = to;
 }
 
-/** Hard-navigate to the correct page after login. */
-export function redirectAfterLogin(isAdmin: boolean) {
-  // window.location.href forces a full page reload — no React timing issues
-  window.location.href = isAdmin ? '/admin' : '/';
+/**
+ * Where a finished sign-in lands. A full document load, so every provider
+ * re-reads the new token instead of racing a client transition.
+ *
+ *   admin                  -> the workroom
+ *   customer               -> the page they were on before signing in, as on
+ *                             Amazon; the homepage only if there was none.
+ *                             This always went to the homepage, so signing in
+ *                             from a product page lost the product.
+ *   switched / added       -> the homepage. The page before belonged to the
+ *   account                   PREVIOUS account (its order, its bag), and landing
+ *                             the new account on it would show the wrong one's.
+ */
+export function redirectAfterLogin(isAdmin: boolean, opts: { newAccount?: boolean } = {}) {
+  window.location.href = isAdmin ? '/admin' : opts.newAccount ? '/' : returnPath('/');
 }

@@ -15,6 +15,7 @@ import ThreeProvider from '@/three/ThreeProvider';
 import CaptureMode from '@/components/CaptureMode';
 import ErrorReporting from '@/components/ErrorReporting';
 import ScrollManager from '@/components/system/ScrollManager';
+import ReturnPathRecorder from '@/components/system/ReturnPathRecorder';
 import SiteToaster from '@/components/system/SiteToaster';
 import { STORE } from '@/lib/config';
 
@@ -96,6 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             already on — the masthead, a footer link, a shelf filter. Renders
             nothing; it is one listener on the document. */}
         <ScrollManager />
+        <ReturnPathRecorder />
         <Suspense fallback={null}><CaptureMode /></Suspense>
         <ThreeProvider />
         {/* Outermost of the data providers: AuthContext, CartContext and
