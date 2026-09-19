@@ -73,7 +73,10 @@ export async function generateMetadata({ params }: Params, parent: ResolvingMeta
   }
   if (!p) return {};   // API unreachable: keep the shop's own title
 
-  const title = `${p.name}${p.category ? ` — ${p.category}` : ''} | ${STORE.name}`;
+  // The category only when it adds something: "Classic Cotton Half Saree —
+  // Half Saree" and "Tops — Tops" say the same word twice in a search result.
+  const addsCategory = !!p.category && !p.name.toLowerCase().includes(p.category.toLowerCase());
+  const title = `${p.name}${addsCategory ? ` — ${p.category}` : ''} | ${STORE.name}`;
   // Price first: it is what a shared link is usually asked about.
   const firstLine = (p.description ?? '').trim().split(/(?<=[.!?])\s+/)[0]?.slice(0, 150);
   const description = [rupees(p.price), p.fabric, firstLine].filter(Boolean).join(' · ');
