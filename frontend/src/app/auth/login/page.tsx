@@ -7,7 +7,6 @@ import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
 import { codeTimer, formatRemaining, CODE_TTL_SECONDS } from '@/lib/otpTimer';
 import { redirectAfterLogin } from '@/lib/auth';
-import { returnPath } from '@/lib/returnPath';
 import AuthShell from '@/components/system/AuthShell';
 import { Field, Step } from '@/components/system/Field';
 import { ActionButton, ActionLink } from '@/components/system/Action';
@@ -108,16 +107,6 @@ function SignInInner() {
   const isAddMode = params.get('add') === '1';
   const isSwitchMode = params.get('switch') === '1';
   const staysSignedIn = isAddMode || isSwitchMode;
-
-  /**
-   * WHERE BACK GOES: the page the customer was on before they came to sign in
-   * — a product, the bag, a category — not the homepage. See lib/returnPath.
-   * Read after mount because it lives in sessionStorage, which the server
-   * render cannot see; until then it is the homepage, which is also the answer
-   * when there is nowhere to go back to.
-   */
-  const [backHref, setBackHref] = useState('/');
-  useEffect(() => { setBackHref(returnPath()); }, []);
 
   // Already signed in, and not deliberately adding another account.
   useEffect(() => {
@@ -360,9 +349,16 @@ function SignInInner() {
        * been accepted at that point, so there is no earlier state to return to
        * — going "back" would mean throwing away a proven sign-in.
        */
+      /*
+       * NO BACK LINK ON THE FIRST STEP, as on Amazon. The way out is the
+       * wordmark at the top and the browser's own Back button — and a
+       * finished sign-in still returns the customer to the page they came
+       * from (lib/returnPath). The later steps keep theirs: those undo a
+       * step inside the form, like correcting a mistyped email.
+       */
       back={
         stage === 'identifier'
-          ? { label: 'Back', href: backHref }
+          ? undefined
           : stage === 'password'
             ? { label: 'Use a different phone or email', onClick: editIdentifier }
             : stage === 'code'

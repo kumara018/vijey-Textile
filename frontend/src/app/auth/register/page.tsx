@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/lib/api';
 import { redirectAfterLogin } from '@/lib/auth';
-import { returnPath } from '@/lib/returnPath';
 import AuthShell from '@/components/system/AuthShell';
 import { Field, Step } from '@/components/system/Field';
 import { ActionButton } from '@/components/system/Action';
@@ -47,16 +46,6 @@ function RegisterInner() {
   const { login } = useAuth();
   const params = useSearchParams();
   const prefill = params.get('identifier')?.trim() ?? '';
-
-  /**
-   * WHERE BACK GOES: the page the customer was on before they came to sign in
-   * — a product, the bag, a category — not the homepage. See lib/returnPath.
-   * Read after mount because it lives in sessionStorage, which the server
-   * render cannot see; until then it is the homepage, which is also the answer
-   * when there is nowhere to go back to.
-   */
-  const [backHref, setBackHref] = useState('/');
-  useEffect(() => { setBackHref(returnPath()); }, []);
 
   const [stage, setStage] = useState<Stage>('details');
   const [fullName, setFullName] = useState('');
@@ -206,7 +195,9 @@ function RegisterInner() {
          chooser gets none: the code is already accepted by then. */
       back={
         stage === 'details'
-          ? { label: prefill ? 'Back to signing in' : 'Back', href: prefill ? '/auth/login' : backHref }
+          // Only when they came from signing in — then it undoes that step.
+          // Arriving fresh, there is no back link, as on the sign-in page.
+          ? (prefill ? { label: 'Back to signing in', href: '/auth/login' } : undefined)
           : stage === 'code'
             ? { label: 'Back to your details', onClick: () => { setStage('details'); setErrors({}); } }
             : undefined
