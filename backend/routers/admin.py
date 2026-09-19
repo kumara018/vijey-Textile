@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from database import get_db
 import models, schemas, auth as auth_utils, notifications
 import courier_sync
+import category_store
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -64,7 +65,10 @@ def create_product(
         if existing:
             raise HTTPException(status_code=409, detail="Product with this SKU already exists")
 
-    product = models.Product(**payload.model_dump())
+    data = payload.model_dump()
+    # Against the categories table, and stored in its canonical spelling.
+    data["category"] = category_store.require(db, data.get("category"))
+    product = models.Product(**data)
     db.add(product)
     db.commit()
     db.refresh(product)
@@ -99,7 +103,12 @@ def update_product(
     # leaves untouched any field a caller genuinely omits, like the
     # single-field quick-toggle calls (is_featured, is_active) elsewhere in
     # the admin UI.
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    changes = payload.model_dump(exclude_unset=True)
+    # Update never checked the category at all, so an edit could file a piece
+    # under any string — a name no menu links to, reachable only by search.
+    if "category" in changes:
+        changes["category"] = category_store.require(db, changes["category"])
+    for field, value in changes.items():
         setattr(product, field, value)
 
     db.commit()

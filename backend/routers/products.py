@@ -7,17 +7,33 @@ import models, schemas, auth as auth_utils
 
 router = APIRouter(prefix="/api/products", tags=["Products"])
 
-VALID_CATEGORIES = ["Chudithar", "Tops", "Lehenga", "Half Saree", "Crop Tops", "Party Wears"]
-
-
 @router.get("/categories")
 def get_categories(db: Session = Depends(get_db)):
-    """Return categories from DB (with IDs). Falls back to hardcoded list."""
-    cats = db.query(models.Category).filter(models.Category.is_active == True).order_by(models.Category.sort_order).all()
+    """
+    The categories the shop's menus offer, in the admin's order.
+
+    Hidden categories are left out — that is what hiding one means. The
+    fallback used to be a hard-coded list, and on Vijey Textile it was AMMALU
+    TEX's list; if the table were ever empty the menus would have offered
+    another shop's garments. It falls back to the categories products actually
+    use instead, which is at least this shop's own truth.
+    """
+    import category_store
+    tally = category_store.counts(db)
+    cats = (
+        db.query(models.Category)
+        .filter(models.Category.is_active == True)  # noqa: E712
+        .order_by(models.Category.sort_order, models.Category.id)
+        .all()
+    )
     if cats:
-        return [{"id": c.id, "name": c.name, "emoji": c.emoji, "description": c.description} for c in cats]
-    # Fallback if DB not seeded yet
-    return [{"id": i+1, "name": n, "emoji": None, "description": None} for i, n in enumerate(VALID_CATEGORIES)]
+        return [category_store.to_dict(c, tally) for c in cats]
+    return [
+        {"id": 0, "name": name, "emoji": None, "eyebrow": None, "headline": None,
+         "description": None, "is_active": True, "sort_order": i,
+         "product_count": t["total"], "live_product_count": t["active"]}
+        for i, (name, t) in enumerate(sorted(tally.items()), start=1)
+    ]
 
 
 @router.get("/", response_model=List[schemas.ProductOut])

@@ -36,16 +36,29 @@ class User(Base):
 
 
 class Category(Base):
-    """Master list of product categories with their own IDs."""
+    """
+    The shop's categories — the ONE list every menu, filter and form reads.
+
+    Products store their category by NAME (`Product.category`), not by id, so
+    `name` is the key that matters: renaming a category has to rename it on its
+    products too, which routers/categories.py does in the same transaction.
+
+    `eyebrow`, `headline` and `description` are the category's landing-page
+    copy. They live here so a category added from the workroom gets a real
+    page on day one instead of a generic heading.
+    """
     __tablename__ = "categories"
 
     id          = Column(Integer, primary_key=True, index=True)
     name        = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(String(500), nullable=True)
     emoji       = Column(String(10), nullable=True)
-    is_active   = Column(Boolean, default=True)
+    eyebrow     = Column(String(60), nullable=True)    # short occasion line
+    headline    = Column(String(160), nullable=True)   # landing-page display line
+    is_active   = Column(Boolean, default=True)        # false = hidden from menus
     sort_order  = Column(Integer, default=0)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at  = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
 
     # ── Indexes, chosen from measured query plans ────────────────────────

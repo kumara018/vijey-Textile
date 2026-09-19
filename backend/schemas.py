@@ -3,7 +3,8 @@ from typing import Optional, List, Any
 from datetime import datetime
 import re
 
-VALID_CATEGORIES = ["Baby Frocks", "Chudithar", "Frocks", "Western Dresses", "Lehenga", "Party Wear"]
+# Categories are no longer listed here — the `categories` table is the list,
+# edited from the workroom. See category_store.py.
 
 # Clothing sizes 12 to 40 — Baby, Kids & Girls
 VALID_SIZES = [
@@ -345,12 +346,10 @@ class ProductCreate(BaseModel):
             raise ValueError("Stock cannot be negative")
         return v
 
-    @field_validator("category")
-    @classmethod
-    def category_valid(cls, v):
-        if v not in VALID_CATEGORIES:
-            raise ValueError(f"Category must be one of: {', '.join(VALID_CATEGORIES)}")
-        return v
+    # No category validator here, deliberately. It checked a hard-coded list,
+    # which meant a category added from the workroom could never be used on a
+    # product. A schema cannot see the database, so the check lives in the
+    # admin router instead: category_store.require(), against the real table.
 
 
 class ProductUpdate(BaseModel):
