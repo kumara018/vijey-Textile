@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { adminAPI } from '@/lib/api';
 import { mediaUrl } from '@/lib/media';
-import { CATEGORY_ORDER } from '@/lib/categories';
+import { useAdminCategories } from '@/lib/useCategories';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
@@ -53,7 +53,9 @@ function thumbOf(p: { images?: string[] }): string | null {
 }
 
 const EMPTY_FORM = {
-  name: '', description: '', price: '', compare_price: '', category: CATEGORY_ORDER[0],
+  // Filled from the workroom's category list when the form opens — a
+  // hard-coded first category would be wrong the day it was renamed.
+  name: '', description: '', price: '', compare_price: '', category: '',
   fabric: '', size_options: '', colors: '', stock: '', sku: '',
   fit: '', material: '', care_instructions: '',
   is_featured: false, is_new_arrival: false, is_returnable: true,
@@ -63,6 +65,9 @@ type FormState = typeof EMPTY_FORM;
 
 export default function AdminProductsView() {
   const { user, loading: authLoading } = useAuth();
+  // Hidden categories included: hiding one takes it out of the shop's menus,
+  // not out of the admin's reach.
+  const { categories: adminCategories } = useAdminCategories(!!user?.is_admin);
   const router = useRouter();
 
   const [rows, setRows] = useState<any[]>([]);
@@ -156,7 +161,8 @@ export default function AdminProductsView() {
   const outOfStock = rows.filter((p) => p.stock === 0).length;
 
   const openNew = () => {
-    setForm(EMPTY_FORM); setImages([]); setVideoUrl(''); setVideoOrientation('portrait');
+    setForm({ ...EMPTY_FORM, category: adminCategories.find((c) => c.is_active)?.name ?? adminCategories[0]?.name ?? '' });
+    setImages([]); setVideoUrl(''); setVideoOrientation('portrait');
     setFormError(''); setEditing('new');
   };
 
@@ -186,7 +192,7 @@ export default function AdminProductsView() {
     setForm({
       name: p.name ?? '', description: p.description ?? '',
       price: String(p.price ?? ''), compare_price: p.compare_price ? String(p.compare_price) : '',
-      category: p.category ?? CATEGORY_ORDER[0], fabric: p.fabric ?? '',
+      category: p.category ?? '', fabric: p.fabric ?? '',
       size_options: (p.size_options ?? []).join(', '), colors: (p.colors ?? []).join(', '),
       stock: String(p.stock ?? ''), sku: p.sku ?? '', fit: p.fit ?? '',
       material: p.material ?? '', care_instructions: p.care_instructions ?? '',
@@ -234,6 +240,7 @@ export default function AdminProductsView() {
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { setFormError('The piece needs a name.'); return; }
+    if (!form.category) { setFormError('Choose a category.'); return; }
     if (!form.price || Number(form.price) <= 0) { setFormError('Enter a price.'); return; }
     if (form.stock === '' || Number(form.stock) < 0) { setFormError('Enter a stock count.'); return; }
 
@@ -385,10 +392,25 @@ export default function AdminProductsView() {
             </div>
             <div>
               <label htmlFor="p-cat" className={lab}>Category</label>
-              <select id="p-cat" value={form.category} className={input}
+              <select id="p-cat" value={form.category} className={input} required
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
-                {CATEGORY_ORDER.map((c) => <option key={c} value={c} className="bg-ink">{c}</option>)}
+                {!form.category && (
+                  <option value="" disabled className="bg-ink">Choose a category</option>
+                )}
+                {adminCategories.map((c) => (
+                  <option key={c.id} value={c.name} className="bg-ink">
+                    {c.name}{c.is_active ? '' : ' (hidden from the shop)'}
+                  </option>
+                ))}
+                {/* A piece filed under a name the list does not hold still has
+                    to show its real value, or saving would silently move it. */}
+                {form.category && !adminCategories.some((c) => c.name === form.category) && (
+                  <option value={form.category} className="bg-ink">{form.category}</option>
+                )}
               </select>
+              <a href="/admin/categories" className="mt-1.5 inline-block text-caption text-paper-faint underline underline-offset-4 hover:text-paper">
+                Add or edit categories
+              </a>
             </div>
 
             <div className="lg:col-span-3">

@@ -286,6 +286,13 @@ export const adminAPI = {
   getClientErrors:         ()                           => api.get('/api/client-errors/recent'),
   revokeAdmin:             (id: number)                 => api.patch(`/api/admin/users/${id}/revoke-admin`),
   updateSettings:          (data: object)               => api.put('/api/admin/settings', data),
+  // Categories. Every call returns the whole list, in order, with product
+  // counts — the screen replaces its state with that, so it cannot drift.
+  getCategories:           ()                           => api.get('/api/admin/categories'),
+  createCategory:          (data: object)               => api.post('/api/admin/categories', data),
+  updateCategory:          (id: number, data: object)   => api.put(`/api/admin/categories/${id}`, data),
+  reorderCategories:       (ids: number[])              => api.put('/api/admin/categories/reorder', { ids }),
+  deleteCategory:          (id: number)                 => api.delete(`/api/admin/categories/${id}`),
 };
 
 export const supportAPI = {

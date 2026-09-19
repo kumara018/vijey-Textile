@@ -31,6 +31,7 @@ const VIEWS = [
   { href: '/admin', label: 'Dashboard', match: (p: string) => p === '/admin' },
   { href: '/admin/orders', label: 'Orders', match: (p: string) => p === '/admin/orders' },
   { href: '/admin/products', label: 'Products', match: (p: string) => p === '/admin/products' },
+  { href: '/admin/categories', label: 'Categories', match: (p: string) => p === '/admin/categories' },
   { href: '/admin/returns', label: 'Returns', match: (p: string) => p === '/admin/returns' },
   { href: '/admin/cancellations', label: 'Cancelled', match: (p: string) => p === '/admin/cancellations' },
   { href: '/admin/users', label: 'Customers', match: (p: string) => p === '/admin/users' },

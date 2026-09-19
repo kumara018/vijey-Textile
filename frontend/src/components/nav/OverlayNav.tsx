@@ -12,6 +12,7 @@ import DeliverTo from '@/components/home/DeliverTo';
 import ContactMenu from '@/components/nav/ContactMenu';
 import HelpMenu from '@/components/nav/HelpMenu';
 import { STORE } from '@/lib/config';
+import { useCategories } from '@/lib/useCategories';
 
 /**
  * Full-screen overlay navigation — The Trousseau.
@@ -34,14 +35,8 @@ import { STORE } from '@/lib/config';
  *   - body scroll locks without the layout shifting when the bar disappears
  */
 
-const CATEGORIES = [
-  { name: 'Baby Frocks',     note: 'First celebrations' },
-  { name: 'Chudithar',       note: 'Everyday grace' },
-  { name: 'Frocks',          note: 'School to supper' },
-  { name: 'Western Dresses', note: 'Modern occasion' },
-  { name: 'Lehenga',         note: 'The heirloom piece' },
-  { name: 'Party Wear',      note: 'For the photographs' },
-];
+/* The categories come from the workroom (useCategories) — this list used to be
+   typed out here, so a category added by the shop never reached the menu. */
 
 const SECONDARY = [
   { href: '/products', label: 'All pieces' },
@@ -55,6 +50,7 @@ export default function OverlayNav() {
   const pathname = usePathname();
   const { count: itemCount } = useCart();
   const { user } = useAuth();
+  const { categories } = useCategories();
 
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -309,7 +305,7 @@ export default function OverlayNav() {
             */}
           <nav className="mt-4" aria-label="Categories">
             <ul>
-              {CATEGORIES.map((c, i) => (
+              {categories.map((c, i) => (
                 <li key={c.name} className="border-t border-ink-edge last:border-b">
                   <Link
                     href={`/products?category=${encodeURIComponent(c.name)}`}
@@ -332,9 +328,11 @@ export default function OverlayNav() {
                       <span className="block font-display text-[1.05rem] font-light leading-tight text-paper transition-colors duration-300 group-hover:text-brass-bright motion-reduce:transition-none">
                         {c.name}
                       </span>
-                      <span className="mt-1.5 block text-caption uppercase text-paper-faint transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
-                        {c.note}
-                      </span>
+                      {c.eyebrow && (
+                        <span className="mt-1.5 block text-caption uppercase text-paper-faint transition-colors duration-500 group-hover:text-maroon-300 motion-reduce:transition-none">
+                          {c.eyebrow}
+                        </span>
+                      )}
                     </span>
                     <span
                       aria-hidden="true"

@@ -18,6 +18,8 @@
  * this shop's customers actually choose.
  */
 
+import type { ShopCategory } from '@/types';
+
 export type Rhythm = 'lead-wide' | 'lead-pair' | 'lead-tall';
 
 export interface CategoryIdentity {
@@ -80,6 +82,14 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
       'Weight, drape, and a hem that holds its line through a wedding.',
     rhythm: 'lead-wide',
   },
+  'Sharara': {
+    slug: 'Sharara',
+    eyebrow: 'Mehendi to sangeet',
+    display: 'Wide at the hem, and made to twirl in',
+    standfirst:
+      'Flared trousers under a short kurti — easy to dance in all evening.',
+    rhythm: 'lead-pair',
+  },
   'Party Wear': {
     slug: 'Party Wear',
     eyebrow: 'For the photographs',
@@ -90,8 +100,30 @@ export const CATEGORY_IDENTITY: Record<string, CategoryIdentity> = {
   },
 };
 
-/** The canonical order — matches the Index overlay and the footer. */
+/**
+ * THE FALLBACK ORDER, NOT THE LIVE ONE.
+ *
+ * The live list is the `categories` table, edited from the workroom and read
+ * through useCategories(). This is what a menu shows before that answers, or
+ * if it cannot — so the menu is never empty and never an error.
+ */
 export const CATEGORY_ORDER = Object.keys(CATEGORY_IDENTITY);
+
+/** The fallback list, in the shape the API returns. */
+export const FALLBACK_CATEGORIES: ShopCategory[] = CATEGORY_ORDER.map((name, i) => ({
+  id: -(i + 1),                    // negative: never mistaken for a real row
+  name,
+  emoji: null,
+  eyebrow: CATEGORY_IDENTITY[name].eyebrow,
+  headline: CATEGORY_IDENTITY[name].display,
+  description: CATEGORY_IDENTITY[name].standfirst,
+  is_active: true,
+  sort_order: i + 1,
+  product_count: 0,
+  live_product_count: 0,
+}));
+
+const RHYTHMS: Rhythm[] = ['lead-wide', 'lead-pair', 'lead-tall'];
 
 /**
  * Identity for the un-filtered listing.
@@ -108,7 +140,21 @@ export const ALL_PIECES: CategoryIdentity = {
   rhythm: 'lead-wide',
 };
 
-export function identityFor(category: string | null | undefined, search?: string | null): CategoryIdentity {
+/**
+ * The landing-page identity for a category.
+ *
+ * `row` is the category as the workroom has it. Its copy wins over the
+ * built-in copy, so an admin's edit shows up on the page; the built-in copy
+ * fills anything the row leaves blank. A category added from the workroom
+ * with no built-in entry — Sharara, the day it went in — still gets a full
+ * page from the row alone, and a rhythm picked from its position so it does
+ * not scan like its neighbours.
+ */
+export function identityFor(
+  category: string | null | undefined,
+  search?: string | null,
+  row?: ShopCategory | null,
+): CategoryIdentity {
   if (search) {
     return {
       slug: '',
@@ -119,11 +165,14 @@ export function identityFor(category: string | null | undefined, search?: string
     };
   }
   if (!category) return ALL_PIECES;
-  return CATEGORY_IDENTITY[category] ?? {
-    ...ALL_PIECES,
+
+  const built = CATEGORY_IDENTITY[category];
+  return {
     slug: category,
-    eyebrow: 'Category',
-    display: category,
+    eyebrow: row?.eyebrow || built?.eyebrow || 'Category',
+    display: row?.headline || built?.display || category,
+    standfirst: row?.description || built?.standfirst || ALL_PIECES.standfirst,
+    rhythm: built?.rhythm ?? RHYTHMS[Math.abs(row?.sort_order ?? 0) % RHYTHMS.length],
   };
 }
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CATEGORY_ORDER, CATEGORY_IDENTITY } from '@/lib/categories';
+import DepartmentIndex from '@/components/nav/DepartmentIndex';
 
 /**
  * 404.
@@ -55,35 +55,9 @@ export default function NotFound() {
         </div>
 
         {/* The catalogue, as an index rather than a grid of tiles — this is a
-            wayfinding surface, and a numbered list reads faster than cards. */}
-        <nav aria-label="Departments" className="mt-[5vh] border-t border-ink-edge/60 pt-10">
-          <h2 className="text-rule uppercase text-paper-faint">Or go straight to</h2>
-          <ul className="mt-8 grid gap-x-12 gap-y-1 sm:grid-cols-2 lg:grid-cols-3">
-            {CATEGORY_ORDER.map((c, i) => (
-              <li key={c} className="border-b border-ink-edge/40">
-                <Link
-                  href={`/products?category=${encodeURIComponent(c)}`}
-                  className="group flex items-baseline gap-5 py-4 transition-colors duration-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-bright"
-                >
-                  {/* Numbered because the catalogue genuinely has a canonical
-                      order — the same one the Index overlay and footer use.
-                      These are positions in a sequence, not decoration. */}
-                  <span className="text-rule tabular-nums text-paper-faint transition-colors duration-500 group-hover:text-brass-bright">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <span>
-                    <span className="block font-display text-2xl font-light text-paper-muted transition-colors duration-500 group-hover:text-paper">
-                      {c}
-                    </span>
-                    <span className="mt-1 block text-rule uppercase text-paper-faint/70">
-                      {CATEGORY_IDENTITY[c]?.eyebrow}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+            wayfinding surface, and a numbered list reads faster than cards.
+            It reads the workroom's live category list. */}
+        <DepartmentIndex />
       </div>
     </div>
   );

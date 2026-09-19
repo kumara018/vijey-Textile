@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   STORE, WHATSAPP_URL, WHATSAPP_URL2, CALL_URL, CALL_URL2, MAIL_URL,
 } from '@/lib/config';
+import { useCategories } from '@/lib/useCategories';
 
 /**
  * The Selvedge — site footer.
@@ -86,9 +87,8 @@ function FooterLink({ href, children, external = false }: {
   );
 }
 
-const CATEGORIES = [
-  'Baby Frocks', 'Chudithar', 'Frocks', 'Western Dresses', 'Lehenga', 'Party Wear',
-];
+/* The pieces column reads the workroom's category list (useCategories). It
+   was typed out here, so a category the shop added never reached the footer. */
 
 /*
  * HELP AND POLICIES, AND NOT THREE THINGS THAT ARE NEITHER.
@@ -181,6 +181,7 @@ function Pin() {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { names: categoryNames } = useCategories();
 
   return (
     <footer className="relative overflow-hidden border-t border-ink-edge/60 bg-ink-deep text-paper-muted">
@@ -361,7 +362,7 @@ export default function Footer() {
           <nav aria-labelledby="footer-shop" className="min-w-0 min-[900px]:col-span-2">
             <h2 id="footer-shop" className="text-rule uppercase text-brass-bright">The pieces</h2>
             <ul className="mt-6 space-y-1.5">
-              {CATEGORIES.map((c) => (
+              {categoryNames.map((c) => (
                 <li key={c}>
                   <FooterLink href={`/products?category=${encodeURIComponent(c)}`}>{c}</FooterLink>
                 </li>

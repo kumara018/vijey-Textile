@@ -9,7 +9,8 @@ import { qk } from '@/lib/query';
 import { Product } from '@/types';
 import ProductCard from '@/components/ProductCard';
 import Reveal from '@/components/home/Reveal';
-import { identityFor, CATEGORY_ORDER } from '@/lib/categories';
+import { identityFor } from '@/lib/categories';
+import { useCategories } from '@/lib/useCategories';
 
 /* 12 to 40 in twos — the range printed on the homepage rule, kept here as
    the one list the filter offers so the two cannot disagree. */
@@ -153,7 +154,10 @@ function ProductsContent() {
    * for, and on a row rhythm that differs from every other category, so this
    * never reads as one generic grid with a chip pre-selected.
    */
-  const identity = identityFor(filters.category, filters.search);
+  // The rail and the masthead read the workroom's list, so a category the shop
+  // adds appears here without a deploy, with its own copy.
+  const { names: categoryNames, find: findCategory } = useCategories();
+  const identity = identityFor(filters.category, filters.search, findCategory(filters.category));
 
   const railClass =
     'group relative py-1 text-caption uppercase transition-colors duration-500 ' +
@@ -212,7 +216,7 @@ function ProductsContent() {
                 <span aria-hidden="true" className={`${ruleClass} ${!filters.category && !filters.search ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`} />
               </button>
 
-              {CATEGORY_ORDER.map((c) => {
+              {categoryNames.map((c) => {
                 const active = filters.category === c;
                 return (
                   <button

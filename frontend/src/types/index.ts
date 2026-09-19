@@ -128,7 +128,32 @@ export interface Review {
   user: User;
 }
 
-export type Category = 'Baby Frocks' | 'Chudithar' | 'Frocks' | 'Western Dresses' | 'Lehenga' | 'Party Wear';
+/**
+ * A category name. A string, not a union of today's names: the list is edited
+ * from the workroom now, so any union written here would be wrong the moment
+ * an admin added one.
+ */
+export type Category = string;
+
+/** One row of /api/products/categories — the list every menu reads. */
+export interface ShopCategory {
+  id: number;
+  name: string;
+  emoji: string | null;
+  /** Short occasion line, e.g. "First celebrations". */
+  eyebrow: string | null;
+  /** The landing page's display line. */
+  headline: string | null;
+  /** One line under it. */
+  description: string | null;
+  /** False = hidden from the shop's menus. Only the admin list returns these. */
+  is_active: boolean;
+  sort_order: number;
+  /** Every piece filed under it, on sale or not. */
+  product_count: number;
+  /** Pieces customers can actually buy right now. */
+  live_product_count: number;
+}
 
 export interface ReturnRequest {
   id: number;

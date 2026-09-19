@@ -3,6 +3,7 @@ import AdminOrdersView from '../AdminOrdersView';
 import AdminReturnsView from '../AdminReturnsView';
 import { AdminUsersView, AdminRatingsView, AdminCancellationsView, AdminAdminsView, AdminErrorsView, AdminHealthView } from '../AdminListViews';
 import AdminProductsView from '../AdminProductsView';
+import AdminCategoriesView from '../AdminCategoriesView';
 
 /**
  * The admin's views as real, addressable routes.
@@ -34,6 +35,7 @@ import AdminProductsView from '../AdminProductsView';
  */
 const VIEWS = [
   'products',
+  'categories',
   'orders',
   'returns',
   'users',
@@ -63,6 +65,7 @@ export const dynamicParams = false;
 
 const TITLES: Record<string, string> = {
   products:      'Products',
+  categories:    'Categories',
   orders:        'Orders',
   returns:       'Returns & Exchange',
   users:         'Customers',
@@ -107,6 +110,7 @@ export default async function AdminViewPage({ params }: { params: Promise<{ view
   if (view === 'ratings') return <AdminRatingsView />;
   if (view === 'cancellations') return <AdminCancellationsView />;
   if (view === 'products') return <AdminProductsView />;
+  if (view === 'categories') return <AdminCategoriesView />;
   if (view === 'admins') return <AdminAdminsView />;
   if (view === 'errors') return <AdminErrorsView />;
   if (view === 'health') return <AdminHealthView />;
