@@ -53,6 +53,46 @@ def test_liveness_is_separate_so_an_outage_cannot_block_a_deploy(client):
     assert r.json()['status'] == 'alive'
 
 
+def test_the_app_starts_with_the_database_down(monkeypatch):
+    """
+    Startup used to run every database step bare, so an unreachable database
+    killed the process before it served one request — a 502 from the edge,
+    with no API left to say what was wrong, restarting in a loop over
+    something no restart could fix.
+
+    It must start, and /health must be the thing that reports the fault.
+    """
+    import asyncio
+    import main
+
+    for name in ('_migrate_db', '_ensure_indexes', '_cleanup_deleted_accounts',
+                 '_ensure_admin', '_ensure_products', '_clear_dead_image_paths',
+                 '_print_integration_banner'):
+        monkeypatch.setattr(main, name, lambda *a, **k: (_ for _ in ()).throw(
+            OSError('connection refused: quota exceeded')))
+    monkeypatch.setattr(main, '_try_take_scheduler_lease',
+                        lambda: (_ for _ in ()).throw(OSError('connection refused')))
+
+    class _Dead:
+        def connect(self):
+            raise OSError('connection refused: quota exceeded')
+
+    monkeypatch.setattr(main.Base.metadata, 'create_all',
+                        lambda *a, **k: (_ for _ in ()).throw(OSError('connection refused')))
+    monkeypatch.setattr(main, 'engine', _Dead())
+
+    # Wrapped the way Starlette wraps an async-generator lifespan.
+    from contextlib import asynccontextmanager
+    started = asynccontextmanager(main.lifespan)
+
+    async def run():
+        async with started(main.app):
+            return True
+
+    assert asyncio.run(run()) is True, 'the API refused to start without a database'
+    main._DB_CHECK.update(at=0.0, ok=False, detail='reset')
+
+
 def test_the_database_answer_is_cached_briefly(client, monkeypatch):
     """
     /health is polled by the container every 60s and by every open tab. One

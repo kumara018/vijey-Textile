@@ -717,7 +717,10 @@ def _sweep_rate_limits():
 _scheduler = BackgroundScheduler()
 
 
-@asynccontextmanager
+# NOT an async context manager: this is a plain function that prints. The
+# decorator was on it rather than on `lifespan` below, which made every call
+# return a context manager and print nothing — so the banner this docstring
+# describes has never actually appeared in a deploy log.
 def _print_integration_banner() -> None:
     """
     Print what is switched on, every boot, where the owner can actually see it.
@@ -787,24 +790,55 @@ def _print_integration_banner() -> None:
 
 
 async def lifespan(app: FastAPI):
+    """
+    START EVEN IF THE DATABASE IS DOWN.
+
+    Every step below needs the database, and each used to run bare — so when
+    the database was unreachable the process died before it could serve a
+    single request. On 20 September 2026 that turned a database outage into a
+    502 from the edge: no API at all, so nothing could report what was wrong,
+    and the container restarted in a loop over something no restart could fix.
+
+    Now a failure here is logged and startup continues. The API comes up,
+    /health answers 503 with the reason, and the moment the database returns
+    the next request simply works — no deploy, no restart, no intervention.
+    """
+    def _startup_step(step, label: str) -> None:
+        try:
+            step()
+        except Exception as e:
+            reason = str(e).strip().splitlines()[-1][:200] if str(e).strip() else type(e).__name__
+            print(f"[Startup] {label} could not run: {reason}")
+            print(f"[Startup] carrying on without it — /health will report the fault")
+
     # Create all tables
-    Base.metadata.create_all(bind=engine)
+    _startup_step(lambda: Base.metadata.create_all(bind=engine), "table creation")
     # Migrate new columns without data loss
-    _migrate_db()
+    _startup_step(_migrate_db, "column migration")
     # Bring indexes on EXISTING tables up to what the models declare
-    _ensure_indexes()
+    _startup_step(_ensure_indexes, "index check")
     # Delete accounts whose 4-hour deletion window expired + send goodbye email
-    _cleanup_deleted_accounts()
+    _startup_step(_cleanup_deleted_accounts, "account erasure sweep")
     # Always ensure admin + products exist
-    _ensure_admin()
-    _ensure_products()
+    _startup_step(_ensure_admin, "admin check")
+    _startup_step(_ensure_products, "product seed check")
     # Strip image paths that have never resolved in any environment
-    _clear_dead_image_paths()
+    _startup_step(_clear_dead_image_paths, "image path cleanup")
 
     # Last, so it is the thing sitting at the bottom of a fresh deploy log.
-    _print_integration_banner()
+    _startup_step(_print_integration_banner, "integration banner")
 
-    if _try_take_scheduler_lease():
+    # The lease lives in the database too. Without it there are no background
+    # jobs this run — correct, and better than refusing to start: the next
+    # restart after the database returns picks them up.
+    def _lease() -> bool:
+        try:
+            return _try_take_scheduler_lease()
+        except Exception as e:
+            print(f"[Scheduler] no lease while the database is unreachable: {str(e)[:120]}")
+            return False
+
+    if _lease():
         _scheduler.add_job(_sync_delhivery_statuses, "interval", minutes=15, id="delhivery_sync", replace_existing=True)
         _scheduler.add_job(_sweep_rate_limits, "interval", hours=6, id="rate_limit_sweep", replace_existing=True)
         # ── Erasure, on a timer rather than on a reboot ──────────────────
