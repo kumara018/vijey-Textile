@@ -108,14 +108,40 @@ def _ensure_admin():
 
 
 def _ensure_products():
-    """Seed products if the table is empty."""
+    """
+    Seed the demo catalogue into an EMPTY database — only when asked.
+
+    THIS USED TO RUN UNCONDITIONALLY, and on a live shop that is dangerous. An
+    empty products table is not always a fresh install: it is also what a
+    restored-but-not-yet-loaded database looks like, or a database that has
+    just been moved. Seeding then fills a real shop with 32 invented garments
+    that a customer can order and nobody can post.
+
+    So it now takes an explicit SEED_DEMO_PRODUCTS=1. A new developer setting
+    up locally opts in; a production shop that comes up empty stays empty and
+    says so, which is honest and cannot take money for something that does not
+    exist.
+    """
+    if os.getenv("SEED_DEMO_PRODUCTS", "").strip().lower() not in ("1", "true", "yes"):
+        db = SessionLocal()
+        try:
+            count = db.query(models.Product).count()
+            if count == 0:
+                print("[Startup] No products, and demo seeding is off "
+                      "(set SEED_DEMO_PRODUCTS=1 to seed a development database).")
+            else:
+                print(f"[Startup] {count} products already in database.")
+        finally:
+            db.close()
+        return
+
     db = SessionLocal()
     try:
         count = db.query(models.Product).count()
         if count == 0:
             from seed_data import seed
             seed()
-            print("[Startup] Products seeded.")
+            print("[Startup] Demo products seeded (SEED_DEMO_PRODUCTS is on).")
         else:
             print(f"[Startup] {count} products already in database.")
     finally:
