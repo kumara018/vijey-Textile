@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -968,9 +968,63 @@ def root():
 # surface — and because listing one route under two methods made FastAPI
 # emit a duplicate-operation-id warning on every boot, which is noise in a
 # log that has to stay readable enough to find a recovery code in.
+#: The database answer, cached briefly. /health is polled by the container
+#: every 60s and by every open browser tab every 14 minutes; one round trip per
+#: caller would be load for no extra truth.
+_DB_CHECK: dict = {"at": 0.0, "ok": False, "detail": "not checked yet"}
+_DB_CHECK_TTL = 15.0
+
+
+def _database_ok() -> tuple[bool, str]:
+    import time as _t
+    if _t.monotonic() - _DB_CHECK["at"] < _DB_CHECK_TTL:
+        return _DB_CHECK["ok"], _DB_CHECK["detail"]
+    from sqlalchemy import text as _text
+    try:
+        with engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))
+        _DB_CHECK.update(at=_t.monotonic(), ok=True, detail="ok")
+    except Exception as e:
+        # The message, not the traceback: this is read on a status page.
+        reason = str(e).strip().splitlines()[-1][:200] if str(e).strip() else type(e).__name__
+        _DB_CHECK.update(at=_t.monotonic(), ok=False, detail=reason)
+    return _DB_CHECK["ok"], _DB_CHECK["detail"]
+
+
 @app.api_route("/health", methods=["GET", "HEAD"], include_in_schema=False)
-def health():
-    return {"status": "healthy"}
+def health(response: Response):
+    """
+    Healthy means the shop can actually answer a customer — which means the
+    database answers.
+
+    THIS SAID "healthy" THROUGH A COMPLETE OUTAGE. On 20 September 2026 the
+    hosted database refused every connection ("Your account or project has
+    exceeded the quota"), so every product, order and sign-in failed with a
+    500 — and this endpoint, which never touched the database, kept returning
+    200. The container was marked healthy, the deploy script declared success,
+    and nothing anywhere raised a word. The shop served an empty catalogue for
+    hours and the only reason anyone found out was a person looking at it.
+
+    A health check that cannot fail is not a health check.
+    """
+    ok, detail = _database_ok()
+    if not ok:
+        response.status_code = 503   # Service Unavailable
+        return {"status": "degraded", "database": detail}
+    return {"status": "healthy", "database": "ok"}
+
+
+@app.api_route("/health/live", methods=["GET", "HEAD"], include_in_schema=False)
+def health_live():
+    """
+    Is the process up — nothing more.
+
+    Kept separate so the two questions never get confused. The container's own
+    healthcheck and the deploy script use THIS one, so a database outage does
+    not restart a working process or block the very deploy that might fix it.
+    /health above is the one a status page or uptime monitor should watch.
+    """
+    return {"status": "alive"}
 
 
 def seed_database():
