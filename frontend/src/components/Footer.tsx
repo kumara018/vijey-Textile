@@ -258,34 +258,50 @@ export default function Footer() {
         <div className="grid gap-x-8 gap-y-14 sm:grid-cols-2 min-[900px]:grid-cols-12 xl:gap-x-14">
 
           {/* ── The shop ─────────────────────────────────────────────── */}
-          <div className="min-w-0 min-[900px]:col-span-3">
+          {/* FOUR COLUMNS WIDE, BECAUSE THE LOCK-UP NEEDS 197px AND THREE GAVE
+              IT 179. That shortfall is what broke the wordmark in half: the
+              name wrapped under the mark and stopped being a logo. Measured at
+              900px, where this grid first appears and its columns are
+              narrowest. The address column gives up the width — its lines wrap
+              naturally, a wordmark does not. */}
+          <div className="min-w-0 min-[900px]:col-span-4">
             <Link
               href="/"
-              /* Raised by the measured cap-height difference. `leading-none`
-                 on the wordmark was not enough — taken honestly, by
-                 rasterising both strings and finding the first row of real
-                 ink rather than trusting font-metric APIs, the wordmark's
-                 cap-top still sat 5.5px below the column headings'. The
-                 face's ascent is nearly a full em, so even a collapsed line
-                 box puts the letters well below the top of it.
-                 5.5px = 0.344rem, and this wordmark is a fixed 1.05rem rather
-                 than a clamp, so a fixed rem is exact at every width. On the
-                 link, so the mark and the name rise together. */
-              className="-mt-[0.344rem] inline-flex items-center gap-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright"
+              /* THE SAME LOCK-UP AS THE HEADER, BECAUSE IT IS THE SAME LOGO.
+                 This was sized on its own — a 38px mark and a 1.05rem wordmark
+                 against the header's 34px and 0.95rem — so the shop's name was
+                 visibly bigger at the bottom of the page than at the top. Worse,
+                 nothing stopped it wrapping: in this column (three of twelve,
+                 about 250px) "VIJEY TEXTILE" at that size needs ~220px, so it
+                 broke into "VIJEY / TEXTILE" under the mark and stopped reading
+                 as a lock-up at all. Every size below now comes from the header
+                 in nav/OverlayNav.tsx, and both lines are held on one line.
+
+                 The lift is the measured cap-height difference, scaled with the
+                 wordmark: it was 5.5px at 1.05rem, so 0.31rem at 0.95rem. It
+                 exists because the face's ascent is nearly a full em, so even a
+                 collapsed line box leaves the letters sitting below the cap-top
+                 of the column headings beside them. On the link, so the mark and
+                 the name rise together. */
+              className="-mt-[0.31rem] inline-flex items-center gap-2.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brass-bright sm:gap-3"
             >
-              <img src="/hero-mark-v3.jpg" alt="" width={38} height={38} className="shrink-0 rounded-full" />
+              <img src="/hero-mark-v3.jpg" alt="" width={34} height={34} className="h-8 w-8 shrink-0 rounded-full sm:h-[34px] sm:w-[34px]" />
               <span>
                 {/* `leading-none`, for the same reason as the sister shop's wordmark:
                     half-leading pushed the brand name below the cap-top of the
                     column headings beside it. Smaller offset here (1.5px against
                     3.7px) because this mark is 16.8px and already sat on
                     leading-tight, but it is the same defect. */}
-                <span className="block font-display text-[1.05rem] uppercase leading-none tracking-[0.16em] text-paper">
+                {/* Sizes, weight and tracking copied from the header's wordmark
+                    so the two are one logo. `whitespace-nowrap` is the guard:
+                    this column is the narrowest on the page, and a wordmark that
+                    breaks in half is not a wordmark. */}
+                <span className="block whitespace-nowrap font-display text-[0.8rem] font-medium uppercase leading-tight tracking-[0.09em] text-paper sm:text-[0.95rem] sm:tracking-[0.18em]">
                   {STORE.name}
                 </span>
                 {/* The same line as the header and the invoice, from one place
                     in config so the four cannot drift apart. */}
-                <span className="mt-0.5 block text-[0.62rem] uppercase tracking-[0.14em] text-brass-bright">
+                <span className="mt-0.5 block whitespace-nowrap text-[0.6rem] uppercase tracking-[0.14em] text-brass-bright">
                   {STORE.tagline}
                 </span>
               </span>
@@ -381,7 +397,10 @@ export default function Footer() {
           </nav>
 
           {/* ── Reach us ─────────────────────────────────────────────── */}
-          <div className="min-w-0 min-[900px]:col-span-4">
+          {/* Three now, not four: that width went to the shop's own column so
+              the wordmark could stay on one line. An address wraps well; a
+              logo does not. */}
+          <div className="min-w-0 min-[900px]:col-span-3">
             {/* The rows beneath already repeat every one of these facts — this
                 heading is the one thing here that can point at the page where
                 a person, rather than a link, actually answers. */}
