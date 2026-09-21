@@ -513,6 +513,14 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
     if not user.is_active:
         raise HTTPException(403, "Your account has been deactivated. Contact support.")
 
+    # The code is checked FIRST. Everything below changes the account —
+    # reactivates it, cancels a pending deletion, emails the owner — and none of
+    # it may happen for a caller who has only shown they know an email address
+    # or a phone number. With this check further down, any six digits undid a
+    # customer's deactivation or deletion request.
+    if not _verify_otp(db, user.email, payload.otp_code, otp_type="login"):
+        raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
+
     # If account is deactivated by the user → auto-reactivate on successful login
     if getattr(user, 'is_deactivated', False):
         user.is_deactivated      = False
@@ -532,9 +540,6 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
         user.scheduled_delete_at = None
         db.commit()
         notifications.send_account_retrieved_email(user.email, user.full_name)
-
-    if not _verify_otp(db, user.email, payload.otp_code, otp_type="login"):
-        raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
 
     session_token = _create_session_or_409(db, user, request)
     token = auth_utils.create_access_token({"sub": user.id, "sid": session_token})

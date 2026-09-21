@@ -354,3 +354,115 @@ class TestR5RevokeAll:
         assert r.status_code == 200, r.text
         assert r.json()["current_session_kept"] is False
         assert client.get("/api/auth/sessions", headers=me).status_code == 401
+
+
+class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
+    """
+    /verify-login-otp may only reactivate an account, or cancel its deletion,
+    for a caller holding the right code.
+
+    It used to do both BEFORE checking the code. Anyone who knew a customer's
+    email or phone could submit any six digits and silently undo that
+    customer's deactivation or deletion request — and the shop would email the
+    customer that their account had been "restored" — while the endpoint still
+    answered 400 and issued no token. Every other test passed throughout,
+    because the only visible symptom was the one that is supposed to happen.
+    """
+
+    PASSWORD = "Customer@2026"
+
+    # The two ways an account ends up pending erasure: deactivation sets all
+    # three columns, a deletion request sets only the deadline. They take
+    # different branches in the endpoint, so both are held down.
+    STATES = ["deactivated", "deletion_requested"]
+
+    def _pending(self, db, user, state):
+        from datetime import datetime, timedelta, timezone
+        now = datetime.now(timezone.utc)
+        deactivated = state == "deactivated"
+        user.is_deactivated = deactivated
+        user.deactivated_at = now if deactivated else None
+        user.scheduled_delete_at = now + timedelta(days=6)
+        db.commit()
+        db.refresh(user)
+        return (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
+
+    def _issue_login_code(self, client, db, user):
+        """A real, live code — so a rejection is about the digits, not absence."""
+        import models
+        r = client.post("/api/auth/send-login-otp",
+                        json={"identifier": user.email, "password": self.PASSWORD})
+        assert r.status_code == 200, r.text
+        otp = (db.query(models.OTPStore)
+                 .filter(models.OTPStore.identifier == user.email,
+                         models.OTPStore.otp_type == "login",
+                         models.OTPStore.is_used == False)  # noqa: E712
+                 .order_by(models.OTPStore.id.desc()).first())
+        assert otp is not None, "/send-login-otp did not create a code"
+        return otp.otp_code
+
+    @staticmethod
+    def _retrieved_emails_to(email):
+        # The stub is session-wide, so count only this test's recipient rather
+        # than resetting a mock other tests share.
+        import notifications
+        return [c for c in notifications.send_account_retrieved_email.call_args_list
+                if c.args and c.args[0] == email]
+
+    @pytest.mark.parametrize("state", STATES)
+    def test_wrong_code_leaves_the_account_exactly_as_it_was(self, client, make_user, db, state):
+        user, _ = make_user()
+        before = self._pending(db, user, state)
+        real = self._issue_login_code(client, db, user)
+        wrong = "000000" if real != "000000" else "111111"
+
+        r = client.post("/api/auth/verify-login-otp",
+                        json={"identifier": user.email, "otp_code": wrong})
+        assert r.status_code == 400, r.text
+        assert "access_token" not in r.json()
+
+        db.refresh(user)
+        after = (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
+        assert after == before, (
+            f"a wrong code changed the account: {before} -> {after} — "
+            "anyone who knows the email can undo the customer's own request"
+        )
+        assert self._retrieved_emails_to(user.email) == [], (
+            "a wrong code sent the 'account restored' email"
+        )
+
+    @pytest.mark.parametrize("state", STATES)
+    def test_right_code_still_restores_the_account(self, client, make_user, db, state):
+        user, _ = make_user()
+        self._pending(db, user, state)
+        code = self._issue_login_code(client, db, user)
+
+        r = client.post("/api/auth/verify-login-otp",
+                        json={"identifier": user.email, "otp_code": code})
+        assert r.status_code == 200, r.text
+        assert r.json()["access_token"]
+
+        db.refresh(user)
+        assert not user.is_deactivated
+        assert user.deactivated_at is None
+        assert user.scheduled_delete_at is None
+        if state == "deletion_requested":
+            assert len(self._retrieved_emails_to(user.email)) == 1, (
+                "cancelling a deletion by signing in should tell the customer"
+            )
+
+    def test_account_past_its_window_is_still_refused(self, client, make_user, db):
+        from datetime import datetime, timedelta, timezone
+        user, _ = make_user()
+        user.scheduled_delete_at = datetime.now(timezone.utc) - timedelta(hours=1)
+        db.commit()
+        code = self._issue_login_code(client, db, user)
+
+        r = client.post("/api/auth/verify-login-otp",
+                        json={"identifier": user.email, "otp_code": code})
+        assert r.status_code == 401, r.text
+        assert "permanently deleted" in r.json()["detail"]
+
+        db.refresh(user)
+        assert user.scheduled_delete_at is not None, "an expired deletion was cancelled"
+        assert self._retrieved_emails_to(user.email) == []
