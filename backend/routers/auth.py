@@ -525,13 +525,8 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
     # before reactivation, because reactivation clears the deadline: in the
     # other order a deactivated account the purge had not reached yet came back
     # to life instead of being refused.
-    if user.scheduled_delete_at:
-        now = datetime.now(timezone.utc)
-        sda = user.scheduled_delete_at
-        if sda.tzinfo is None:
-            sda = sda.replace(tzinfo=timezone.utc)
-        if now > sda:
-            raise HTTPException(401, "This account has been permanently deleted.")
+    if auth_utils.past_deletion_window(user):
+        raise HTTPException(401, "This account has been permanently deleted.")
 
     # If account is deactivated by the user → auto-reactivate on successful login
     if getattr(user, 'is_deactivated', False):

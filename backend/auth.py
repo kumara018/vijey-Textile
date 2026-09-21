@@ -45,6 +45,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return pyjwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
+def past_deletion_window(user: models.User) -> bool:
+    """
+    Whether this account's erasure deadline has passed.
+
+    Past it the account is gone, whether or not the timed purge has reached its
+    row yet — so sign-in and every signed-in request refuse it alike.
+    """
+    sda = user.scheduled_delete_at
+    if not sda:
+        return False
+    if sda.tzinfo is None:
+        sda = sda.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) > sda
+
+
 def get_current_user(
     request: Request = None,
     token: str = Depends(oauth2_scheme),
@@ -80,6 +95,14 @@ def get_current_user(
         request.state.user_id = user.id
     if user is None or not user.is_active:
         raise credentials_exc
+    # A device still signed in when the deadline passes must not keep working —
+    # least of all to call /cancel-delete-account and bring the account back.
+    if past_deletion_window(user):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This account has been permanently deleted.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     # Tokens issued before the device-session feature have no "sid" claim —
     # honor them until they naturally expire (backward compatible).

@@ -357,6 +357,34 @@ class TestR5RevokeAll:
         assert client.get("/api/auth/sessions", headers=me).status_code == 401
 
 
+# ── Accounts pending erasure ─────────────────────────────────────────────────
+
+# The two ways an account ends up pending erasure: deactivation sets all three
+# columns, a deletion request sets only the deadline. They take different
+# branches in the endpoints, so both are held down.
+ERASURE_STATES = ["deactivated", "deletion_requested"]
+
+
+def _set_pending_erasure(db, user, state, deadline=timedelta(days=6)):
+    """Put `user` into `state` with its deadline `deadline` from now (negative = passed)."""
+    now = datetime.now(timezone.utc)
+    deactivated = state == "deactivated"
+    user.is_deactivated = deactivated
+    user.deactivated_at = now - timedelta(days=7) + deadline if deactivated else None
+    user.scheduled_delete_at = now + deadline
+    db.commit()
+    db.refresh(user)
+    return (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
+
+
+def _retrieved_emails_to(email):
+    # The stub is session-wide, so count only this test's recipient rather than
+    # resetting a mock other tests share.
+    import notifications
+    return [c for c in notifications.send_account_retrieved_email.call_args_list
+            if c.args and c.args[0] == email]
+
+
 class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
     """
     /verify-login-otp may only reactivate an account, or cancel its deletion,
@@ -372,21 +400,6 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
 
     PASSWORD = "Customer@2026"
 
-    # The two ways an account ends up pending erasure: deactivation sets all
-    # three columns, a deletion request sets only the deadline. They take
-    # different branches in the endpoint, so both are held down.
-    STATES = ["deactivated", "deletion_requested"]
-
-    def _pending(self, db, user, state, deadline=timedelta(days=6)):
-        now = datetime.now(timezone.utc)
-        deactivated = state == "deactivated"
-        user.is_deactivated = deactivated
-        user.deactivated_at = now - timedelta(days=7) + deadline if deactivated else None
-        user.scheduled_delete_at = now + deadline
-        db.commit()
-        db.refresh(user)
-        return (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
-
     def _issue_login_code(self, client, db, user):
         """A real, live code — so a rejection is about the digits, not absence."""
         import models
@@ -401,18 +414,10 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
         assert otp is not None, "/send-login-otp did not create a code"
         return otp.otp_code
 
-    @staticmethod
-    def _retrieved_emails_to(email):
-        # The stub is session-wide, so count only this test's recipient rather
-        # than resetting a mock other tests share.
-        import notifications
-        return [c for c in notifications.send_account_retrieved_email.call_args_list
-                if c.args and c.args[0] == email]
-
-    @pytest.mark.parametrize("state", STATES)
+    @pytest.mark.parametrize("state", ERASURE_STATES)
     def test_wrong_code_leaves_the_account_exactly_as_it_was(self, client, make_user, db, state):
         user, _ = make_user()
-        before = self._pending(db, user, state)
+        before = _set_pending_erasure(db, user, state)
         real = self._issue_login_code(client, db, user)
         wrong = "000000" if real != "000000" else "111111"
 
@@ -427,14 +432,14 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
             f"a wrong code changed the account: {before} -> {after} — "
             "anyone who knows the email can undo the customer's own request"
         )
-        assert self._retrieved_emails_to(user.email) == [], (
+        assert _retrieved_emails_to(user.email) == [], (
             "a wrong code sent the 'account restored' email"
         )
 
-    @pytest.mark.parametrize("state", STATES)
+    @pytest.mark.parametrize("state", ERASURE_STATES)
     def test_right_code_still_restores_the_account(self, client, make_user, db, state):
         user, _ = make_user()
-        self._pending(db, user, state)
+        _set_pending_erasure(db, user, state)
         code = self._issue_login_code(client, db, user)
 
         r = client.post("/api/auth/verify-login-otp",
@@ -447,11 +452,11 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
         assert user.deactivated_at is None
         assert user.scheduled_delete_at is None
         if state == "deletion_requested":
-            assert len(self._retrieved_emails_to(user.email)) == 1, (
+            assert len(_retrieved_emails_to(user.email)) == 1, (
                 "cancelling a deletion by signing in should tell the customer"
             )
 
-    @pytest.mark.parametrize("state", STATES)
+    @pytest.mark.parametrize("state", ERASURE_STATES)
     def test_account_past_its_window_is_still_refused(self, client, make_user, db, state):
         """
         Even with the right code. The purge runs on a timer, so there is always
@@ -461,7 +466,7 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
         cleared the deadline, so the window check never saw it had passed.
         """
         user, _ = make_user()
-        before = self._pending(db, user, state, deadline=-timedelta(hours=1))
+        before = _set_pending_erasure(db, user, state, deadline=-timedelta(hours=1))
         code = self._issue_login_code(client, db, user)
 
         r = client.post("/api/auth/verify-login-otp",
@@ -473,4 +478,51 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
         db.refresh(user)
         after = (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
         assert after == before, f"an account past its window was revived: {before} -> {after}"
-        assert self._retrieved_emails_to(user.email) == []
+        assert _retrieved_emails_to(user.email) == []
+
+
+class TestSignedInDeviceCannotReviveAnErasedAccount:
+    """
+    Past the deadline, a device that is still signed in is signed out.
+
+    get_current_user never looked at the deletion window, so a session that
+    outlived it kept working until the purge reached the row — and could call
+    /cancel-delete-account, which clears the deadline and brings the account
+    back. Sign-in already refused the same account; this was the side door.
+    """
+
+    @pytest.mark.parametrize("state", ERASURE_STATES)
+    def test_cancel_is_refused_past_the_window(self, client, make_user, db, state):
+        user, headers = make_user()
+        before = _set_pending_erasure(db, user, state, deadline=-timedelta(hours=1))
+
+        r = client.post("/api/auth/cancel-delete-account", headers=headers)
+        assert r.status_code == 401, r.text
+        assert "permanently deleted" in r.json()["detail"]
+
+        db.refresh(user)
+        after = (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
+        assert after == before, f"a signed-in device revived an erased account: {before} -> {after}"
+        assert _retrieved_emails_to(user.email) == []
+
+    def test_me_answers_401_so_the_device_signs_out(self, client, make_user, db):
+        # The frontend signs a device out when /me says 401, so this is what
+        # actually ends the session in the browser.
+        user, headers = make_user()
+        _set_pending_erasure(db, user, "deletion_requested", deadline=-timedelta(hours=1))
+        r = client.get("/api/auth/me", headers=headers)
+        assert r.status_code == 401, r.text
+
+    @pytest.mark.parametrize("state", ERASURE_STATES)
+    def test_cancel_inside_the_window_still_restores(self, client, make_user, db, state):
+        user, headers = make_user()
+        _set_pending_erasure(db, user, state)
+
+        r = client.post("/api/auth/cancel-delete-account", headers=headers)
+        assert r.status_code == 200, r.text
+
+        db.refresh(user)
+        assert not user.is_deactivated
+        assert user.deactivated_at is None
+        assert user.scheduled_delete_at is None
+        assert len(_retrieved_emails_to(user.email)) == 1
