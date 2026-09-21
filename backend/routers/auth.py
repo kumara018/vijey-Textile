@@ -521,14 +521,10 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
     if not _verify_otp(db, user.email, payload.otp_code, otp_type="login"):
         raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
 
-    # If account is deactivated by the user → auto-reactivate on successful login
-    if getattr(user, 'is_deactivated', False):
-        user.is_deactivated      = False
-        user.deactivated_at      = None
-        user.scheduled_delete_at = None
-        db.commit()
-
-    # Check if account is past its deletion window
+    # Past its deletion window → gone, whichever route put it there. Checked
+    # before reactivation, because reactivation clears the deadline: in the
+    # other order a deactivated account the purge had not reached yet came back
+    # to life instead of being refused.
     if user.scheduled_delete_at:
         now = datetime.now(timezone.utc)
         sda = user.scheduled_delete_at
@@ -536,7 +532,16 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
             sda = sda.replace(tzinfo=timezone.utc)
         if now > sda:
             raise HTTPException(401, "This account has been permanently deleted.")
-        # Logged in within window → auto-cancel deletion + notify
+
+    # If account is deactivated by the user → auto-reactivate on successful login
+    if getattr(user, 'is_deactivated', False):
+        user.is_deactivated      = False
+        user.deactivated_at      = None
+        user.scheduled_delete_at = None
+        db.commit()
+
+    # Logged in within a deletion window → auto-cancel deletion + notify
+    if user.scheduled_delete_at:
         user.scheduled_delete_at = None
         db.commit()
         notifications.send_account_retrieved_email(user.email, user.full_name)

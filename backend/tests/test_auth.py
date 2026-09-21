@@ -10,6 +10,7 @@ perfectly while quietly answering a question it must not answer.
 """
 import sqlite3
 import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -376,13 +377,12 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
     # different branches in the endpoint, so both are held down.
     STATES = ["deactivated", "deletion_requested"]
 
-    def _pending(self, db, user, state):
-        from datetime import datetime, timedelta, timezone
+    def _pending(self, db, user, state, deadline=timedelta(days=6)):
         now = datetime.now(timezone.utc)
         deactivated = state == "deactivated"
         user.is_deactivated = deactivated
-        user.deactivated_at = now if deactivated else None
-        user.scheduled_delete_at = now + timedelta(days=6)
+        user.deactivated_at = now - timedelta(days=7) + deadline if deactivated else None
+        user.scheduled_delete_at = now + deadline
         db.commit()
         db.refresh(user)
         return (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
@@ -451,18 +451,26 @@ class TestLoginOtpChecksTheCodeBeforeTouchingTheAccount:
                 "cancelling a deletion by signing in should tell the customer"
             )
 
-    def test_account_past_its_window_is_still_refused(self, client, make_user, db):
-        from datetime import datetime, timedelta, timezone
+    @pytest.mark.parametrize("state", STATES)
+    def test_account_past_its_window_is_still_refused(self, client, make_user, db, state):
+        """
+        Even with the right code. The purge runs on a timer, so there is always
+        a stretch where an erased account's row still exists.
+
+        The deactivated case used to slip through: reactivation ran first and
+        cleared the deadline, so the window check never saw it had passed.
+        """
         user, _ = make_user()
-        user.scheduled_delete_at = datetime.now(timezone.utc) - timedelta(hours=1)
-        db.commit()
+        before = self._pending(db, user, state, deadline=-timedelta(hours=1))
         code = self._issue_login_code(client, db, user)
 
         r = client.post("/api/auth/verify-login-otp",
                         json={"identifier": user.email, "otp_code": code})
         assert r.status_code == 401, r.text
         assert "permanently deleted" in r.json()["detail"]
+        assert "access_token" not in r.json()
 
         db.refresh(user)
-        assert user.scheduled_delete_at is not None, "an expired deletion was cancelled"
+        after = (user.is_deactivated, user.deactivated_at, user.scheduled_delete_at)
+        assert after == before, f"an account past its window was revived: {before} -> {after}"
         assert self._retrieved_emails_to(user.email) == []
