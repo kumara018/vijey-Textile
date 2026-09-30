@@ -105,6 +105,28 @@ SESSION_SWAP = "10/minute"          # evict-and-login
 # Per-identifier ceiling for the enumeration-sensitive endpoints. Deliberately
 # per-hour: the point is to make walking a number space take years.
 PER_IDENTIFIER = "5/hour"
+# PASSWORD SIGN-IN HAS ITS OWN CEILING, AND ONLY WRONG PASSWORDS SPEND IT.
+#
+# It used to share PER_IDENTIFIER with forgot-password and send-login-otp, and
+# that is a different job. Those two SEND something — an email, an SMS and a
+# WhatsApp message each — so five an hour is right: it bounds what an attacker
+# can cost the shop and dump in a stranger's inbox. Signing in sends nothing.
+#
+# Sharing one budget across both meant the owner resetting their own password
+# spent the sign-in allowance doing it: three reset requests plus two attempts
+# and the sixth action was refused, with the CORRECT new password, for an hour.
+# The person most likely to trip this is the one already having trouble.
+#
+# So: a separate bucket, and only a FAILED attempt is recorded. Someone who
+# signs in successfully spends nothing, which is the honest accounting — they
+# were never the threat. Forty wrong passwords an hour on one account is still
+# far below anything useful for guessing (each costs a ~300 ms bcrypt hash and
+# the per-address budget of 10/minute applies on top), and far above anything a
+# real customer does.
+LOGIN_PER_IDENTIFIER = "10/minute;40/hour"
+# The bucket name for the above. Kept distinct from "identifier" so the two
+# budgets cannot silently share rows again.
+LOGIN_SCOPE = "identifier-login"
 # Progressive sign-in (AUTH-SPEC R6) sends a real SMS on every attempt whether
 # or not the account exists — that is the whole point of the blind branch, and
 # it means the spend ceiling has to be tighter than anywhere else. The spec's
@@ -159,9 +181,13 @@ def parse_budget(budget: str) -> list[tuple[int, int]]:
 
 # ── The limiter ──────────────────────────────────────────────────────────────
 
-def enforce(db: Session, scope: str, key: str, budget: str) -> None:
+def enforce(db: Session, scope: str, key: str, budget: str, *, record: bool = True) -> None:
     """
     Record one attempt against `scope|key` and raise 429 if it breaks `budget`.
+
+    With `record=False` the ceiling is still checked but nothing is charged for,
+    which is how an endpoint can bill only the attempts that turned out to be
+    failures — see `record_identifier_failure`.
 
     Called explicitly at the top of an endpoint rather than through a decorator.
     That is the same judgement already made for the per-identifier ceiling, and
@@ -222,14 +248,23 @@ def enforce(db: Session, scope: str, key: str, budget: str) -> None:
                         oldest = oldest.replace(tzinfo=timezone.utc)
                     retry = max(1, int(seconds - (now - oldest).total_seconds()))
                 db.commit()
+                # SAY HOW LONG. "Please wait a moment" is not a moment when the
+                # window is an hour, and a customer who cannot tell whether to
+                # wait or to ring the shop will ring the shop.
+                if retry < 90:
+                    wait = f"{retry} second{'s' if retry != 1 else ''}"
+                else:
+                    minutes = max(1, round(retry / 60))
+                    wait = f"{minutes} minute{'s' if minutes != 1 else ''}"
                 raise HTTPException(
                     status_code=429,
-                    detail="Too many attempts. Please wait a moment and try again.",
+                    detail=f"Too many attempts. Please try again in about {wait}.",
                     headers={"Retry-After": str(retry)},
                 )
 
-        db.add(models.RateLimitHit(bucket=bucket, at=now))
-        db.commit()
+        if record:
+            db.add(models.RateLimitHit(bucket=bucket, at=now))
+            db.commit()
     except HTTPException:
         raise
     except Exception:
@@ -245,7 +280,14 @@ def enforce_ip_limit(db: Session, request: Request, scope: str, budget: str) -> 
     enforce(db, scope, f"ip:{client_ip(request)}", budget)
 
 
-def enforce_identifier_limit(db: Session, identifier: str, budget: str = PER_IDENTIFIER) -> None:
+def enforce_identifier_limit(
+    db: Session,
+    identifier: str,
+    budget: str = PER_IDENTIFIER,
+    *,
+    scope: str = "identifier",
+    record: bool = True,
+) -> None:
     """
     Raise 429 when one identifier has been probed too often, from anywhere.
 
@@ -261,7 +303,30 @@ def enforce_identifier_limit(db: Session, identifier: str, budget: str = PER_IDE
     key = (identifier or "").strip().lower()
     if not key:
         return
-    enforce(db, "identifier", f"id:{key}", budget)
+    enforce(db, scope, f"id:{key}", budget, record=record)
+
+
+def record_identifier_failure(db: Session, identifier: str, scope: str = LOGIN_SCOPE) -> None:
+    """
+    Spend one slot of an identifier's budget, after the fact.
+
+    The pair to `enforce_identifier_limit(..., record=False)`: check the ceiling
+    before doing the expensive work, then charge for it only if it turned out to
+    be a failed attempt. Same normalisation and the same bucket, so the check and
+    the charge can never drift apart.
+    """
+    key = (identifier or "").strip().lower()
+    if not key:
+        return
+    try:
+        db.add(models.RateLimitHit(bucket=f"{scope}|id:{key}", at=datetime.now(timezone.utc)))
+        db.commit()
+    except Exception:
+        # Same rule as the limiter itself: abuse control must not become an outage.
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
 
 def sweep(db: Session, older_than_seconds: int = 86400) -> int:
