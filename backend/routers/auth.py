@@ -427,7 +427,22 @@ def forgot_password(request: Request, payload: schemas.OTPRequest, db: Session =
     # and the code finally agree.
     if user:
         otp = _create_otp(db, user.email, otp_type="reset")
-        notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
+        try:
+            notifications.send_password_reset_otp_email(user.email, user.full_name, otp)
+            # THE SAME CODE ON THE PHONE, the way the sign-in code already goes out.
+            #
+            # Email alone was the one dead end left in this flow. The customer who
+            # cannot get in is, by definition, the one who cannot check something —
+            # and a reset mail that lands in a spam folder leaves them with no other
+            # route back into their own account. Sign-in codes have gone by email,
+            # SMS and WhatsApp all along; there was no reason for the reset code to
+            # be the exception. Both sends are already backgrounded, so the reply
+            # below is returned at the same speed either way.
+            notifications.send_otp_sms(user.phone, otp, "Password Reset")
+        except Exception:
+            # A failing provider must not become the oracle the wording below was
+            # written to remove: the answer has to be identical either way.
+            pass
 
     return {
         "message": (

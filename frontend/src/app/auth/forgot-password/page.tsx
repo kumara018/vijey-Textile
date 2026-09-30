@@ -122,10 +122,10 @@ function ForgotInner() {
       title={stage === 'identifier' ? 'Reset your password' : 'Choose a new password'}
       standfirst={
         stage === 'identifier'
-          ? 'Tell us the phone number or email on your account and we will send a code to the email address registered to it.'
+          ? 'Tell us the phone number or email on your account. The code goes to the email address registered to it, and to that phone by SMS and WhatsApp.'
           : hint
-            ? `Enter the code we sent to ${hint}, then choose a new password.`
-            : 'Enter the code we sent to the email address registered to this account, then choose a new password.'
+            ? `Enter the code we sent to ${hint} and to your phone, then choose a new password.`
+            : 'Enter the code we sent to the email address registered to this account, and to that phone by SMS and WhatsApp. If the email has not arrived, look in your spam folder.'
       }
       footer={
         <p className="text-center text-sm text-paper-faint">
