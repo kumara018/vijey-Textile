@@ -58,7 +58,14 @@ function SignInInner() {
   const params = useSearchParams();
 
   const [stage, setStage] = useState<Stage>('identifier');
-  const [identifier, setIdentifier] = useState('');
+  /**
+   * Seeded from the address bar, so arriving from a finished password reset
+   * (or from Create Account) means the field is already filled with what the
+   * customer typed a screen ago rather than asking for it again.
+   */
+  const [identifier, setIdentifier] = useState(params.get('identifier')?.trim() ?? '');
+  /** Set by the reset screen on its way here — see the notice below the form. */
+  const justReset = params.get('reset') === '1';
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
 
@@ -390,6 +397,20 @@ function SignInInner() {
       }
     >
       <Announce message={announcement} />
+
+      {/*
+        THE ONE THING THE CUSTOMER CAME BACK TO HEAR.
+        A finished reset used to drop them on a blank sign-in form with nothing
+        saying it had worked — indistinguishable, from where they sat, from the
+        reset having failed silently. The page it redirects from now carries
+        `reset=1`, and this says so once.
+      */}
+      {justReset && stage === 'identifier' && (
+        <p className="mb-7 border-l-2 border-brass-bright bg-ink-raised/60 px-4 py-3 text-sm text-paper-muted">
+          <span className="text-paper">Your password has been changed.</span>{' '}
+          Sign in with the new one. Every other device has been signed out.
+        </p>
+      )}
 
       {/* The identifier, once given, is context rather than a field. */}
       {stage !== 'identifier' && (

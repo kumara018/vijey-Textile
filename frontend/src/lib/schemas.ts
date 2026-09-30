@@ -26,16 +26,26 @@ const phone = z
   .refine((v) => INDIAN_MOBILE.test(v), 'Enter a valid Indian mobile number');
 
 /**
- * backend/schemas.py — UserCreate.password_strong. Four separate checks
+ * backend/schemas.py — UserCreate.password_strong. FIVE separate checks
  * server-side, kept separate here too so the customer is told which one
  * failed rather than being handed the whole rule at once.
+ *
+ * The fifth one — the special character — was missing here for a while, and the
+ * shape of that bug is worth remembering: the form accepted a password the
+ * server then refused, so the only place the rule was ever stated was a 422 the
+ * screen was not built to render. A mirror that is missing a rule is worse than
+ * no mirror, because it promises the round trip will succeed.
+ *
+ * The character class is copied verbatim from the server's regex. If one side
+ * changes, change both.
  */
 const strongPassword = z
   .string()
   .min(8, 'Password must be at least 8 characters')
   .regex(/[A-Z]/, 'Password must have at least one uppercase letter (A-Z)')
   .regex(/[a-z]/, 'Password must have at least one lowercase letter (a-z)')
-  .regex(/\d/, 'Password must have at least one number (0-9)');
+  .regex(/\d/, 'Password must have at least one number (0-9)')
+  .regex(/[!@#$%^&*(),.?":{}|<>\-_]/, 'Password must have at least one special character (!@#$%...)');
 
 /** backend/schemas.py — OTPVerify.otp_valid. */
 const otpCode = z

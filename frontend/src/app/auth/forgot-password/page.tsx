@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authAPI } from '@/lib/api';
+import { resetPasswordSchema } from '@/lib/schemas';
 import AuthShell from '@/components/system/AuthShell';
 import { Field, Step } from '@/components/system/Field';
 import { ActionButton } from '@/components/system/Action';
@@ -33,6 +34,29 @@ import { Announce } from '@/components/system/States';
  */
 
 type Stage = 'identifier' | 'reset';
+
+/**
+ * What FastAPI actually put in `detail`, as something a person can read.
+ *
+ * It is a plain string for every error this screen raises on purpose (401, 400,
+ * 429) — but a request that fails Pydantic's own validation comes back 422 with
+ * a LIST of objects, and `setError(thatList)` renders as "[object Object]" or
+ * throws, depending on the component. The form now checks the same rules the
+ * server does, so a 422 should not happen; this is the belt for the day a new
+ * validator is added on one side only.
+ *
+ * Pydantic v2 prefixes a field_validator's ValueError with "Value error, ",
+ * which is noise to a customer.
+ */
+function detailOf(err: any, fallback: string): string {
+  const d = err?.response?.data?.detail;
+  if (typeof d === 'string' && d.trim()) return d;
+  if (Array.isArray(d)) {
+    const msg = String(d[0]?.msg ?? '').replace(/^Value error,\s*/, '').trim();
+    if (msg) return msg;
+  }
+  return fallback;
+}
 
 function ForgotInner() {
   const params = useSearchParams();
@@ -77,7 +101,7 @@ function ForgotInner() {
       setAnnouncement('If that account exists, a code is on its way.');
     } catch (err: any) {
       if (!err?.response) setError('We could not reach the shop. Check your connection and try again.');
-      else setError(err.response?.data?.detail || 'Something went wrong. Please try again.');
+      else setError(detailOf(err, 'Something went wrong. Please try again.'));
     } finally {
       setBusy(false);
     }
@@ -85,9 +109,18 @@ function ForgotInner() {
 
   const submitReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) { setError('Enter the code we sent you.'); return; }
-    if (password.length < 8) { setError('Your new password needs at least 8 characters.'); return; }
-    if (password !== confirm) { setError('The two passwords do not match.'); return; }
+    // The whole rule, not just its first line. Checking only `length < 8` here
+    // meant a password with no capital or no symbol was accepted by this form
+    // and refused by the server — and the rule it broke was named only inside a
+    // 422 body this screen was not built to render. resetPasswordSchema mirrors
+    // schemas.py field for field, so what it accepts, the server accepts.
+    const checked = resetPasswordSchema.safeParse({
+      identifier: identifier.trim(),
+      otp: code.trim(),
+      password,
+      confirm_password: confirm,
+    });
+    if (!checked.success) { setError(checked.error.issues[0].message); return; }
     setBusy(true);
     setError('');
     try {
@@ -100,11 +133,15 @@ function ForgotInner() {
         confirm_password: confirm,
       });
       // Straight to sign-in with the identifier kept, so the very next thing
-      // they do is the thing they came to do.
-      router.replace(`/auth/login?identifier=${encodeURIComponent(identifier.trim())}`);
+      // they do is the thing they came to do. `reset=1` is what makes that page
+      // say the password was changed — without it the customer lands on an
+      // ordinary sign-in form with no sign that anything worked.
+      router.replace(
+        `/auth/login?identifier=${encodeURIComponent(identifier.trim())}&reset=1`,
+      );
     } catch (err: any) {
       if (!err?.response) setError('We could not reach the shop. Check your connection and try again.');
-      else setError(err.response?.data?.detail || 'That code is not right, or it has expired.');
+      else setError(detailOf(err, 'That code is not right, or it has expired.'));
     } finally {
       setBusy(false);
     }

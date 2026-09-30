@@ -471,16 +471,45 @@ def reset_password(request: Request, payload: schemas.OTPVerify, db: Session = D
     enforce_ip_limit(db, request, "reset-password", VERIFY_CODE)
     identifier = payload.identifier.strip()
     user = _find_user(db, identifier)
+
+    # AUTH-SPEC R2, the other half of it. /forgot-password was rewritten to give
+    # one answer whether or not the account exists — and then this endpoint
+    # answered "Account not found" to the same question, one step later and with
+    # no code needed. Anyone could walk a number space here instead.
+    #
+    # A missing account and a wrong code are now the same refusal, word for word
+    # and status for status. The early return stays because _verify_otp needs an
+    # email to look the code up by; what changes is that it is indistinguishable.
+    BAD_CODE = "Invalid or expired OTP. Please request a new one."
     if not user:
-        raise HTTPException(404, "Account not found")
+        raise HTTPException(400, BAD_CODE)
 
     if not _verify_otp(db, user.email, payload.otp_code, otp_type="reset"):
-        raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
+        raise HTTPException(400, BAD_CODE)
 
     user.password_hash = auth_utils.hash_password(payload.new_password)
+
+    # EVERY OTHER DEVICE IS SIGNED OUT.
+    #
+    # The reason someone resets a password is usually that someone else might
+    # know the old one — a lost phone, a shared computer, a shoulder read. A
+    # reset that leaves those sessions alive changes the lock and hands the old
+    # key back. The tokens are 90 days long, so "it will expire" is not an answer.
+    #
+    # Revoking is enough on its own: `get_current_user` refuses a revoked
+    # session on the next request, so every other device lands back on sign-in
+    # and needs the new password. Nothing is deleted, so the device list still
+    # shows what was signed out and when.
+    signed_out = db.query(models.UserSession).filter(
+        models.UserSession.user_id == user.id,
+        models.UserSession.revoked_at.is_(None),
+    ).update({models.UserSession.revoked_at: datetime.now(timezone.utc)}, synchronize_session=False)
     db.commit()
 
-    return {"message": "Password reset successfully. Please login with your new password."}
+    return {
+        "message": "Password reset successfully. Please login with your new password.",
+        "signed_out_devices": int(signed_out or 0),
+    }
 
 
 # ── SEND LOGIN OTP (Step 1) ───────────────────────────────────────────────────
