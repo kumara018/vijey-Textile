@@ -57,7 +57,25 @@ export interface Cloth {
  * because that is what stops it looking like a loading error. A photograph is
  * the point; a placeholder's only job is to hold the space without competing.
  */
-const CALICO: Cloth = { name: 'Unphotographed', from: '#EFE1E6', to: '#E6D3DA', ink: '#5A4A51' };
+/*
+ * IN THE SHOP'S OWN CLOTH, NOT A COLOUR NEXT TO IT.
+ *
+ * This was #EFE1E6 → #E6D3DA: a pink-grey. On the warm white page it read as a
+ * cold patch — the one rectangle on the shelf that belonged to a different
+ * palette, and it stood out most on exactly the rows where several pieces are
+ * still waiting to be photographed.
+ *
+ * It is the shop's own sandal now, the tone already used for section bands and
+ * inputs (#DFD2C0), with one step either side of it so the plate still has a
+ * fold in it. Beside a photograph it now reads as unbleached cloth on the
+ * counter rather than as a hole in the page.
+ *
+ * Measured, because a placeholder still has to be read: the ink is 5.3:1 on
+ * the darker stop and 6.3:1 on the lighter one, both past AA, and the plate
+ * sits 1.3:1 off the card behind it — enough to have an edge, not enough to
+ * compete with the pieces that do have photographs.
+ */
+const CALICO: Cloth = { name: 'Unphotographed', from: '#EADCC9', to: '#DBCBB4', ink: '#5B4A33' };
 const TURMERIC: Cloth = { name: 'Turmeric silk', from: '#C08A1E', to: '#9C6E12', ink: '#241A1F' };
 const SLATE: Cloth    = { name: 'Slate tissue',  from: '#5C6E82', to: '#48586A', ink: '#FFFFFF' };
 const WINE: Cloth     = { name: 'Wine',          from: '#A83455', to: '#87243F', ink: '#FFFFFF' };
