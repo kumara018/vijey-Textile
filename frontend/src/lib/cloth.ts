@@ -58,24 +58,25 @@ export interface Cloth {
  * the point; a placeholder's only job is to hold the space without competing.
  */
 /*
- * IN THE SHOP'S OWN CLOTH, NOT A COLOUR NEXT TO IT.
+ * THE PAGE'S OWN COLOUR, ONE SHADE DOWN.
  *
- * This was #EFE1E6 → #E6D3DA: a pink-grey. On the warm white page it read as a
- * cold patch — the one rectangle on the shelf that belonged to a different
- * palette, and it stood out most on exactly the rows where several pieces are
- * still waiting to be photographed.
+ * Two attempts before this, both rejected on sight, and both for the same
+ * reason — each was a DIFFERENT colour placed on the page:
+ *   #EFE1E6 → #E6D3DA, a pink-grey left over from the dark-room era: "don't
+ *   want this rose";
+ *   #EADCC9 → #DBCBB4, the sandal of the section bands: "why is it sandal, see
+ *   the difference". Up to 1.4:1 off the page and visibly more yellow.
  *
- * It is the shop's own sandal now, the tone already used for section bands and
- * inputs (#DFD2C0), with one step either side of it so the plate still has a
- * fold in it. Beside a photograph it now reads as unbleached cloth on the
- * counter rather than as a hole in the page.
+ * What was asked for is the website's own colour, a little darker. So this is
+ * the page ground (#F7F1E8) taken down one step in lightness and nowhere else:
+ * same hue, same warmth. It sits 1.07:1 off the page at the light edge and
+ * 1.15:1 at the dark one — enough for the plate to have an edge and a fold,
+ * not enough to read as a separate swatch. The sheen and weave in boltGround
+ * carry the rest; they are what stop it looking like a loading error.
  *
- * Measured, because a placeholder still has to be read: the ink is 5.3:1 on
- * the darker stop and 6.3:1 on the lighter one, both past AA, and the plate
- * sits 1.3:1 off the card behind it — enough to have an edge, not enough to
- * compete with the pieces that do have photographs.
+ * The ink still has to be read: 6.6:1 on the darker stop.
  */
-const CALICO: Cloth = { name: 'Unphotographed', from: '#EADCC9', to: '#DBCBB4', ink: '#5B4A33' };
+const CALICO: Cloth = { name: 'Unphotographed', from: '#F1E9DE', to: '#EAE1D4', ink: '#5B4A33' };
 const TURMERIC: Cloth = { name: 'Turmeric silk', from: '#C08A1E', to: '#9C6E12', ink: '#241A1F' };
 const SLATE: Cloth    = { name: 'Slate tissue',  from: '#5C6E82', to: '#48586A', ink: '#FFFFFF' };
 const WINE: Cloth     = { name: 'Wine',          from: '#A83455', to: '#87243F', ink: '#FFFFFF' };
