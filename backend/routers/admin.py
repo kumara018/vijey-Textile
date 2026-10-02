@@ -116,17 +116,94 @@ def update_product(
     return product
 
 
-@router.delete("/products/{product_id}", status_code=204)
+def _product_history(db: Session, product_id: int) -> Optional[str]:
+    """
+    Whether any customer has a stake in this piece — and if so, in words.
+
+    A product row is not only stock. Bags, kept lists and reviews point at it
+    with ON DELETE CASCADE, so erasing it would silently erase a customer's
+    review or empty their bag; and past orders reference it by id inside their
+    item snapshot, where a deleted row turns the "view this piece" link on an
+    order into a 404. None of that should vanish because the shop tidied its
+    list.
+
+    Orders are read in Python rather than with a JSON operator so the same
+    check holds on the live Postgres and on the SQLite the tests run against.
+    """
+    reasons = []
+    ordered = 0
+    for (snapshot,) in db.query(models.Order.items_snapshot).all():
+        for item in snapshot or []:
+            if isinstance(item, dict) and item.get("product_id") == product_id:
+                ordered += 1
+                break
+    if ordered:
+        reasons.append(f"it is in {ordered} order{'s' if ordered != 1 else ''}")
+
+    for model, one, many in (
+        (models.CartItem, "it is in a customer's bag", "it is in {n} customers' bags"),
+        (models.WishlistItem, "a customer has kept it", "{n} customers have kept it"),
+        (models.Review, "it has a review", "it has {n} reviews"),
+    ):
+        n = db.query(model).filter(model.product_id == product_id).count()
+        if n:
+            reasons.append(one if n == 1 else many.format(n=n))
+
+    returns = db.query(models.ReturnRequest).filter(
+        (models.ReturnRequest.product_id == product_id)
+        | (models.ReturnRequest.new_product_id == product_id)
+    ).count()
+    if returns:
+        reasons.append(f"it is part of {returns} return or exchange request{'s' if returns != 1 else ''}")
+
+    return ", and ".join(reasons) if reasons else None
+
+
+@router.delete("/products/{product_id}")
 def delete_product(
     product_id: int,
+    permanent: bool = False,
     db: Session = Depends(get_db),
     _: models.User = Depends(auth_utils.get_current_admin),
 ):
+    """
+    Take a piece off the shop — by hiding it, or, when asked and when it is
+    safe, by deleting it outright.
+
+    THE BUTTON SAID "REMOVE" AND THIS ONLY EVER HID. The workroom asked
+    'Remove "frock"?', the owner said yes, and the row stayed in the list marked
+    HIDDEN — which looked exactly like the removal having failed. A sample piece
+    made to try something out could never actually be got rid of.
+
+    So there are two requests now, and each does what it says:
+      * no flag  — hide it. Reversible; the sister shop's "Deactivate" button
+        relies on exactly this and is unchanged.
+      * permanent=true — delete the row, UNLESS a customer has any stake in it
+        (see _product_history). Then it is hidden instead and the reply says
+        why, so the screen can tell the owner the truth rather than pretend.
+    """
     product = db.query(models.Product).filter(models.Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    product.is_active = False
+
+    if not permanent:
+        product.is_active = False
+        db.commit()
+        return {"deleted": False, "hidden": True}
+
+    why_kept = _product_history(db, product_id)
+    if why_kept:
+        product.is_active = False
+        db.commit()
+        return {
+            "deleted": False,
+            "hidden": True,
+            "reason": f"Hidden, not deleted: {why_kept}, so its history is kept.",
+        }
+
+    db.delete(product)
     db.commit()
+    return {"deleted": True, "hidden": False}
 
 
 @router.post("/products/upload-image")

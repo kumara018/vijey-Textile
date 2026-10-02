@@ -264,7 +264,10 @@ export const adminAPI = {
   getProducts:        ()                           => api.get('/api/admin/products'),
   createProduct:      (data: object)               => api.post('/api/admin/products', data),
   updateProduct:      (id: number, data: object)   => api.put(`/api/admin/products/${id}`, data),
-  deleteProduct:      (id: number)                 => api.delete(`/api/admin/products/${id}`),
+  /** `permanent`: delete the row when no customer has a stake in it; otherwise the
+   *  server hides it and says why. Without it, the piece is only hidden. */
+  deleteProduct:      (id: number, permanent = false) =>
+    api.delete(`/api/admin/products/${id}`, permanent ? { params: { permanent: true } } : undefined),
   uploadImage:        (form: FormData)             => api.post('/api/admin/products/upload-image', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadVideo:        (form: FormData)             => api.post('/api/admin/products/upload-video', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getOrders:               (status?: string)            => api.get('/api/admin/orders', { params: status ? { status } : {} }),

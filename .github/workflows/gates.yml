@@ -95,9 +95,24 @@ jobs:
 
       # Last, because it is the slowest and the cheap checks should fail first.
       - name: build
-        run: npx next build
+        id: build
+        run: |
+          set -o pipefail
+          npx next build 2>&1 | tee "$RUNNER_TEMP/next-build.log"
         env:
           NEXT_TELEMETRY_DISABLED: '1'
+
+      # The same reason as the backend's `name the failing tests`: the log
+      # needs a sign-in, annotations do not. A build that dies in seconds says
+      # only "exit code 1" otherwise — and this one downloads its fonts from
+      # Google at build time, so a failure can be the network rather than the
+      # code, which is exactly the distinction worth seeing without the log.
+      - name: say why the build failed
+        if: failure() && steps.build.outcome == 'failure'
+        run: |
+          tail -n 30 "$RUNNER_TEMP/next-build.log" | sed 's/%/%25/g' |
+            awk 'NF { printf "%s%%0A", $0 }' | sed 's/^/::error title=next build::/'
+          echo
 
       # A CSP is the one security header that can take a shop down: too tight
       # and the browser silently refuses to open the Razorpay modal, so checkout

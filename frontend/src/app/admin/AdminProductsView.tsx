@@ -9,6 +9,7 @@ import { useAdminCategories } from '@/lib/useCategories';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
+import toast from 'react-hot-toast';
 
 /**
  * Admin — products.
@@ -284,15 +285,35 @@ export default function AdminProductsView() {
     }
   };
 
+  /**
+   * REMOVE MEANS REMOVE.
+   *
+   * This used to ask 'Remove "frock"?' and then only hide the piece, so the row
+   * stayed in this list marked HIDDEN — indistinguishable, from the owner's
+   * side, from the removal having failed. And the only confirmation was spoken
+   * to screen readers, so nobody sighted was ever told otherwise.
+   *
+   * Now it asks the server to delete for good. The server refuses when a
+   * customer has a stake in the piece (an order, a bag, a kept list, a review)
+   * and hides it instead — and says which, in words, on screen.
+   */
   const remove = async (p: any) => {
     setBusyId(p.id);
     setConfirmId(null);
     try {
-      await adminAPI.deleteProduct(p.id);
-      setAnnouncement(`${p.name} removed from the catalogue.`);
+      const res = await adminAPI.deleteProduct(p.id, true);
+      if (res.data?.deleted) {
+        toast.success(`"${p.name}" deleted.`);
+        setAnnouncement(`${p.name} deleted.`);
+      } else {
+        const why = res.data?.reason || 'Hidden from the shop, not deleted.';
+        toast(why, { duration: 7000 });
+        setAnnouncement(`${p.name}: ${why}`);
+      }
       await load();
       heading.current?.focus();
     } catch {
+      toast.error('That could not be removed. Please try again.');
       setAnnouncement('That could not be removed.');
     } finally {
       setBusyId(null);
@@ -660,9 +681,9 @@ export default function AdminProductsView() {
                         {confirming ? (
                           <>
                             {/* Names the piece — window.confirm never did. */}
-                            <span className="text-xs text-paper-muted">Remove “{p.name}”?</span>
+                            <span className="text-xs text-paper-muted">Delete “{p.name}” for good?</span>
                             <ActionButton tone="lead" arrow={false} disabled={busy} onClick={() => remove(p)}>
-                              {busy ? 'Removing…' : 'Yes, remove'}
+                              {busy ? 'Deleting…' : 'Yes, delete'}
                             </ActionButton>
                             <ActionButton tone="quiet" arrow={false} onClick={() => setConfirmId(null)}>
                               Keep
