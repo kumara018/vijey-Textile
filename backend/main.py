@@ -1031,13 +1031,19 @@ def root():
 #: The database answer, cached briefly. /health is polled by the container
 #: every 60s and by every open browser tab every 14 minutes; one round trip per
 #: caller would be load for no extra truth.
-_DB_CHECK: dict = {"at": 0.0, "ok": False, "detail": "not checked yet"}
+#: "at" is None until the first check, not 0.0: monotonic() counts from boot,
+#: so on a host up for under 15 seconds a 0.0 stamp would pass as fresh and
+#: /health would answer 503 "not checked yet" without asking the database.
+#: The same mistake in category_store's icon cache kept Vijey Textile's CI red
+#: for two weeks.
+_DB_CHECK: dict = {"at": None, "ok": False, "detail": "not checked yet"}
 _DB_CHECK_TTL = 15.0
 
 
 def _database_ok() -> tuple[bool, str]:
     import time as _t
-    if _t.monotonic() - _DB_CHECK["at"] < _DB_CHECK_TTL:
+    at = _DB_CHECK["at"]
+    if at is not None and _t.monotonic() - at < _DB_CHECK_TTL:
         return _DB_CHECK["ok"], _DB_CHECK["detail"]
     from sqlalchemy import text as _text
     try:

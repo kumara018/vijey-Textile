@@ -30,7 +30,7 @@ def test_health_fails_when_the_database_is_unreachable(client, monkeypatch):
         def connect(self):
             raise OSError('connection to server failed: quota exceeded')
 
-    main._DB_CHECK.update(at=0.0, ok=False, detail='reset')
+    main._DB_CHECK.update(at=None, ok=False, detail='reset')
     monkeypatch.setattr(main, 'engine', _Dead())
 
     r = client.get('/health')
@@ -39,7 +39,7 @@ def test_health_fails_when_the_database_is_unreachable(client, monkeypatch):
     assert body['status'] == 'degraded'
     assert 'quota' in body['database'], 'the reason was not passed on'
 
-    main._DB_CHECK.update(at=0.0, ok=False, detail='reset')   # unpoison the cache
+    main._DB_CHECK.update(at=None, ok=False, detail='reset')   # unpoison the cache
 
 
 def test_liveness_is_separate_so_an_outage_cannot_block_a_deploy(client):
@@ -90,7 +90,22 @@ def test_the_app_starts_with_the_database_down(monkeypatch):
             return True
 
     assert asyncio.run(run()) is True, 'the API refused to start without a database'
-    main._DB_CHECK.update(at=0.0, ok=False, detail='reset')
+    main._DB_CHECK.update(at=None, ok=False, detail='reset')
+
+
+def test_the_first_check_asks_the_database_even_just_after_boot(client, monkeypatch):
+    """
+    monotonic() counts from boot. With 0.0 meaning "never checked", a host up
+    for under 15 seconds took the starting value as a fresh answer and /health
+    said 503 "not checked yet" without asking. Called directly rather than
+    through the client so the patched clock reaches nothing but this check.
+    """
+    import time
+    import main
+    main._DB_CHECK.update(at=None, ok=False, detail='not checked yet')
+    monkeypatch.setattr(time, 'monotonic', lambda: 5.0)
+    assert main._database_ok() == (True, 'ok'), 'a just-booted host never asked the database'
+    main._DB_CHECK.update(at=None, ok=False, detail='reset')
 
 
 def test_the_database_answer_is_cached_briefly(client, monkeypatch):
@@ -99,7 +114,7 @@ def test_the_database_answer_is_cached_briefly(client, monkeypatch):
     round trip per caller would be load for no extra truth.
     """
     import main
-    main._DB_CHECK.update(at=0.0, ok=False, detail='reset')
+    main._DB_CHECK.update(at=None, ok=False, detail='reset')
     calls = {'n': 0}
     real = main.engine
 

@@ -138,16 +138,24 @@ _BUILT_IN_ICONS = {
     "half saree": "🥻", "crop tops": "🎽", "tops": "👕", "party wears": "✨",
 }
 _ICON_TTL_SECONDS = 300
-_icon_cache: dict = {"at": 0.0, "map": {}}
+# "at" is None until the map has been read — NOT 0.0. time.monotonic() counts
+# from when the MACHINE booted, so on a host up for less than five minutes a
+# stamp of 0.0 looks fresh: the empty starting map was served as current, and
+# forget_icons() cleared nothing, so an admin's icon did not reach emails until
+# five minutes after boot. Every fresh CI runner is such a host, which is how
+# it surfaced: Vijey Textile's backend gate failed on every push for two weeks
+# while the same suite passed on a PC that had been up for days.
+_icon_cache: dict = {"at": None, "map": {}}
 
 
 def forget_icons() -> None:
     """Drop the cached icons. Called after every category write."""
-    _icon_cache["at"] = 0.0
+    _icon_cache["at"] = None
 
 
 def _icons() -> dict[str, str]:
-    if _time.monotonic() - _icon_cache["at"] < _ICON_TTL_SECONDS:
+    at = _icon_cache["at"]
+    if at is not None and _time.monotonic() - at < _ICON_TTL_SECONDS:
         return _icon_cache["map"]
     try:
         from database import SessionLocal

@@ -243,6 +243,25 @@ class TestEmailIcons:
                    json={"emoji": "🎀"}, headers=admin)
         assert category_store.icon_for(name) == "🎀", "the cached icon outlived the edit"
 
+    def test_icons_are_read_on_a_host_that_has_just_booted(self, client, admin, monkeypatch):
+        """
+        time.monotonic() counts from when the machine booted. The cache used
+        0.0 for "never read", which on a host up for under five minutes looked
+        fresh — so the empty starting map was served and the admin's icon never
+        reached an email. Every new CI runner is such a host: the two tests
+        above failed on Vijey Textile's gate for two weeks while passing on a
+        PC that had been up for days. This pins the fresh-boot case everywhere.
+        """
+        import types
+        import category_store
+        name = _name("Fresh")
+        client.post("/api/admin/categories", json={"name": name, "emoji": "🪡"}, headers=admin)
+        category_store.forget_icons()
+        monkeypatch.setattr(category_store, "_time", types.SimpleNamespace(monotonic=lambda: 30.0))
+        assert category_store.icon_for(name) == "🪡", (
+            "on a host booted 30s ago the icon cache served its empty starting map"
+        )
+
     def test_both_shops_categories_have_a_built_in_icon(self):
         """The cross-shop bug: Vijey's names were missing from the email map."""
         import category_store

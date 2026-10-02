@@ -36,9 +36,14 @@ concurrency:
   group: gates-${{ github.ref }}
   cancel-in-progress: true
 
+# Both jobs pin ubuntu-24.04 rather than ubuntu-latest. GitHub moves the
+# `latest` label to Ubuntu 26 from 19 October 2026, and an OS swap nobody chose
+# can change the Python build setup-python finds, sharp's prebuilt binary and
+# the AVIF decoder, all at once, on a commit that touched none of them. Moving
+# up should be a commit of its own that can be read and reverted.
 jobs:
   frontend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -137,7 +142,7 @@ jobs:
         run: npm run check:bundle
 
   backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: backend
@@ -172,7 +177,27 @@ jobs:
       # each one careless `if` away from regressing while every other test
       # keeps passing.
       - name: tests
-        run: python -m pytest tests/ -q
+        id: tests
+        run: |
+          set -o pipefail
+          python -m pytest tests/ -q -rfE --tb=short 2>&1 | tee "$RUNNER_TEMP/pytest.log"
+
+      # WHY THIS STEP EXISTS. The job log needs a signed-in GitHub session;
+      # annotations do not. For two weeks this job was red on every push and
+      # the only thing readable without signing in was "Process completed with
+      # exit code 1", pinned to the line of a later step that had not even run.
+      # The cause — a cache that trusted time.monotonic() on a freshly booted
+      # runner — passed on every PC that had been up for days, so nothing but
+      # the log could have said which test it was. Now the summary says.
+      - name: name the failing tests
+        if: failure() && steps.tests.outcome == 'failure'
+        run: |
+          if grep -qE '^(FAILED|ERROR) ' "$RUNNER_TEMP/pytest.log"; then
+            grep -E '^(FAILED|ERROR) ' "$RUNNER_TEMP/pytest.log" | head -n 10 | sed 's/%/%25/g' |
+              while IFS= read -r line; do echo "::error title=backend tests::$line"; done
+          else
+            echo "::error title=backend tests::pytest stopped before reporting: $(tail -n 5 "$RUNNER_TEMP/pytest.log" | tr '\n' ' ' | sed 's/%/%25/g')"
+          fi
 
       # Schema, referential integrity, money arithmetic and the auth boundary,
       # against a throwaway database this job creates from the models.
@@ -183,12 +208,37 @@ jobs:
       # stops refusing anonymous callers. That last one is the check worth
       # having on every commit: an auth regression is silent until it is
       # catastrophic.
+      #
+      # The same readiness lesson as `csp breaks nothing`: if the server never
+      # answers, say THAT and show its log, rather than letting the health
+      # check report a dozen connection failures as findings. Each problem it
+      # finds becomes an annotation, for the reason given above `name the
+      # failing tests`. An empty catalogue is correct here: demo seeding is off
+      # unless SEED_DEMO_PRODUCTS is set, and every check holds for zero rows.
       - name: database + api integrity
         run: |
-          python -m uvicorn main:app --port 8000 &
+          set -o pipefail
+          python -m uvicorn main:app --port 8000 > "$RUNNER_TEMP/uvicorn.log" 2>&1 &
           for i in $(seq 1 40); do
             code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/api/products/ || true)
             [ "$code" = "200" ] && break
             sleep 1
           done
-          python healthcheck.py --api http://localhost:8000
+          if [ "$code" != "200" ]; then
+            echo "::error title=database + api integrity::the API never answered 200 on :8000/api/products/ (last: ${code:-none}) — it did not start; this is not a healthcheck finding."
+            cat "$RUNNER_TEMP/uvicorn.log"
+            exit 1
+          fi
+          if ! python healthcheck.py --api http://localhost:8000 2>&1 | tee "$RUNNER_TEMP/healthcheck.log"; then
+            # Its closing summary lists every problem as "  x ...", including
+            # ones that never got a [FAIL] line; no summary means it crashed.
+            if grep -q '^  x ' "$RUNNER_TEMP/healthcheck.log"; then
+              sed -n 's/^  x //p' "$RUNNER_TEMP/healthcheck.log" | head -n 10 | sed 's/%/%25/g' |
+                while IFS= read -r line; do echo "::error title=database + api integrity::$line"; done
+            else
+              echo "::error title=database + api integrity::healthcheck.py crashed: $(tail -n 1 "$RUNNER_TEMP/healthcheck.log" | sed 's/%/%25/g')"
+            fi
+            echo "----- server log -----"
+            tail -n 60 "$RUNNER_TEMP/uvicorn.log"
+            exit 1
+          fi
