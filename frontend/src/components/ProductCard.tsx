@@ -277,7 +277,13 @@ export default function ProductCard({ product }: Props) {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
                 style={boltGround(clothFor(product.category), product.id)}
-                className="flex h-full w-full flex-col justify-between p-5"
+                /* The label sits at the FOOT of the plate. At the top it shared
+                   a corner with the "Sold out" and "% off" badges, and on a
+                   sold-out unphotographed piece the badge was printed straight
+                   across the words. The badges own the top; this owns the
+                   bottom, and a piece with no photograph has no gallery dots
+                   down there to collide with. */
+                className="flex h-full w-full flex-col justify-end p-5"
               >
                 <span className="block">
                   <span
