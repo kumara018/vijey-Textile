@@ -50,10 +50,27 @@ const chrome = spawn(CHROME, [
      on a machine that has one. */
   '--enable-unsafe-swiftshader',
   '--no-first-run', '--no-default-browser-check', 'about:blank',
-], { stdio: 'ignore' });
+], { stdio: ['ignore', 'ignore', 'pipe'] });
 
+// Chrome's own stderr and exit, kept so a launch failure says why. With stdio
+// ignored, a Chrome that crashed on start looked exactly like a slow one.
+let chromeErr = '';
+let chromeExit = null;
+chrome.stderr.on('data', (b) => { chromeErr = (chromeErr + b).slice(-2000); });
+chrome.on('exit', (code, signal) => { chromeExit = code ?? signal; });
+
+/* Sixty seconds for Chrome to open a page, not fifteen. A freshly booted CI
+   runner's first Chrome launch builds its profile and font cache from nothing.
+   Ammalu Tex's first gate run failed this step 23 seconds in, while the next
+   run of the same code passed in 53. Walking the routes takes longer than 23
+   seconds and a violation does not stop the walk, so the run died before the
+   first route, and the fifteen-second wait here was the only limit that early.
+   Either way, the failure now says it is Chrome rather than the policy. */
 async function target() {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 240; i++) {
+    if (chromeExit !== null) {
+      throw new Error(`Chrome exited (${chromeExit}) before opening a page — not a CSP failure.\n${chromeErr.trim()}`);
+    }
     try {
       const l = await (await fetch('http://127.0.0.1:9750/json/list')).json();
       const p = l.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
@@ -61,7 +78,7 @@ async function target() {
     } catch {}
     await sleep(250);
   }
-  throw new Error('no page target');
+  throw new Error(`Chrome opened no page within 60s — not a CSP failure.\n${chromeErr.trim()}`);
 }
 
 function connect(url) {
