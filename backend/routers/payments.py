@@ -6,7 +6,8 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
-import models, schemas, auth as auth_utils, notifications, pricing, refunds
+import models, schemas, auth as auth_utils, notifications, pricing, refunds, payment_binding
+from routers import returns as returns_router
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/payments", tags=["Payments"])
@@ -19,6 +20,13 @@ def get_razorpay_client():
     if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
         raise HTTPException(status_code=503, detail="Payment gateway not configured")
     return razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+
+
+class ExchangeSpec(BaseModel):
+    """Which piece of which delivered order is being swapped for which product."""
+    order_id:       int
+    product_id:     int
+    new_product_id: int
 
 
 class CreateOrderRequest(BaseModel):
@@ -36,6 +44,11 @@ class CreateOrderRequest(BaseModel):
     """
     amount: float | None = None      # ignored; see the docstring
     buy_now: schemas.BuyNowItem | None = None
+    # Paying the price difference on an exchange instead of buying. The
+    # server works out the difference; the browser used to send it as
+    # `amount`, which this endpoint ignores, so the customer was charged for
+    # their bag (or the bare shipping fee) instead.
+    exchange: ExchangeSpec | None = None
 
 
 class VerifyRequest(BaseModel):
@@ -64,6 +77,25 @@ def create_razorpay_order(
     """
     client = get_razorpay_client()
 
+    if payload.exchange is not None:
+        x = payload.exchange
+        difference = returns_router.exchange_difference(
+            db, current_user.id, x.order_id, x.product_id, x.new_product_id,
+        )
+        rz = client.order.create({
+            "amount":   pricing.to_paise(difference),
+            "currency": "INR",
+            "payment_capture": 1,
+        })
+        payment_binding.record(db, rz["id"], current_user.id, rz["amount"], "exchange")
+        return {
+            "order_id": rz["id"],
+            "amount":   rz["amount"],
+            "currency": rz["currency"],
+            "key_id":   RAZORPAY_KEY_ID,
+            "total":    difference,
+        }
+
     snapshot, subtotal, shipping_fee, total, stock_error, _ = pricing.price_order(
         db, current_user.id, payload.buy_now
     )
@@ -85,6 +117,9 @@ def create_razorpay_order(
         "currency": "INR",
         "payment_capture": 1,
     })
+    # What this Razorpay order is for, written down — place_order will only
+    # accept its payment for this customer, this purpose and this amount.
+    payment_binding.record(db, order["id"], current_user.id, order["amount"], "order")
     return {
         "order_id":  order["id"],
         "amount":    order["amount"],
@@ -279,6 +314,12 @@ def admin_initiate_refund(
         raise HTTPException(400, "Order is already fully refunded")
     if order.payment_status == "refund_initiated":
         raise HTTPException(400, "Refund is already initiated for this order")
+    # PAY-02: only a cancelled order is refunded. This used to take any order,
+    # so one mis-click on a live order gave the money back while the parcel
+    # still went out. Cancelling refunds by itself now; this button is for a
+    # refund that failed, or for an order cancelled before that was true.
+    if order.status != "cancelled":
+        raise HTTPException(400, "Only a cancelled order can be refunded. Cancel it first — that refunds it.")
 
     # The amount comes back from Razorpay rather than from order.total. Asking
     # for order.total is what made this button fail with "the refund amount
@@ -316,7 +357,7 @@ def admin_initiate_refund(
         "message":        f"Refund initiated for {order.order_number} ✅",
         "order_id":       order_id,
         "refund_id":      refund_id,
-        "payment_status": "refund_initiated",
+        "payment_status": order.payment_status,
     }
 
 
@@ -369,6 +410,11 @@ def admin_mark_refunded(
         raise HTTPException(400, "COD orders don't have a digital refund")
     if order.payment_status == "refunded":
         raise HTTPException(400, "Order is already marked as refunded")
+    # PAY-03: money that was never taken cannot be given back. Marking an
+    # unpaid order refunded sent the customer a "refund credited" message for
+    # a payment they never made.
+    if order.payment_status not in ("paid", "refund_initiated", "refund_failed"):
+        raise HTTPException(400, f"Nothing was paid on this order (payment is '{order.payment_status}'), so there is nothing to mark refunded.")
 
     order.payment_status = "refunded"
     db.commit()

@@ -8,6 +8,7 @@ them are found by a customer rather than by the shop.
 """
 import hashlib
 import hmac
+import itertools
 import os
 
 import pytest
@@ -32,8 +33,15 @@ def razorpay_signature(order_id: str, payment_id: str) -> str:
     return hmac.new(secret, f"{order_id}|{payment_id}".encode(), hashlib.sha256).hexdigest()
 
 
+_PAYMENTS = itertools.count(1)
+
+
 def order_body(phone="9000000123", *, valid_signature=True):
-    rp_order, rp_payment = "order_TEST123", "pay_TEST123"
+    # A fresh Razorpay order and payment every time. These were one fixed pair
+    # shared by every test — which only worked while one payment could pay for
+    # any number of orders (PAY-04, October 2026 test pass).
+    n = next(_PAYMENTS)
+    rp_order, rp_payment = f"order_SHOP{n:05d}", f"pay_SHOP{n:05d}"
     sig = razorpay_signature(rp_order, rp_payment) if valid_signature else "0" * 64
     return {
         "shipping_address": {
@@ -52,6 +60,35 @@ def order_body(phone="9000000123", *, valid_signature=True):
             "razorpay_signature": sig,
         },
     }
+
+
+
+def place(client, headers, body):
+    """
+    Check out the way the site does: open the Razorpay order first, so the
+    server records who it is for and what it costs, then place the order with
+    that order's payment. The stand-in Razorpay hands back the order id already
+    in `body`, so the signature order_body computed stays valid.
+    """
+    from routers import payments
+
+    class _Razorpay:
+        class order:
+            @staticmethod
+            def create(params):
+                return {"id": body["payment"]["razorpay_order_id"],
+                        "amount": params["amount"], "currency": "INR"}
+
+    real = payments.get_razorpay_client
+    payments.get_razorpay_client = lambda: _Razorpay()
+    try:
+        # Refused for an empty bag or a sold-out piece — that is fine: the
+        # order call below then answers for itself, as it would on the site.
+        client.post("/api/payments/create-order", headers=headers,
+                    json={"buy_now": body["buy_now"]} if body.get("buy_now") else {})
+    finally:
+        payments.get_razorpay_client = real
+    return client.post("/api/orders/", headers=headers, json=body)
 
 
 # ── Cart ─────────────────────────────────────────────────────────────────────
@@ -108,7 +145,7 @@ class TestOrders:
         before = product.stock
         self._stocked_cart(client, headers, product, qty=2)
 
-        r = client.post("/api/orders/", headers=headers, json=order_body("9000000123"))
+        r = place(client, headers, order_body("9000000123"))
         assert r.status_code == 201, r.text
         order = r.json()
 
@@ -144,7 +181,7 @@ class TestOrders:
         body = order_body("9000000123")
         body["buy_now"] = {"product_id": product.id, "quantity": 1}
 
-        r = client.post("/api/orders/", headers=headers, json=body)
+        r = place(client, headers, body)
         assert r.status_code == 201, r.text
         order = r.json()
 
@@ -161,7 +198,7 @@ class TestOrders:
         _, headers = make_user()
         body = order_body("9000000124", valid_signature=False)
         body["buy_now"] = {"product_id": product.id, "quantity": 1}
-        r = client.post("/api/orders/", headers=headers, json=body)
+        r = place(client, headers, body)
         assert r.status_code == 400, r.text
 
     def test_buy_now_respects_stock(self, client, make_user, product, db):
@@ -169,7 +206,7 @@ class TestOrders:
         _, headers = make_user()
         body = order_body("9000000125")
         body["buy_now"] = {"product_id": product.id, "quantity": product.stock + 5}
-        r = client.post("/api/orders/", headers=headers, json=body)
+        r = place(client, headers, body)
         assert r.status_code == 400, r.text
 
     def test_forged_payment_signature_is_refused(self, client, make_user, product, db):
@@ -186,8 +223,7 @@ class TestOrders:
         before = db.query(models.Product).get(product.id).stock
         self._stocked_cart(client, headers, product, qty=1)
 
-        r = client.post("/api/orders/", headers=headers,
-                        json=order_body("9000000128", valid_signature=False))
+        r = place(client, headers, order_body("9000000128", valid_signature=False))
         assert r.status_code == 400, (
             f"an order was accepted with a forged payment signature: {r.status_code}"
         )
@@ -225,8 +261,7 @@ class TestOrders:
         db.commit()
 
         with patch.object(orders_router, "_refund_uncredited_payment") as refund:
-            r = client.post("/api/orders/", headers=headers,
-                            json=order_body("9000000129", valid_signature=False))
+            r = place(client, headers, order_body("9000000129", valid_signature=False))
 
         assert r.status_code == 400, r.text
         refund.assert_not_called(), (
@@ -258,8 +293,7 @@ class TestOrders:
 
         with patch.object(orders_router, "_refund_uncredited_payment",
                           return_value="rfnd_TEST") as refund:
-            r = client.post("/api/orders/", headers=headers,
-                            json=order_body("9000000130"))
+            r = place(client, headers, order_body("9000000130"))
 
         assert r.status_code == 400, r.text
         refund.assert_called_once()
@@ -269,14 +303,14 @@ class TestOrders:
 
     def test_an_empty_cart_cannot_become_an_order(self, client, make_user):
         _, headers = make_user()
-        r = client.post("/api/orders/", headers=headers, json=order_body("9000000123"))
+        r = place(client, headers, order_body("9000000123"))
         assert r.status_code == 400
 
     def test_an_order_is_private_to_its_owner(self, client, make_user, product):
         _, mine = make_user()
         _, theirs = make_user()
         self._stocked_cart(client, mine, product, qty=1)
-        created = client.post("/api/orders/", headers=mine, json=order_body("9000000124"))
+        created = place(client, mine, order_body("9000000124"))
         assert created.status_code == 201, created.text
         order_id = created.json()["id"]
 
@@ -293,7 +327,7 @@ class TestOrders:
         _, headers = make_user()
         before = db.query(models.Product).get(product.id).stock
         self._stocked_cart(client, headers, product, qty=3)
-        created = client.post("/api/orders/", headers=headers, json=order_body("9000000125"))
+        created = place(client, headers, order_body("9000000125"))
         assert created.status_code == 201, created.text
         order_id = created.json()["id"]
 
@@ -320,7 +354,7 @@ class TestOrders:
         import models
         _, headers = make_user()
         self._stocked_cart(client, headers, product, qty=2)
-        created = client.post("/api/orders/", headers=headers, json=order_body("9000000126"))
+        created = place(client, headers, order_body("9000000126"))
         order_id = created.json()["id"]
 
         order = db.query(models.Order).get(order_id)
@@ -346,7 +380,7 @@ class TestOrders:
         import models
         _, headers = make_user()
         self._stocked_cart(client, headers, product, qty=1)
-        order_id = client.post("/api/orders/", headers=headers, json=order_body("9000000127")).json()["id"]
+        order_id = place(client, headers, order_body("9000000127")).json()["id"]
 
         order = db.query(models.Order).get(order_id)
         order.status = "delivered"
@@ -364,7 +398,7 @@ class TestReturns:
         from datetime import datetime, timezone
         client.post("/api/cart/", headers=headers,
                     json={"product_id": product.id, "quantity": 1, "size": "16", "color": "Green"})
-        created = client.post("/api/orders/", headers=headers, json=order_body(phone))
+        created = place(client, headers, order_body(phone))
         assert created.status_code == 201, created.text
         order = db.query(models.Order).get(created.json()["id"])
         order.status = "delivered"
@@ -379,7 +413,7 @@ class TestReturns:
         _, headers = make_user()
         client.post("/api/cart/", headers=headers,
                     json={"product_id": product.id, "quantity": 1, "size": "16", "color": "Green"})
-        order_id = client.post("/api/orders/", headers=headers, json=order_body("9000000198")).json()["id"]
+        order_id = place(client, headers, order_body("9000000198")).json()["id"]
 
         r = client.post("/api/returns/", headers=headers, json={
             "order_id": order_id, "product_id": product.id,

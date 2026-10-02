@@ -22,6 +22,7 @@ the shop kept the money.
 
 These tests are the reason none of that can come back quietly.
 """
+import itertools
 import pytest
 
 
@@ -46,6 +47,9 @@ def priced(db):
     return p
 
 
+_IDS = itertools.count(1)   # Razorpay order ids are unique now (payment_intents)
+
+
 class TestTheServerDecidesTheAmount:
 
     def test_buy_it_now_charges_for_the_garment(self, client, make_user, priced, monkeypatch):
@@ -58,7 +62,7 @@ class TestTheServerDecidesTheAmount:
         class _FakeOrders:
             def create(self, data):
                 captured.update(data)
-                return {"id": "order_test", "amount": data["amount"], "currency": "INR"}
+                return {"id": f"order_test{next(_IDS)}", "amount": data["amount"], "currency": "INR"}
 
         class _FakeClient:
             order = _FakeOrders()
@@ -89,7 +93,7 @@ class TestTheServerDecidesTheAmount:
                 @staticmethod
                 def create(data):
                     captured.update(data)
-                    return {"id": "order_test", "amount": data["amount"], "currency": "INR"}
+                    return {"id": f"order_test{next(_IDS)}", "amount": data["amount"], "currency": "INR"}
 
         import routers.payments as payments
         monkeypatch.setattr(payments, "get_razorpay_client", lambda: _FakeClient())
@@ -115,7 +119,7 @@ class TestTheServerDecidesTheAmount:
                 @staticmethod
                 def create(data):
                     captured.update(data)
-                    return {"id": "order_test", "amount": data["amount"], "currency": "INR"}
+                    return {"id": f"order_test{next(_IDS)}", "amount": data["amount"], "currency": "INR"}
 
         import routers.payments as payments
         monkeypatch.setattr(payments, "get_razorpay_client", lambda: _FakeClient())

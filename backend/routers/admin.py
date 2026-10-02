@@ -4,7 +4,7 @@ from typing import List, Optional
 import os, random, secrets
 from datetime import datetime, timezone
 from database import get_db
-import models, schemas, auth as auth_utils, notifications
+import models, schemas, auth as auth_utils, notifications, refunds
 import courier_sync
 import category_store
 
@@ -385,6 +385,7 @@ def update_order_status(
 
     was_cancelled     = order.status == "cancelled"
     pre_cancel_status = order.status
+    refund_status     = None
     order.status = payload.status
 
     # ── Cancelled by admin: restore stock and cancel the courier pickup ───────
@@ -428,6 +429,46 @@ def update_order_status(
                     sr.cancel_order([int(order.shiprocket_order_id)])
             except Exception as e:
                 print(f"[Courier cancel error] {e}")
+
+        # ── The refund, exactly as when the customer cancels ─────────────────
+        #
+        # PAY-01, October 2026 test pass. This block put the stock back and
+        # called off the courier, and never gave the customer's money back:
+        # a prepaid order the shop cancelled — out of stock, a damaged piece,
+        # an address it cannot reach — went to "cancelled" with the payment
+        # still captured, and nothing on screen said so. On Vijey's workroom
+        # there was not even a refund button to notice it with.
+        #
+        # The customer's own Cancel has always refunded on the spot
+        # (routers/orders.py::cancel_order). The shop cancelling is the same
+        # decision — the sale is off — so it gets the same outcome, through the
+        # same refunds.refund_payment, which reads the refundable amount back
+        # from Razorpay and is safe to repeat. A refund that fails is recorded
+        # as refund_failed and raised as an alert, never left reading "paid".
+        if (
+            order.payment_method != "cod"
+            and order.payment_status == "paid"
+            and order.payment_transaction_id
+        ):
+            refund_status, refund_error = refunds.refund_payment(
+                order.payment_transaction_id,
+                order.cancel_reason or "Cancelled by the shop",
+                {"order_number": order.order_number},
+            )
+            if refund_status == "already_refunded":
+                order.payment_status = "refunded"
+            elif refund_status:
+                order.payment_status = "refund_initiated"
+            else:
+                order.payment_status = "refund_failed"
+                print(f"[Admin cancel] refund failed for {order.order_number}: {refund_error}")
+                db.add(models.AdminNotification(
+                    type="refund_failed",
+                    title=f"Refund failed — {order.order_number}",
+                    message=(f"₹{order.total} could not be refunded automatically: "
+                             f"{refund_error}. Refund it from the Razorpay dashboard."),
+                    order_id=order.id,
+                ))
 
     # ── Marked Shipped: hand it to Delhivery automatically ────────────────────
     # Previously "Shipped" was just a label — the courier was never actually
@@ -507,8 +548,22 @@ def update_order_status(
             notifications.send_review_request_email(user.email, user.full_name, order)
             notifications.send_review_request_whatsapp(user.phone, user.full_name, order.order_number)
 
+    # The customer is told the money is on its way only when it really is.
+    if user and refund_status and refund_status != "already_refunded":
+        for send, args in (
+            (notifications.send_refund_initiated_email,
+             (user.email, user.full_name, order, refund_status)),
+            (notifications.send_refund_initiated_whatsapp,
+             (user.phone, user.full_name, order, refund_status)),
+        ):
+            try:
+                send(*args)
+            except Exception as e:
+                print(f"[Admin cancel] refund notification error: {e}")
+
     return {
         "message": f"Order {order.order_number} updated to {payload.status}",
+        "payment_status": order.payment_status,
         "delivery_otp": order.delivery_otp if payload.status == "out_for_delivery" else None,
         "awb_code": order.awb_code,
     }

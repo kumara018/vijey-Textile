@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-import models, schemas, auth as auth_utils, notifications, pricing, refunds
+import models, schemas, auth as auth_utils, notifications, pricing, payment_binding, refunds
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
 
@@ -55,30 +55,13 @@ def _refund_uncredited_payment(payment_id: str, reason: str):
     actually be fulfilled (e.g. stock ran out in the race between checkout
     and payment), the customer has already been charged. Refund it rather
     than leaving them charged with no order. Fetches the exact captured
-    amount from Razorpay itself so it can never mismatch what was taken."""
-    key_id     = os.getenv("RAZORPAY_KEY_ID", "")
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
-    if not key_id or not key_secret:
-        print(f"[Razorpay] ⚠️ REFUND SKIPPED (no keys) — payment {payment_id} "
-              f"must be refunded MANUALLY. Reason: {reason}")
-        return None
-    try:
-        import razorpay as _rp
-        client = _rp.Client(auth=(key_id, key_secret))
-        captured = client.payment.fetch(payment_id)
-        amount = captured.get("amount")
-        if not amount:
-            print(f"[Razorpay] ❌ Could not fetch captured amount for {payment_id} — refund skipped.")
-            return None
-        refund = client.payment.refund(payment_id, {
-            "amount": amount, "speed": "normal", "notes": {"reason": reason},
-        })
-        refund_id = refund.get("id", "initiated")
-        print(f"[Razorpay] ✅ Refund {refund_id} initiated for undeliverable order — payment {payment_id}")
-        return refund_id
-    except Exception as e:
-        print(f"[Razorpay] ❌ Refund FAILED for payment {payment_id}: {e}")
-        return None
+    amount from Razorpay itself so it can never mismatch what was taken.
+
+    Through refunds.refund_payment, as the sister shop already does: this was
+    a separate copy that asked for the full captured amount, so a second
+    attempt on a payment already part-refunded was refused by Razorpay."""
+    refund_id, _error = refunds.refund_payment(payment_id, reason)
+    return refund_id
 
 
 @router.post("/", response_model=schemas.OrderOut, status_code=status.HTTP_201_CREATED)
@@ -156,6 +139,25 @@ def place_order(
     # before the cart is even inspected.
     _verify_razorpay_payment(payload.payment)
 
+    # ── ONE PAYMENT, ONE ORDER, FOR WHAT IT WAS OPENED FOR (PAY-04) ──────
+    # A genuine signature proved only that somebody paid something. The same
+    # payment could be posted again for another order, stretched over a bag
+    # edited after paying, or replayed against an out-of-stock piece so the
+    # refund below handed back an order already delivered. See
+    # payment_binding.py. This runs before the refund below on purpose.
+    pay = payload.payment
+    earlier = (
+        db.query(models.Order)
+        .filter(models.Order.payment_transaction_id == pay.razorpay_payment_id)
+        .first()
+    )
+    if earlier is not None and earlier.user_id == current_user.id:
+        return earlier   # a retry of an order that already went through
+    intent = payment_binding.guard(
+        db, razorpay_order_id=pay.razorpay_order_id, payment_id=pay.razorpay_payment_id,
+        user_id=current_user.id, purpose="order",
+    )
+
     items_snapshot = []
     subtotal = 0.0
     stock_error = None
@@ -195,6 +197,7 @@ def place_order(
         pay_id = payload.payment.razorpay_payment_id if payload.payment else None
         if pay_id:
             refund_id = _refund_uncredited_payment(pay_id, stock_error)
+            payment_binding.spend(db, intent)
             stock_error += (
                 " Your payment has been automatically refunded and should reflect in 5-7 business days."
                 if refund_id else
@@ -204,6 +207,14 @@ def place_order(
 
     shipping_fee = pricing.SHIPPING_FEE
     total = subtotal + shipping_fee
+
+    # The payment must be for exactly this total; if the bag changed after
+    # paying it is refunded, never stretched. Marked used in the same commit
+    # as the order below.
+    payment_binding.settle(
+        db, intent, razorpay_order_id=pay.razorpay_order_id,
+        payment_id=pay.razorpay_payment_id, amount_due=total, what="this order",
+    )
 
     order_number = generate_order_number()
     while db.query(models.Order).filter(models.Order.order_number == order_number).first():

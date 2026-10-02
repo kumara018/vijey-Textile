@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-import models, schemas, auth as auth_utils, notifications
+import models, schemas, auth as auth_utils, notifications, payment_binding
 
 router = APIRouter(prefix="/api/returns", tags=["Returns"])
 
@@ -46,6 +46,34 @@ def _verify_price_diff_payment(payload: schemas.ReturnRequestCreate, amount_due:
     ).hexdigest()
     if not hmac.compare_digest(expected_signature, payload.razorpay_signature):
         raise HTTPException(status_code=400, detail="Payment verification failed. Invalid signature.")
+
+
+def exchange_difference(db, user_id: int, order_id: int, product_id: int, new_product_id: int) -> float:
+    """
+    What a customer owes to swap one piece of their order for another.
+
+    /payments/create-order charges this and create_return_request below
+    requires it, so it is worked out in one place and the two cannot disagree.
+    Only the price is settled here; the delivery, window and eligibility rules
+    are checked when the exchange itself is requested.
+    """
+    order = db.query(models.Order).filter(
+        models.Order.id == order_id, models.Order.user_id == user_id,
+    ).first()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    item = next((i for i in (order.items_snapshot or []) if i.get("product_id") == product_id), None)
+    if not item:
+        raise HTTPException(400, "That item was not found in this order")
+    new_product = db.query(models.Product).filter(
+        models.Product.id == new_product_id, models.Product.is_active == True,
+    ).first()
+    if not new_product:
+        raise HTTPException(400, "The selected replacement product is not available")
+    difference = round(new_product.price - item.get("price", 0), 2)
+    if difference <= 0:
+        raise HTTPException(400, "There is nothing to pay — the replacement does not cost more.")
+    return difference
 
 
 @router.post("/", response_model=schemas.ReturnRequestOut, status_code=201)
@@ -121,6 +149,20 @@ def create_return_request(
         # If the replacement costs more, the difference must already be paid
         if price_difference > 0:
             _verify_price_diff_payment(payload, price_difference)
+            # PAY-05: the signature alone accepted ANY payment — including the
+            # one that paid for this very order — whatever its amount. It must
+            # be this customer's, opened for an exchange, for exactly this
+            # difference, and never used before.
+            intent = payment_binding.guard(
+                db, razorpay_order_id=payload.razorpay_order_id,
+                payment_id=payload.razorpay_payment_id,
+                user_id=current_user.id, purpose="exchange",
+            )
+            payment_binding.settle(
+                db, intent, razorpay_order_id=payload.razorpay_order_id,
+                payment_id=payload.razorpay_payment_id, amount_due=price_difference,
+                what="an exchange price difference",
+            )
             price_diff_payment_id = payload.razorpay_payment_id
 
     rr = models.ReturnRequest(

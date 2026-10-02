@@ -61,6 +61,21 @@ const NEEDS_ACTION = new Set(['pending', 'confirmed']);
 const label = (s: string) => s.replace(/_/g, ' ');
 const money = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
 
+/**
+ * Where a cancelled order's money is. This table showed no payment state at
+ * all, so a cancelled prepaid order whose refund had failed looked exactly like
+ * one that had been refunded (PAY-01, October 2026 test pass).
+ */
+const REFUND_NOTE: Record<string, string> = {
+  paid: 'Paid — not refunded',
+  refund_failed: 'Refund failed',
+  refund_initiated: 'Refund on its way',
+  refunded: 'Refunded',
+};
+const isPrepaid = (o: any) => o.payment_method && o.payment_method !== 'cod';
+const canRefund = (o: any) =>
+  o.status === 'cancelled' && isPrepaid(o) && ['paid', 'refund_failed'].includes(o.payment_status);
+
 export default function AdminOrdersView() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -131,15 +146,44 @@ export default function AdminOrdersView() {
 
   const changeStatus = async (order: any, status: string) => {
     if (status === order.status) return;
+    // Cancelling a paid order now refunds it there and then, as the customer's
+    // own Cancel does — so say so before it happens, not after.
+    if (
+      status === 'cancelled' && isPrepaid(order) && order.payment_status === 'paid' &&
+      !window.confirm(`Cancel ${order.order_number}?\n\n${money(order.total)} goes back to the customer's original payment method straight away.`)
+    ) {
+      return;
+    }
     setBusyId(order.id);
     try {
       const payload: OrderStatusUpdatePayload = { status };
-      await adminAPI.updateOrderStatus(order.id, payload);
-      setAnnouncement(`${order.order_number} moved to ${label(status)}.`);
+      const res = await adminAPI.updateOrderStatus(order.id, payload);
+      const paid = res.data?.payment_status;
+      setAnnouncement(
+        status === 'cancelled' && paid === 'refund_initiated'
+          ? `${order.order_number} cancelled — refund of ${money(order.total)} started.`
+          : status === 'cancelled' && paid === 'refund_failed'
+            ? `${order.order_number} cancelled, but the refund did not go through. Use Refund to try again.`
+            : `${order.order_number} moved to ${label(status)}.`,
+      );
       await load();
       heading.current?.focus();
     } catch (err: any) {
       setAnnouncement(err?.response?.data?.detail || 'That change did not save.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const refund = async (order: any) => {
+    if (!window.confirm(`Refund ${order.order_number}?\n\n${money(order.total)} goes back to the customer's original payment method.`)) return;
+    setBusyId(order.id);
+    try {
+      await adminAPI.initiateRefund(order.id);
+      setAnnouncement(`Refund started for ${order.order_number} — the customer has been told.`);
+      await load();
+    } catch (err: any) {
+      setAnnouncement(err?.response?.data?.detail || 'The refund did not go through.');
     } finally {
       setBusyId(null);
     }
@@ -286,6 +330,11 @@ export default function AdminOrdersView() {
                           Returning to us
                         </span>
                       )}
+                      {o.status === 'cancelled' && isPrepaid(o) && REFUND_NOTE[o.payment_status] && (
+                        <span className={`mt-1 block text-xs ${canRefund(o) ? 'text-brass-bright' : 'text-paper-faint'}`}>
+                          {REFUND_NOTE[o.payment_status]}
+                        </span>
+                      )}
                     </td>
 
                     <td className="py-4 pr-4 text-right tabular-nums text-paper">{money(o.total)}</td>
@@ -316,6 +365,18 @@ export default function AdminOrdersView() {
                             aria-label={`Sync ${o.order_number} with the courier`}
                           >
                             {busy ? 'Working…' : 'Sync'}
+                          </ActionButton>
+                        )}
+
+                        {canRefund(o) && (
+                          <ActionButton
+                            tone="quiet"
+                            arrow={false}
+                            disabled={busy}
+                            onClick={() => refund(o)}
+                            aria-label={`Refund ${o.order_number}`}
+                          >
+                            {busy ? 'Working…' : o.payment_status === 'refund_failed' ? 'Retry refund' : 'Refund'}
                           </ActionButton>
                         )}
                       </div>

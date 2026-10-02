@@ -617,3 +617,23 @@ class IntegrationStatus(Base):
     ok         = Column(Boolean, default=False)
     detail     = Column(String(200), nullable=True)
     checked_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class PaymentIntent(Base):
+    """
+    What one Razorpay order was opened to pay for: who, what for, how much.
+
+    Written by /payments/create-order, checked and stamped by whatever the
+    payment is then used for. See payment_binding.py for the four ways a
+    payment could be spent on something it was never made for before this.
+    `used_at` set means spent — on an order, an exchange, or a refund.
+    """
+    __tablename__ = "payment_intents"
+
+    id                = Column(Integer, primary_key=True, index=True)
+    razorpay_order_id = Column(String(64), unique=True, nullable=False, index=True)
+    user_id           = Column(Integer, nullable=False, index=True)
+    purpose           = Column(String(20), nullable=False)    # "order" | "exchange"
+    amount_paise      = Column(Integer, nullable=False)
+    used_at           = Column(DateTime(timezone=True), nullable=True)
+    created_at        = Column(DateTime(timezone=True), server_default=func.now())
