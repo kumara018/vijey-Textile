@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   title: `${STORE.name} — ${STORE.tagline} | Texvalley Erode`,
   // Under 160 characters: Google cuts a longer one off mid-word in the result,
   // and the 204-character version lost "Fast delivery across India" that way.
-  description: 'Baby frocks, chudithar, lehenga, western dresses & party wear for baby, kids & girls (sizes 12–40). Vijey Textile, Texvalley Erode — delivered across India.',
+  description: 'Baby frocks, chudithar, lehenga, western dresses & party wear for kids & girls (sizes 12–40). Vijey Textile, Texvalley Erode — delivered across India.',
   keywords: 'Vijey Textile, vijey textile, baby frocks Erode, chudithar kids, lehenga girls, frocks online, party wear kids, western dresses girls, textile shop Erode, Texvalley Gangapuram, baby clothing India, kids fashion, girls fashion Erode',
   authors: [{ name: 'Vijey Textile' }],
   creator: 'Vijey Textile',
