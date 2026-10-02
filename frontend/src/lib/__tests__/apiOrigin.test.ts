@@ -149,3 +149,38 @@ describe('what the variable actually does', () => {
     expect(c.imageHosts).toContain('res.cloudinary.com');
   });
 });
+
+describe("'unsafe-eval' never reaches a customer", () => {
+  /**
+   * SEC-57 in the October 2026 test pass: the live policy let any injected
+   * script call eval(). Nothing in the production build needs it — only
+   * `next dev`, whose source maps are built with eval — so it is granted by
+   * NODE_ENV, and the one thing that must never happen is it coming back for
+   * the build Vercel ships.
+   */
+  async function scriptSrcFor(nodeEnv: string) {
+    const env = process.env as Record<string, string | undefined>;
+    const before = env.NODE_ENV;
+    env.NODE_ENV = nodeEnv;
+    try {
+      delete require_.cache[CONFIG];
+      const headers = await require_(CONFIG).headers();
+      const csp: string = headers[0].headers.find(
+        (h: { key: string }) => h.key === 'Content-Security-Policy',
+      ).value;
+      return csp.split('; ').find((d) => d.startsWith('script-src'))!;
+    } finally {
+      env.NODE_ENV = before;
+    }
+  }
+
+  it('is absent from the production policy', async () => {
+    const s = await scriptSrcFor('production');
+    expect(s).not.toContain('unsafe-eval');
+    expect(s).toContain('https://checkout.razorpay.com');   // the payment modal still loads
+  });
+
+  it('is still there for next dev, which needs it', async () => {
+    expect(await scriptSrcFor('development')).toContain("'unsafe-eval'");
+  });
+});

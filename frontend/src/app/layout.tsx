@@ -37,7 +37,9 @@ export const metadata: Metadata = {
    * rather than in the name.
    */
   title: `${STORE.name} — ${STORE.tagline} | Texvalley Erode`,
-  description: 'Shop luxury Baby Frocks, Chudithar, Frocks, Western Dresses, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile. Located at Texvalley Gangapuram, Erode. Fast delivery across India.',
+  // Under 160 characters: Google cuts a longer one off mid-word in the result,
+  // and the 204-character version lost "Fast delivery across India" that way.
+  description: 'Baby frocks, chudithar, lehenga, western dresses & party wear for baby, kids & girls (sizes 12–40). Vijey Textile, Texvalley Erode — delivered across India.',
   keywords: 'Vijey Textile, vijey textile, baby frocks Erode, chudithar kids, lehenga girls, frocks online, party wear kids, western dresses girls, textile shop Erode, Texvalley Gangapuram, baby clothing India, kids fashion, girls fashion Erode',
   authors: [{ name: 'Vijey Textile' }],
   creator: 'Vijey Textile',
@@ -51,11 +53,16 @@ export const metadata: Metadata = {
     siteName: 'Vijey Textile',
     locale: 'en_IN',
     type: 'website',
+    // The picture a shared link shows on WhatsApp, Facebook and the rest.
+    // Without one, every link to the shop previewed as bare text — and a
+    // product with no photograph, which inherits this, did the same.
+    images: [{ url: '/og.jpg', width: 1200, height: 630, alt: 'Vijey Textile — Grand treat for girls' }],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: `${STORE.name} — ${STORE.tagline}`,
     description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile, Texvalley Erode.',
+    images: ['/og.jpg'],
   },
   robots: {
     index: true,

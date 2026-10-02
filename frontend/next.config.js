@@ -110,14 +110,19 @@ const nextConfig = {
    *   what this site actually loads: Razorpay's checkout, the Render API, and
    *   the site's own assets. Nothing else may execute or be connected to.
    *
-   *   'unsafe-inline' and 'unsafe-eval' are present for scripts, and that is an
-   *   honest compromise rather than an oversight: Next's inline bootstrap and
-   *   React's dev tooling both require them, and Razorpay injects inline script
-   *   of its own. Removing them needs a nonce-based CSP wired through the
-   *   document, which is a real piece of work and would break the payment modal
-   *   if got wrong. The policy still blocks the main prize — loading script from
-   *   an attacker's domain — and that is worth having today rather than a
-   *   perfect policy nobody ships.
+   *   'unsafe-inline' is present for scripts, and that is an honest compromise
+   *   rather than an oversight: Next's inline bootstrap requires it, and
+   *   Razorpay injects inline script of its own. Removing it needs a nonce-based
+   *   CSP wired through the document, which is a real piece of work and would
+   *   break the payment modal if got wrong. The policy still blocks the main
+   *   prize — loading script from an attacker's domain.
+   *
+   *   'unsafe-eval' IS NOW DEVELOPMENT-ONLY. It was shipped to customers for
+   *   "React's dev tooling", which never runs in production. Checked in October
+   *   2026 before taking it out: no chunk of the production build calls eval or
+   *   new Function, and Razorpay's checkout.js reaches for Function() only in
+   *   browsers too old to have `globalThis`. `next dev` still gets it, because
+   *   its source maps are built with eval.
    *
    * Permissions-Policy
    *   The camera and the microphone stay switched off — nothing here needs
@@ -193,13 +198,14 @@ const nextConfig = {
      * the shop uploads to.
      */
     const media = 'https://res.cloudinary.com';
+    const devEval = process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'";
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://*.razorpay.com",
+      "script-src 'self' 'unsafe-inline'" + devEval + " https://checkout.razorpay.com https://*.razorpay.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: " + api + " " + local + " " + media + " https://*.razorpay.com",
       "media-src 'self' data: blob: " + media,
