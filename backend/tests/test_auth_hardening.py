@@ -156,3 +156,34 @@ class TestAuth14PausingSignsDevicesOut:
         assert after.status_code in (401, 403), (
             f"a paused account's device was still signed in: {after.status_code}"
         )
+
+
+class TestAuth16OptionalUserSeesTheSignedInCustomer:
+    def test_a_valid_token_resolves_to_its_customer(self, db, make_user):
+        import auth as auth_utils
+        user, headers = make_user()
+        token = headers["Authorization"].split(" ", 1)[1]
+        found = auth_utils.get_optional_user(token=token, db=db)
+        assert found is not None and found.id == user.id, (
+            "a signed-in customer came back as anonymous"
+        )
+
+    def test_no_token_or_a_bad_one_is_anonymous(self, db):
+        import auth as auth_utils
+        assert auth_utils.get_optional_user(token="not-a-token", db=db) is None
+
+
+class TestAuth10SignInCodesAreEmailedNotLogged:
+    def test_begin_sends_the_code_through_the_shops_mail_sender(self, client, db, capsys, monkeypatch):
+        """The code went out over SMTP only — which the shops do not use — so
+        it was printed to the log on every call and never emailed."""
+        import notifications
+        sent = []
+        monkeypatch.setattr(notifications, "_send_email", lambda to, subject, html: sent.append((to, html)) or True)
+        _clear_ip(db, "auth-begin")
+        r = client.post("/api/auth/begin", json={"identifier": "begin.qa.customer@gmail.com"})
+        assert r.status_code == 200, r.text
+        assert sent and sent[0][0] == "begin.qa.customer@gmail.com", "the code was never handed to the mail sender"
+        code = _code(db, "begin.qa.customer@gmail.com", "begin")
+        assert code in sent[0][1]
+        assert code not in capsys.readouterr().out, "a working sign-in code was printed to the log"

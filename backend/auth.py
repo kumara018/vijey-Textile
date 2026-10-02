@@ -178,7 +178,13 @@ def get_optional_user(
     token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> Optional[models.User]:
+    # By keyword. get_current_user's first parameter is `request`, so the
+    # positional call handed it the token as the request and the database
+    # session as the token; decoding then always failed, the bare except
+    # swallowed it, and every signed-in caller came back as anonymous
+    # (AUTH-16, October 2026 test pass). Nothing calls this yet; it was
+    # a trap for the first thing that does.
     try:
-        return get_current_user(token, db)
-    except Exception:
+        return get_current_user(token=token, db=db)
+    except HTTPException:
         return None

@@ -1,5 +1,4 @@
 import os, re, random, secrets, smtplib
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta, timezone
 import notifications
 import device_utils
@@ -73,7 +72,7 @@ def _find_user(db: Session, identifier: str):
 
 def _send_otp_email(to_email: str, otp: str, purpose: str = "Password Reset"):
     """
-    Send a code by email, through the one SMTP path the rest of the app uses.
+    Send a code by email, through the one sender the rest of the app uses.
 
     THIS FUNCTION USED TO OPEN smtp.gmail.com:465 ITSELF, a second hardcoded
     Gmail endpoint alongside the one in notifications.py. Two copies meant a
@@ -88,22 +87,20 @@ def _send_otp_email(to_email: str, otp: str, purpose: str = "Password Reset"):
     their shop. It is not a leak: reading it already requires access to the
     server's logs.
     """
-    if not notifications.SMTP_EMAIL or not notifications.SMTP_PASS:
-        print(f"[OTP] {purpose} OTP for {to_email}: {otp}")
-        return
-
-    msg = MIMEText(
-        f"Your Vijey Textile {purpose} OTP is: {otp}\n\n"
-        f"This OTP is valid for 10 minutes.\n"
-        f"Do not share this OTP with anyone.\n\n"
-        f"— Vijey Textile Team"
+    # THROUGH notifications._send_email, LIKE EVERY OTHER EMAIL (AUTH-10,
+    # October 2026 test pass). This went out over SMTP only, and the shops
+    # send through Brevo with no SMTP password set — so every code this sent
+    # was never emailed at all, only printed to the log, on every call. Now it
+    # is printed only when the email genuinely fails, as the docstring says.
+    subject = f"Vijey Textile — your {purpose.lower()} code"
+    html = (
+        f"<p>Your Vijey Textile {purpose.lower()} code is "
+        f"<strong style=\"font-size:20px;letter-spacing:3px\">{otp}</strong>.</p>"
+        f"<p>It is valid for 10 minutes. Do not share it with anyone.</p>"
+        f"<p>— Vijey Textile</p>"
     )
-    msg["Subject"] = f"Vijey Textile — {purpose} OTP: {otp}"
-    msg["From"]    = notifications.SMTP_EMAIL
-    msg["To"]      = to_email
-
-    if not notifications._smtp_send(to_email, msg["Subject"], msg):
-        print(f"[OTP] {purpose} OTP for {to_email}: {otp}")
+    if not notifications._send_email(to_email, subject, html):
+        print(f"[RECOVERY] Email failed, so the {purpose} code for {to_email} is here instead: {otp}")
 
 def _create_otp(db: Session, identifier: str, otp_type: str = "reset") -> str:
     """Create a 6-digit OTP and store in DB."""

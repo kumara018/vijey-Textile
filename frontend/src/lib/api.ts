@@ -94,7 +94,7 @@ function _applyNewTokenHeader(res: any) {
   const newToken = res?.headers?.['x-new-token'];
   if (newToken && typeof window !== 'undefined') {
     localStorage.setItem('token', newToken);
-    document.cookie = `auth_token=${newToken}; path=/; max-age=7776000; SameSite=Lax`; // 90 days
+    document.cookie = `auth_token=${newToken}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 90 days
   }
 }
 
@@ -162,7 +162,7 @@ api.interceptors.response.use(
             localStorage.setItem('sessions', JSON.stringify(remaining));
             localStorage.setItem('token', next.token);
             localStorage.setItem('user', JSON.stringify(next.user));
-            document.cookie = `auth_token=${next.token}; path=/; max-age=7776000; SameSite=Lax`;
+            document.cookie = `auth_token=${next.token}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
             // A full load, not a push: the dead account's cart and kept pieces
             // are still in memory. Same reasoning as switching by hand.
             window.location.href = next.user?.is_admin ? '/admin' : '/';

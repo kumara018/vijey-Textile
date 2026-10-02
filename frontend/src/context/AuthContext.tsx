@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(storedToken);
       try { setUser(JSON.parse(storedUser)); } catch {}
       setSessions(parsedSessions);
-      document.cookie = `auth_token=${storedToken}; path=/; max-age=7776000; SameSite=Lax`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
+      document.cookie = `auth_token=${storedToken}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
 
       // Always fetch fresh user data from server to pick up role changes (e.g. is_admin)
       const API = getApiBase();
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const _setCookie = (t: string) => {
-    document.cookie = `auth_token=${t}; path=/; max-age=7776000; SameSite=Lax`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
+    document.cookie = `auth_token=${t}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
   };
   // Swap in a server-issued token upgrade (see the X-New-Token header on /me) —
   // used to silently migrate pre-device-tracking tokens without a re-login.
