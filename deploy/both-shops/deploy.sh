@@ -93,10 +93,38 @@ wait_healthy() {
   return 1
 }
 
+# ── Caddy ────────────────────────────────────────────────────────────────────
+# A changed Caddyfile used to do NOTHING. The file is bind-mounted into the
+# container by itself, and `git pull` replaces it with a new file rather than
+# editing it in place — so the container went on seeing the old one until it
+# happened to be recreated. In October 2026 that meant an HSTS header committed,
+# "deployed", reloaded with no error, and never served.
+#
+# So when the Caddyfile changes: check the NEW file parses (a Caddyfile that
+# does not parse stops Caddy starting, which takes both shops' APIs down), and
+# only then recreate the container so it mounts the new file.
+apply_caddy_if_changed() {
+  local before="$1" after="$2"
+  [ "$before" = "$after" ] && return 0
+  if ! git -C "$VIJEY_REPO" diff --quiet "$before" "$after" -- deploy/both-shops/Caddyfile; then
+    echo "== caddy: the Caddyfile changed — validating it"
+    if docker run --rm -v "$COMPOSE_DIR/Caddyfile:/etc/caddy/Caddyfile:ro" caddy:2-alpine \
+         caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null 2>&1; then
+      docker compose up -d --force-recreate caddy
+      echo "   new Caddyfile is live"
+    else
+      echo "   !! the new Caddyfile does not parse — Caddy left on the old one" >&2
+      FAILED=1
+    fi
+  fi
+}
+
 FAILED=0
 
 if [ "$TARGET" = "vijey" ] || [ "$TARGET" = "both" ]; then
+  vijey_before="$(git -C "$VIJEY_REPO" rev-parse HEAD)"
   pull_repo "vijey" "$VIJEY_REPO"
+  apply_caddy_if_changed "$vijey_before" "$(git -C "$VIJEY_REPO" rev-parse HEAD)"
   rebuild vijey
   wait_healthy vijey "https://api.vijeytextile.com/health" || FAILED=1
 fi
