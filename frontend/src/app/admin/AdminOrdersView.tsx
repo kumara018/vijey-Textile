@@ -8,6 +8,7 @@ import type { OrderStatusUpdatePayload } from '@/lib/contracts';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { ErrorState, Skeleton, SkeletonLine, Announce } from '@/components/system/States';
+import { REFUND_NOTE, canRefund, isPrepaid } from '@/lib/refundState';
 
 /**
  * Admin — orders.
@@ -60,21 +61,6 @@ const NEEDS_ACTION = new Set(['pending', 'confirmed']);
 
 const label = (s: string) => s.replace(/_/g, ' ');
 const money = (n: number) => `₹${(n ?? 0).toLocaleString('en-IN')}`;
-
-/**
- * Where a cancelled order's money is. This table showed no payment state at
- * all, so a cancelled prepaid order whose refund had failed looked exactly like
- * one that had been refunded (PAY-01, October 2026 test pass).
- */
-const REFUND_NOTE: Record<string, string> = {
-  paid: 'Paid — not refunded',
-  refund_failed: 'Refund failed',
-  refund_initiated: 'Refund on its way',
-  refunded: 'Refunded',
-};
-const isPrepaid = (o: any) => o.payment_method && o.payment_method !== 'cod';
-const canRefund = (o: any) =>
-  o.status === 'cancelled' && isPrepaid(o) && ['paid', 'refund_failed'].includes(o.payment_status);
 
 export default function AdminOrdersView() {
   const { user, loading: authLoading } = useAuth();
@@ -299,7 +285,10 @@ export default function AdminOrdersView() {
                     </th>
 
                     <td className="py-4 pr-4 text-paper-muted">
-                      {o.customer_name ?? o.user_name ?? '—'}
+                      {/* The API sends neither customer_name nor user_name, so this
+                          column read "—" on every order (UI-01, October 2026 test
+                          pass). The name on the parcel is in the address. */}
+                      {o.customer_name ?? o.user_name ?? o.shipping_address?.full_name ?? '—'}
                       {o.shipping_address?.city && (
                         <span className="mt-1 block text-xs text-paper-faint">
                           {o.shipping_address.city}

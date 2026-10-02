@@ -7,6 +7,7 @@ import { adminAPI, supportAPI } from '@/lib/api';
 import AdminShell from './AdminShell';
 import { ActionButton } from '@/components/system/Action';
 import { Announce, ErrorState, Skeleton, SkeletonLine } from '@/components/system/States';
+import { REFUND_NOTE, canRefund, isPrepaid } from '@/lib/refundState';
 
 /**
  * The three read-mostly admin views: customers, support ratings, and
@@ -399,6 +400,26 @@ const fetchCancelled = () => adminAPI.getOrders('cancelled');
 
 export function AdminCancellationsView() {
   const { rows, loading, failed, load, ready } = useAdminList<any>(fetchCancelled);
+  const [busy, setBusy] = useState<number | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+
+  // The screen an owner opens to see what was cancelled is also where they
+  // look for the money — so a refund that did not go through is shown, and
+  // can be sent again, here as well as on Orders.
+  const refund = async (o: any) => {
+    if (!window.confirm(`Refund ${o.order_number}?\n\n${money(o.total)} goes back to the customer's original payment method.`)) return;
+    setBusy(o.id);
+    try {
+      await adminAPI.initiateRefund(o.id);
+      setAnnouncement(`Refund started for ${o.order_number} — the customer has been told.`);
+      await load();
+    } catch (err: any) {
+      setAnnouncement(err?.response?.data?.detail || 'The refund did not go through.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (!ready) return null;
 
   return (
@@ -410,6 +431,7 @@ export function AdminCancellationsView() {
       }
       actions={<ActionButton tone="quiet" arrow={false} onClick={load} disabled={loading}>Refresh</ActionButton>}
     >
+      <Announce message={announcement} />
       <Body
         loading={loading}
         failed={failed}
@@ -421,7 +443,7 @@ export function AdminCancellationsView() {
           caption="Cancelled orders, newest first"
           columns={[
             { label: 'Order' }, { label: 'Customer' }, { label: 'Cancelled' },
-            { label: 'Stock' }, { label: 'Total', align: 'right' },
+            { label: 'Stock' }, { label: 'Money' }, { label: 'Total', align: 'right' },
           ]}
         >
           {rows.map((o) => (
@@ -429,7 +451,8 @@ export function AdminCancellationsView() {
               <th scope="row" className="py-3 pr-4 text-left font-normal">
                 <span className="font-mono tabular-nums text-paper">{o.order_number}</span>
               </th>
-              <td className="py-3 pr-4 text-paper-muted">{o.customer_name ?? o.user_name ?? '—'}</td>
+              {/* The API sends no customer_name; the name on the parcel is in the address (UI-01). */}
+              <td className="py-3 pr-4 text-paper-muted">{o.customer_name ?? o.user_name ?? o.shipping_address?.full_name ?? '—'}</td>
               <td className="py-3 pr-4 tabular-nums text-paper-faint">{shortDate(o.updated_at ?? o.created_at)}</td>
               {/* The distinction that matters operationally: has the stock
                   come back, or is the parcel still in the courier's network? */}
@@ -438,6 +461,28 @@ export function AdminCancellationsView() {
                   <span className="text-brass-bright">Returning to us</span>
                 ) : (
                   <span className="text-paper-muted">Back in stock</span>
+                )}
+              </td>
+              <td className="py-3 pr-4">
+                {!isPrepaid(o) ? (
+                  <span className="text-paper-faint">Cash on delivery</span>
+                ) : (
+                  <span className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <span className={canRefund(o) ? 'text-brass-bright' : 'text-paper-muted'}>
+                      {REFUND_NOTE[o.payment_status] ?? o.payment_status?.replace(/_/g, ' ')}
+                    </span>
+                    {canRefund(o) && (
+                      <ActionButton
+                        tone="quiet"
+                        arrow={false}
+                        disabled={busy === o.id}
+                        onClick={() => refund(o)}
+                        aria-label={`Refund ${o.order_number}`}
+                      >
+                        {busy === o.id ? 'Working…' : o.payment_status === 'refund_failed' ? 'Retry refund' : 'Refund'}
+                      </ActionButton>
+                    )}
+                  </span>
                 )}
               </td>
               <td className="py-3 text-right tabular-nums text-paper">{money(o.total)}</td>
