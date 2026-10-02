@@ -107,6 +107,36 @@ def _ensure_admin():
         db.close()
 
 
+def _demo_seeding_on() -> bool:
+    """SEED_DEMO_PRODUCTS=1. The one switch for every demo piece the app can add."""
+    return os.getenv("SEED_DEMO_PRODUCTS", "").strip().lower() in ("1", "true", "yes")
+
+
+def _seed_demo_half_sarees(db) -> int:
+    """
+    Add seed_data's demo Half Sarees when the shop has none — only when asked.
+
+    THIS RAN ON EVERY BOOT from _migrate_db, outside the switch that guards
+    _ensure_products below, and put the three demo Half Sarees back whenever
+    the shop had no Half Saree at all. Once the workroom could delete a piece
+    for good, deleting the last real one meant three invented sarees, orderable
+    and unpostable, reappeared at the next restart. A shop with no Half Sarees
+    now stays that way unless a developer opts in. Vijey Textile's seed data has
+    no Half Sarees, so there it never added anything; the code is kept the same
+    in both shops so they cannot drift.
+    """
+    if not _demo_seeding_on():
+        return 0
+    if db.query(models.Product).filter(models.Product.category == "Half Saree").count():
+        return 0
+    from seed_data import PRODUCTS
+    hs_products = [p for p in PRODUCTS if p["category"] == "Half Saree"]
+    for p in hs_products:
+        db.add(models.Product(**p))
+    db.commit()
+    return len(hs_products)
+
+
 def _ensure_products():
     """
     Seed the demo catalogue into an EMPTY database — only when asked.
@@ -122,7 +152,7 @@ def _ensure_products():
     says so, which is honest and cannot take money for something that does not
     exist.
     """
-    if os.getenv("SEED_DEMO_PRODUCTS", "").strip().lower() not in ("1", "true", "yes"):
+    if not _demo_seeding_on():
         db = SessionLocal()
         try:
             count = db.query(models.Product).count()
@@ -575,15 +605,10 @@ def _migrate_db():
             db.commit()
             print(f"[Startup] Fixed sizes: updated {updated} product(s) to kids sizes 12–40.")
 
-        # Seed Half Saree products if none exist
-        hs_count = db.query(models.Product).filter(models.Product.category == "Half Saree").count()
-        if hs_count == 0:
-            from seed_data import PRODUCTS
-            hs_products = [p for p in PRODUCTS if p["category"] == "Half Saree"]
-            for p in hs_products:
-                db.add(models.Product(**p))
-            db.commit()
-            print(f"[Startup] Added {len(hs_products)} Half Saree product(s).")
+        # Demo Half Sarees, only behind SEED_DEMO_PRODUCTS; see the function.
+        added = _seed_demo_half_sarees(db)
+        if added:
+            print(f"[Startup] Added {added} demo Half Saree product(s) (SEED_DEMO_PRODUCTS is on).")
 
         # The categories table: seeded only when empty, then kept in step with
         # the products. After this it is edited from the workroom, never here.
