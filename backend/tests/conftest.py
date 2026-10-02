@@ -39,6 +39,9 @@ os.environ.setdefault("ADMIN_EMAIL", "admin@test.local")
 os.environ.setdefault("ADMIN_PASSWORD", "TestAdmin@2026")
 os.environ.setdefault("ADMIN_PHONE", "9000000001")
 os.environ.setdefault("SECRET_KEY", "test-secret-not-used-anywhere-real")
+# /api/auth/login is off in production (no page uses it; it skipped the
+# emailed code). The fixtures use it to make signed-in customers quickly.
+os.environ.setdefault("ALLOW_PASSWORD_ONLY_LOGIN", "1")
 # A known Razorpay secret so tests can compute a REAL signature rather than
 # stub the verification out. Mocking `_verify_razorpay_payment` would delete
 # the only thing standing between a forged request and a free order — the

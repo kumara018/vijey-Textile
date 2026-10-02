@@ -210,7 +210,8 @@ function AccountInner() {
     if (fullName.trim().length < 2) { setProfileError('Enter your full name.'); return; }
     setSavingProfile(true);
     try {
-      await authAPI.updateProfile({ full_name: fullName.trim(), phone: phone.trim() });
+      // The mobile number is not sent: it is read-only, like the email.
+      await authAPI.updateProfile({ full_name: fullName.trim() });
       setAnnouncement('Your details have been saved.');
     } catch (err: any) {
       setProfileError(err?.response?.data?.detail || 'We could not save that. Please try again.');
@@ -314,13 +315,18 @@ function AccountInner() {
                 onChange={(e) => { setFullName(e.target.value); setProfileError(''); }}
                 error={profileError || undefined}
               />
+              {/* Read-only, like the email: sign-in and reset codes go to this
+                  number, so changing it from a signed-in device would let
+                  whoever holds that device take the account. */}
               <Field
                 label="Mobile number"
                 name="phone"
                 inputMode="tel"
                 autoComplete="tel"
                 value={phone}
-                onChange={(e) => { setPhone(e.target.value); setProfileError(''); }}
+                readOnly
+                disabled
+                hint="Your sign-in and reset codes come to this number. Contact us to change it."
               />
               <Field
                 label="Email"

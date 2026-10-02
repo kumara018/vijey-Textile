@@ -64,6 +64,7 @@ is kept has changed.
 """
 from __future__ import annotations
 
+import re
 import time as _time
 from datetime import datetime, timedelta, timezone
 
@@ -127,6 +128,31 @@ LOGIN_PER_IDENTIFIER = "10/minute;40/hour"
 # The bucket name for the above. Kept distinct from "identifier" so the two
 # budgets cannot silently share rows again.
 LOGIN_SCOPE = "identifier-login"
+
+# ONE BUCKET PER JOB, NOT ONE BUCKET FOR EVERYTHING.
+#
+# Lookup, sending a sign-in code and forgot-password all used to count against
+# the same five-an-hour row for an account. The customer's own sign-in — look
+# up, enter the password, get a code — spent three of those five; one password
+# reset spent the rest, and the next attempt to sign in with the NEW password
+# was refused for an hour. Anyone who knew a customer's number could do the same
+# to them on purpose. Each job now keeps its own count:
+LOOKUP_SCOPE = "identifier-lookup"          # "is this registered?" — sends nothing
+RESET_SEND_SCOPE = "identifier-reset"       # forgot-password — sends email, SMS, WhatsApp
+LOGIN_SEND_SCOPE = "identifier-login-send"  # a correct password sends a sign-in code
+LOGIN_SEND_PER_IDENTIFIER = "10/hour"
+BEGIN_SCOPE = "identifier-begin"
+
+# WRONG CODES, PER ACCOUNT, WHATEVER THE ADDRESS.
+#
+# A six-digit code is a million guesses. The only limit on checking one was per
+# network address, and an address is the one thing an attacker can change for
+# free — so a code could be walked from a pool of them for its full ten
+# minutes. This counts WRONG codes against the account itself, across every
+# endpoint that checks one (sign-in, sign-up, password reset, deletion,
+# deactivation, progressive sign-in), and right ones cost nothing.
+VERIFY_SCOPE = "identifier-verify"
+VERIFY_PER_IDENTIFIER = "10/hour"
 # Progressive sign-in (AUTH-SPEC R6) sends a real SMS on every attempt whether
 # or not the account exists — that is the whole point of the blind branch, and
 # it means the spend ceiling has to be tighter than anywhere else. The spec's
@@ -280,6 +306,28 @@ def enforce_ip_limit(db: Session, request: Request, scope: str, budget: str) -> 
     enforce(db, scope, f"ip:{client_ip(request)}", budget)
 
 
+def identifier_key(identifier: str) -> str:
+    """
+    The account an identifier names, in one canonical spelling.
+
+    The budget was keyed on the text as typed, lower-cased. Sign-in normalises a
+    phone number before looking it up, so "9876543210", "+91 98765 43210",
+    "09876543210" and "919876543210" all reach the SAME account — and each was
+    given a fresh budget of its own. Spaces can go anywhere, so the spellings
+    never run out and the per-account limit limited nothing. This applies the
+    same rules sign-in uses, so every spelling of a number shares one count.
+    """
+    v = (identifier or "").strip().lower()
+    if not v or "@" in v:
+        return v
+    digits = re.sub(r"\D", "", v)
+    if len(digits) == 12 and digits.startswith("91"):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith("0"):
+        digits = digits[1:]
+    return digits or v
+
+
 def enforce_identifier_limit(
     db: Session,
     identifier: str,
@@ -300,7 +348,7 @@ def enforce_identifier_limit(
     Normalised so `  User@Example.COM ` and `user@example.com` share a budget —
     otherwise the limit is bypassed with a capital letter.
     """
-    key = (identifier or "").strip().lower()
+    key = identifier_key(identifier)
     if not key:
         return
     enforce(db, scope, f"id:{key}", budget, record=record)
@@ -315,7 +363,7 @@ def record_identifier_failure(db: Session, identifier: str, scope: str = LOGIN_S
     be a failed attempt. Same normalisation and the same bucket, so the check and
     the charge can never drift apart.
     """
-    key = (identifier or "").strip().lower()
+    key = identifier_key(identifier)
     if not key:
         return
     try:

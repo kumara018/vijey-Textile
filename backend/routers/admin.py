@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import List, Optional
-import os, random
+import os, random, secrets
 from datetime import datetime, timezone
 from database import get_db
 import models, schemas, auth as auth_utils, notifications
@@ -463,7 +463,7 @@ def update_order_status(
 
     # ── Out for Delivery: generate a 6-digit delivery OTP ─────────────────────
     if payload.status == "out_for_delivery":
-        otp = str(random.randint(100000, 999999))
+        otp = f"{secrets.randbelow(900000) + 100000}"
         order.delivery_otp = otp
 
     # ── Delivered: stamp the time — this anchors the return/exchange windows ──

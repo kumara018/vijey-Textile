@@ -34,7 +34,7 @@ const RULES = [
   { test: (p: string) => /[A-Z]/.test(p), label: 'One uppercase letter' },
   { test: (p: string) => /[a-z]/.test(p), label: 'One lowercase letter' },
   { test: (p: string) => /\d/.test(p), label: 'One number' },
-  { test: (p: string) => /[!@#$%^&*(),.?":{}|<>]/.test(p), label: 'One special character' },
+  { test: (p: string) => /[!@#$%^&*(),.?":{}|<>\-_]/.test(p), label: 'One special character' },
 ];
 
 const looksLikeEmail = (v: string) => v.includes('@');

@@ -28,7 +28,7 @@ needing an admin to notice a courier scan and update the order by hand.
   - Any status string this doesn't recognise is logged and left alone —
     never guessed at.
 """
-import os, random
+import os, random, secrets
 from datetime import datetime, timezone
 import models
 import notifications
@@ -151,7 +151,7 @@ def sync_order_from_delhivery(order, current: dict, db) -> str | None:
         if order.status != "out_for_delivery" and is_valid_transition(order.status, "out_for_delivery"):
             order.status = "out_for_delivery"
             if not order.delivery_otp:
-                order.delivery_otp = str(random.randint(100000, 999999))
+                order.delivery_otp = f"{secrets.randbelow(900000) + 100000}"
             changed = True
             action = "out_for_delivery"
 
@@ -306,7 +306,7 @@ def _attempt_return_pickup(rr, order, user) -> bool:
     rr.return_awb = awb
     rr.return_tracking_url = f"https://www.delhivery.com/track/package/{awb}"
     rr.pickup_error = None
-    rr.pickup_otp = str(random.randint(100000, 999999))
+    rr.pickup_otp = f"{secrets.randbelow(900000) + 100000}"
     print(f"[Returns] Delhivery pickup scheduled for {rr.request_type} #{rr.id}, AWB {awb}")
     try:
         notifications.send_pickup_otp_email(user.email, user.full_name, rr.pickup_otp, rr.request_type, order.order_number)
@@ -355,7 +355,7 @@ def _attach_existing_pickup_awb(rr, awb, db) -> tuple[bool, str]:
     if rr.status not in ("picked_up", "processing", "refund_initiated", "replacement_shipped", "refunded", "completed"):
         rr.status = "pickup_scheduled"
         if not rr.pickup_otp:
-            rr.pickup_otp = str(random.randint(100000, 999999))
+            rr.pickup_otp = f"{secrets.randbelow(900000) + 100000}"
     db.commit()
     db.refresh(rr)
     print(f"[Returns] Linked existing Delhivery AWB {awb} to {rr.request_type} #{rr.id}")

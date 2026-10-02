@@ -14,6 +14,8 @@ from rate_limit import (
     BEGIN_PER_IP, BEGIN_PER_IDENTIFIER,
     LOOKUP_PER_IP, LOOKUP_PER_IDENTIFIER,
     LOGIN_PER_IDENTIFIER, LOGIN_SCOPE,
+    LOOKUP_SCOPE, RESET_SEND_SCOPE, LOGIN_SEND_SCOPE, LOGIN_SEND_PER_IDENTIFIER,
+    BEGIN_SCOPE, VERIFY_SCOPE, VERIFY_PER_IDENTIFIER,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -112,7 +114,10 @@ def _create_otp(db: Session, identifier: str, otp_type: str = "reset") -> str:
     ).delete()
     db.commit()
 
-    otp = str(random.randint(100000, 999999))
+    # From the OS's cryptographic source. `random` is a Mersenne Twister: its
+    # output can be predicted from enough earlier outputs, and anyone can
+    # collect codes for accounts they control.
+    otp = f"{secrets.randbelow(900000) + 100000}"
     expires = datetime.now(timezone.utc) + timedelta(minutes=10)
     record = models.OTPStore(
         identifier=identifier,
@@ -125,7 +130,19 @@ def _create_otp(db: Session, identifier: str, otp_type: str = "reset") -> str:
     return otp
 
 def _verify_otp(db: Session, identifier: str, otp_code: str, otp_type: str = "reset") -> bool:
-    """Verify OTP. Returns True if valid."""
+    """
+    Verify OTP. Returns True if valid.
+
+    Every endpoint that checks a code comes through here — sign-in, sign-up,
+    password reset, deletion, deactivation, progressive sign-in — so this is
+    where WRONG codes are counted, against the account and not the network
+    address. Before, the only limit was per address, and an address is free to
+    change: a code could be walked from a pool of them for its full ten
+    minutes. Ten wrong codes an hour per account; right ones cost nothing.
+    `identifier` is the account's own email (or the canonical key for the
+    progressive flow), so no spelling of a phone number gets a fresh count.
+    """
+    enforce_identifier_limit(db, identifier, VERIFY_PER_IDENTIFIER, scope=VERIFY_SCOPE, record=False)
     record = db.query(models.OTPStore).filter(
         models.OTPStore.identifier == identifier,
         models.OTPStore.otp_code   == otp_code,
@@ -133,11 +150,13 @@ def _verify_otp(db: Session, identifier: str, otp_code: str, otp_type: str = "re
         models.OTPStore.is_used    == False,
     ).first()
     if not record:
+        record_identifier_failure(db, identifier, VERIFY_SCOPE)
         return False
     now = datetime.now(timezone.utc)
     if record.expires_at.tzinfo is None:
         record.expires_at = record.expires_at.replace(tzinfo=timezone.utc)
     if now > record.expires_at:
+        record_identifier_failure(db, identifier, VERIFY_SCOPE)
         return False
     record.is_used = True
     db.commit()
@@ -292,7 +311,9 @@ def verify_register_otp(request: Request, payload: schemas.LoginOTPVerify, db: S
     enforce_ip_limit(db, request, "verify-register-otp", VERIFY_CODE)
     user = _find_user(db, payload.identifier)
     if not user:
-        raise HTTPException(404, "Account not found.")
+        # The same refusal as a wrong code: this endpoint must not answer
+        # "is this a customer of yours?" to someone who has no code.
+        raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
     if user.is_verified:
         raise HTTPException(400, "This account is already verified. Please login.")
 
@@ -340,6 +361,14 @@ def login(payload: schemas.UserLogin, request: Request, db: Session = Depends(ge
     differently for each is the most valuable target on the router, whether or
     not the shop's own UI still uses it.
     """
+    # OFF IN PRODUCTION. The website signs in with a password AND an emailed
+    # code (send-login-otp, then verify-login-otp). This older endpoint
+    # issued a full token for the password alone, so the code proved
+    # nothing to anyone who called it directly — and nothing on either
+    # site calls it. It answers only where ALLOW_PASSWORD_ONLY_LOGIN=1 is
+    # set, which the test suite does to make signed-in customers quickly.
+    if os.getenv("ALLOW_PASSWORD_ONLY_LOGIN") != "1":
+        raise HTTPException(status_code=404, detail="Not Found")
     enforce_ip_limit(db, request, "login", VERIFY_CODE)
     # Checked but not charged for: only a WRONG password spends a slot, below.
     # Signing in successfully costs nothing, and this budget is no longer shared
@@ -407,7 +436,21 @@ def update_profile(
     db:           Session = Depends(get_db),
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
-    for field, value in payload.model_dump(exclude_none=True).items():
+    changes = payload.model_dump(exclude_none=True)
+    # THE MOBILE NUMBER IS NOT EDITABLE HERE, like the email beside it.
+    # Sign-in and password-reset codes go to this number. Letting any
+    # signed-in device change it with no confirmation meant whoever
+    # picked up an unlocked phone could point it at their own number,
+    # ask for a reset code and take the account. Re-saving the same
+    # number (in any spelling) is fine; a different one is refused.
+    new_phone = changes.pop("phone", None)
+    if new_phone is not None and _normalize_phone(new_phone) != _normalize_phone(current_user.phone or ""):
+        raise HTTPException(
+            400,
+            "To change your mobile number, please contact the shop — "
+            "it is how we confirm it is really you.",
+        )
+    for field, value in changes.items():
         setattr(current_user, field, value)
     db.commit()
     db.refresh(current_user)
@@ -422,7 +465,7 @@ def forgot_password(request: Request, payload: schemas.OTPRequest, db: Session =
     # survives the restarts this instance does constantly.
     enforce_ip_limit(db, request, "forgot-password", SEND_CODE)
     # AUTH-SPEC R1: per-identifier ceiling, on top of the per-IP one.
-    enforce_identifier_limit(db, payload.identifier)
+    enforce_identifier_limit(db, payload.identifier, scope=RESET_SEND_SCOPE)
     identifier = payload.identifier.strip()
     user = _find_user(db, identifier)
 
@@ -521,7 +564,13 @@ def send_login_otp(request: Request, payload: schemas.UserLogin, db: Session = D
     # survives the restarts this instance does constantly.
     enforce_ip_limit(db, request, "send-login-otp", SEND_CODE)
     # AUTH-SPEC R1: per-identifier ceiling, on top of the per-IP one.
-    enforce_identifier_limit(db, payload.identifier)
+    # Wrong passwords are counted against the account; a right one costs
+    # nothing here. This used to share one five-an-hour bucket with
+    # lookup and forgot-password, so a customer who reset their password
+    # could not then sign in with the new one for an hour.
+    enforce_identifier_limit(
+        db, payload.identifier, LOGIN_PER_IDENTIFIER, scope=LOGIN_SCOPE, record=False
+    )
     user = _find_user(db, payload.identifier)
     # AUTH-SPEC R3: always pay the hash, so presence and absence cost the same.
     # `password_ok` is computed BEFORE the branch precisely so that no `or`
@@ -530,6 +579,7 @@ def send_login_otp(request: Request, payload: schemas.UserLogin, db: Session = D
         payload.password, user.password_hash if user else _DUMMY_HASH
     )
     if not user or not password_ok:
+        record_identifier_failure(db, payload.identifier, LOGIN_SCOPE)
         raise HTTPException(
             status_code=401,
             detail="Incorrect email/phone or password. Please check and try again.",
@@ -539,6 +589,11 @@ def send_login_otp(request: Request, payload: schemas.UserLogin, db: Session = D
     if not user.is_verified:
         raise HTTPException(403, "Please verify your account first — check your email/SMS for the verification code.")
 
+    # Only now, with the password proved, is a send counted — so nobody can
+    # flood a customer's phone without knowing their password.
+    enforce_identifier_limit(
+        db, user.email, LOGIN_SEND_PER_IDENTIFIER, scope=LOGIN_SEND_SCOPE
+    )
     otp  = _create_otp(db, user.email, otp_type="login")
     # Send styled HTML OTP email + optional SMS
     notifications.send_login_otp_email(user.email, user.full_name, otp)
@@ -563,7 +618,9 @@ def verify_login_otp(request: Request, payload: schemas.LoginOTPVerify, db: Sess
     enforce_ip_limit(db, request, "verify-login-otp", VERIFY_CODE)
     user = _find_user(db, payload.identifier)
     if not user:
-        raise HTTPException(404, "Account not found.")
+        # The same refusal as a wrong code: this endpoint must not answer
+        # "is this a customer of yours?" to someone who has no code.
+        raise HTTPException(400, "Invalid or expired OTP. Please request a new one.")
     if not user.is_active:
         raise HTTPException(403, "Your account has been deactivated. Contact support.")
 
@@ -612,11 +669,12 @@ def request_delete_account(
     notifications.send_deletion_otp_email(current_user.email, current_user.full_name, otp)
     notifications.send_otp_sms(current_user.phone, otp, "Account Deletion")
     hint = current_user.email[:3] + "***@" + current_user.email.split("@")[-1]
-    smtp_ready = bool(os.getenv("SMTP_EMAIL") and os.getenv("SMTP_PASSWORD"))
-    response: dict = {"message": "OTP sent to your email and mobile to confirm deletion.", "email_hint": hint}
-    if not smtp_ready:
-        response["dev_otp"] = otp
-    return response
+    # The code is NEVER returned here. It used to be, whenever SMTP_PASSWORD
+    # was unset — a "development" convenience that was live in production,
+    # because the shops send mail through Brevo and never set an SMTP password.
+    # Anyone holding a signed-in device could request and confirm deletion of
+    # the account without ever seeing the owner's email or phone.
+    return {"message": "OTP sent to your email and mobile to confirm deletion.", "email_hint": hint}
 
 
 # ── CONFIRM ACCOUNT DELETION ───────────────────────────────────────────────────
@@ -700,6 +758,13 @@ def confirm_deactivate_account(
     current_user.is_deactivated      = True
     current_user.deactivated_at      = now
     current_user.scheduled_delete_at = delete_at   # auto-delete after 7 days
+    # A paused account is signed out everywhere. The page promises "you
+    # cannot log in or place orders"; without this every existing device
+    # carried on as if nothing had happened.
+    db.query(models.UserSession).filter(
+        models.UserSession.user_id == current_user.id,
+        models.UserSession.revoked_at.is_(None),
+    ).update({models.UserSession.revoked_at: now}, synchronize_session=False)
     db.commit()
 
     notifications.send_deletion_scheduled_email(current_user.email, current_user.full_name, delete_at)
@@ -808,7 +873,7 @@ def auth_lookup(request: Request, payload: schemas.AuthLookupIn, db: Session = D
     open.
     """
     enforce_ip_limit(db, request, "auth-lookup", LOOKUP_PER_IP)
-    enforce_identifier_limit(db, payload.identifier, LOOKUP_PER_IDENTIFIER)
+    enforce_identifier_limit(db, payload.identifier, LOOKUP_PER_IDENTIFIER, scope=LOOKUP_SCOPE)
 
     raw = (payload.identifier or "").strip()
     if not raw:
@@ -839,7 +904,7 @@ def auth_begin(request: Request, payload: schemas.AuthBeginIn, db: Session = Dep
     something maintained by care.
     """
     enforce_ip_limit(db, request, "auth-begin", BEGIN_PER_IP)
-    enforce_identifier_limit(db, payload.identifier, BEGIN_PER_IDENTIFIER)
+    enforce_identifier_limit(db, payload.identifier, BEGIN_PER_IDENTIFIER, scope=BEGIN_SCOPE)
 
     raw = (payload.identifier or "").strip()
     if not raw:
