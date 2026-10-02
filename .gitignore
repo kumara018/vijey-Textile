@@ -54,3 +54,9 @@ deploy/backups/
 deploy/both-shops/.env.vijey
 deploy/both-shops/.env.ammalu
 deploy/both-shops/backups/
+# The database password, and every hand-made copy of an env file taken before
+# an edit (.env.vijey.bak-20260920 and the like) — the server keeps these next
+# to the compose file, so a careless `git add .` there would commit them.
+deploy/both-shops/.env*
+!deploy/both-shops/.env.example*
+deploy/both-shops/*.bak*

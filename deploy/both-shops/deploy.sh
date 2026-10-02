@@ -75,8 +75,10 @@ rebuild() {
 
 # ── Prove it came back ───────────────────────────────────────────────────────
 # Over the public name, not localhost: this checks the whole path a customer
-# uses — Caddy, the certificate, the container and the database — rather than
-# just whether a process is listening.
+# uses — Caddy, the certificate and the container — rather than just whether a
+# process is listening. It asks /health/live, not /health: a database outage
+# must not block the very deploy that might fix it (see main.py). The hourly
+# watchdog is what watches /health and the database.
 wait_healthy() {
   local shop="$1" url="$2" code
   echo "== $shop: waiting for $url"
@@ -126,13 +128,13 @@ if [ "$TARGET" = "vijey" ] || [ "$TARGET" = "both" ]; then
   pull_repo "vijey" "$VIJEY_REPO"
   apply_caddy_if_changed "$vijey_before" "$(git -C "$VIJEY_REPO" rev-parse HEAD)"
   rebuild vijey
-  wait_healthy vijey "https://api.vijeytextile.com/health" || FAILED=1
+  wait_healthy vijey "https://api.vijeytextile.com/health/live" || FAILED=1
 fi
 
 if [ "$TARGET" = "ammalu" ] || [ "$TARGET" = "both" ]; then
   pull_repo "ammalu" "$AMMALU_REPO"
   rebuild ammalu
-  wait_healthy ammalu "https://api.ammalutex.com/health" || FAILED=1
+  wait_healthy ammalu "https://api.ammalutex.com/health/live" || FAILED=1
 fi
 
 echo

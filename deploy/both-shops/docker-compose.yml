@@ -38,7 +38,7 @@ services:
       - "8000"
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live',timeout=5).status==200 else 1)"]
       interval: 60s
       timeout: 10s
       retries: 3
@@ -60,7 +60,7 @@ services:
       - "8000"
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else 1)"]
+             "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health/live',timeout=5).status==200 else 1)"]
       interval: 60s
       timeout: 10s
       retries: 3
@@ -130,6 +130,92 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # ── The shops' own PostgreSQL, on this machine ───────────────────────────
+  #
+  # WHY IT IS HERE AND NOT ON A HOSTED FREE TIER. Vijey Textile's database was
+  # on Neon's free plan, and on 20 September 2026 Neon refused every connection
+  # with "Your account or project has exceeded the quota". The shop stayed up
+  # and served a catalogue of nothing: the site was healthy, every query failed.
+  # A free tier that can be switched off is not a foundation for a shop that
+  # takes money, and the same account hosted BOTH shops, so Ammalu Tex was one
+  # busy week from the same outage.
+  #
+  # This machine is Oracle's Always Free tier with 41 GB spare and both APIs
+  # already on it. Postgres here has no monthly quota to exceed, no bill, and
+  # no third party who can suspend it. The cost is that backups are now
+  # genuinely ours to keep — see db-backup below, which is why that service
+  # exists and is checked.
+  #
+  # Version 17 deliberately: it matches what Neon ran, so a dump taken there
+  # restores here without a version argument.
+  #
+  # NOT PUBLISHED. No `ports:` — only the containers on this network reach it.
+  # The database is not on the internet at all.
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env.db
+    environment:
+      POSTGRES_USER: shops
+      POSTGRES_DB: postgres
+      # Checksums catch silent disk corruption, which is the failure a single
+      # machine cannot otherwise notice.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shops -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # Nightly pg_dump of every database, kept for 14 days.
+  #
+  # The dumps that were supposed to exist did not: ./backups was owned by root
+  # while the job ran as uid 1000, so every run since 30 August failed with
+  # "permission denied" and nobody was told. This service runs as root, writes
+  # a real pg_dump (not a JSON export), and refuses to delete anything until a
+  # new dump has been verified with pg_restore --list.
+  db-backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file: .env.db
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backups/pg:/backups
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          for name in vijey ammalu; do
+            out="/backups/$${name}-$$(date +%Y%m%d-%H%M%S).dump"
+            if PGPASSWORD="$$POSTGRES_PASSWORD" pg_dump -h db -U shops -d "$$name" \
+                 --no-owner --no-acl -Fc -f "$$out" 2>/tmp/err; then
+              if pg_restore -l "$$out" >/dev/null 2>&1; then
+                echo "[backup $$name] OK $$(wc -c <"$$out") bytes"
+                ls -1t /backups/$${name}-*.dump | tail -n +15 | xargs -r rm -f
+              else
+                echo "[backup $$name] UNREADABLE - keeping older dumps"; rm -f "$$out"
+              fi
+            else
+              echo "[backup $$name] FAILED: $$(tail -1 /tmp/err)"
+            fi
+          done
+          sleep 86400
+        done
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+
 volumes:
+  pgdata:
   caddy_data:
   caddy_config:
