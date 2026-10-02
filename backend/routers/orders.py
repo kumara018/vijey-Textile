@@ -84,36 +84,14 @@ def place_order(
     # assigning `.product` on one associates it with a persistent Product, and
     # SQLAlchemy would cascade it into the session and write a real cart row on
     # commit. A SimpleNamespace cannot.
+    #
+    # WHICH LINES, AND WHAT THEY COST, BOTH COME FROM pricing.py — the same
+    # module /payments/create-order prices with, as the sister shop already
+    # does. This was an inline copy of that arithmetic; now that a payment is
+    # accepted only for exactly what create-order priced (payment_binding.py),
+    # two copies drifting apart would refund every order as a mismatch.
     buying_now = payload.buy_now is not None
-    if buying_now:
-        product = (
-            db.query(models.Product)
-            .filter(models.Product.id == payload.buy_now.product_id)
-            .first()
-        )
-        if not product:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="That piece is no longer available.",
-            )
-        cart_items = [SimpleNamespace(
-            product=product,
-            product_id=product.id,
-            quantity=payload.buy_now.quantity,
-            size=payload.buy_now.size,
-            color=payload.buy_now.color,
-        )]
-    else:
-        cart_items = (
-            db.query(models.CartItem)
-            .filter(models.CartItem.user_id == current_user.id)
-            .all()
-        )
-        if not cart_items:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Your cart is empty. Please add items before placing an order.",
-            )
+    cart_items = pricing.resolve_line_items(db, current_user.id, payload.buy_now)
 
     # ── VERIFY FIRST. NOTHING ELSE HAPPENS BEFORE THIS. ─────────────────
     #
@@ -158,32 +136,7 @@ def place_order(
         user_id=current_user.id, purpose="order",
     )
 
-    items_snapshot = []
-    subtotal = 0.0
-    stock_error = None
-
-    for item in cart_items:
-        product = item.product
-        if not product or not product.is_active:
-            stock_error = f"Product '{product.name if product else 'Unknown'}' is no longer available."
-            break
-        if product.stock < item.quantity:
-            stock_error = f"'{product.name}' has only {product.stock} items left. Please update your cart."
-            break
-        item_total = product.price * item.quantity
-        subtotal += item_total
-        items_snapshot.append({
-            "product_id": product.id,
-            "name": product.name,
-            "category": product.category,
-            "price": product.price,
-            "quantity": item.quantity,
-            "size": item.size,
-            "color": item.color,
-            "image": product.images[0] if product.images else None,
-            "subtotal": item_total,
-            "is_returnable": getattr(product, "is_returnable", True),
-        })
+    items_snapshot, subtotal, _total_unused, stock_error = pricing.price_items(cart_items)
 
     if stock_error:
         # Safe to refund here, and only here: the signature above has already
