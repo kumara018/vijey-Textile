@@ -107,6 +107,12 @@ function RegisterInner() {
         email: email.trim().toLowerCase(),
         phone: `+91${phone.replace(/\D/g, '')}`,
         password,
+        // schemas.UserRegister requires both. Without them every sign-up was
+        // refused with a 422, so no new customer could register. There is one
+        // password field on this form, and the screen states that continuing
+        // means agreeing to the terms — these two record exactly that.
+        confirm_password: password,
+        agree_terms: true,
       });
       setStage('code');
       setAnnouncement('We sent a code to your email and phone.');

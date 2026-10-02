@@ -61,11 +61,24 @@ export interface ResetPasswordPayload {
 }
 
 /** schemas.py:18 UserRegister */
+/**
+ * schemas.py UserRegister — ALL SIX fields, because the server requires all six.
+ *
+ * This interface listed four, and the page sent exactly what it said: no
+ * confirm_password, no agree_terms. Pydantic refused every sign-up with a 422
+ * and the screen said only "We could not create that account" — so no new
+ * customer could register on either shop, and the type that should have caught
+ * it was the thing vouching for the mistake.
+ */
 export interface UserRegisterPayload {
   full_name: string;
   email: string;
   phone: string;
   password: string;
+  /** The server checks it equals `password`. */
+  confirm_password: string;
+  /** Must be true. The form states "By continuing you agree to our terms". */
+  agree_terms: boolean;
 }
 
 /** schemas.py:219 DeviceEvictLogin */
