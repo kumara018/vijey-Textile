@@ -19,10 +19,13 @@ api.vijeytextile.com {
 	# matters on the mobile connections most customers are using.
 	encode zstd gzip
 
-	# Caddy sets HSTS itself. The rest of the security headers come from the
-	# app, so they are not duplicated here — one source of truth.
+	# HSTS IS SET HERE, because Caddy does NOT add it by default. This comment
+	# used to say it did, and the API went out with no Strict-Transport-Security
+	# header at all (found in the October 2026 test pass). The rest of the
+	# security headers come from the app; this one belongs to the TLS layer.
 	header {
 		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
 	}
 
 	log {
@@ -38,6 +41,7 @@ api.ammalutex.com {
 
 	header {
 		-Server
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
 	}
 
 	log {

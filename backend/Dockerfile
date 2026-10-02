@@ -57,4 +57,10 @@ ENV PORT=8000
 EXPOSE 8000
 
 # The same command Render was given, so behaviour does not change with the host.
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
+# --forwarded-allow-ips: trust the scheme Caddy reports. Uvicorn trusts only
+# 127.0.0.1 by default, and Caddy reaches this container over the Docker
+# network, so every redirect FastAPI built (e.g. /api/products -> /api/products/)
+# pointed at http:// — which a browser on an https page refuses to follow.
+# Safe here because nothing but Caddy can reach this port: only Caddy
+# publishes ports to the internet.
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT} --proxy-headers --forwarded-allow-ips '*'"]
