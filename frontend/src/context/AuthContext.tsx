@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { User } from '@/types';
 import { authAPI, getApiBase } from '@/lib/api';
 import { sessionsAfterSignIn } from '@/lib/auth';
+import { renewSavedToken, sameAccount, tokenSubject } from '@/lib/sessionTokens';
 
 export interface SavedSession {
   token: string;
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(storedToken);
       try { setUser(JSON.parse(storedUser)); } catch {}
       setSessions(parsedSessions);
-      document.cookie = `auth_token=${storedToken}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
+      document.cookie = `auth_token=${storedToken}; path=/; max-age=2592000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 30 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
 
       // Always fetch fresh user data from server to pick up role changes (e.g. is_admin)
       const API = getApiBase();
@@ -96,11 +97,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const _setCookie = (t: string) => {
-    document.cookie = `auth_token=${t}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 90 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
+    document.cookie = `auth_token=${t}; path=/; max-age=2592000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; // 30 days — mirrors backend ACCESS_TOKEN_EXPIRE_MINUTES
   };
   // Swap in a server-issued token upgrade (see the X-New-Token header on /me) —
   // used to silently migrate pre-device-tracking tokens without a re-login.
   const _applyRefreshedToken = (newToken: string) => {
+    // The saved copy of the token's own account renews with it (SESSION-01),
+    // or switching back to it later uses the token from the day it signed in.
+    const renewed = renewSavedToken(newToken);
+    if (renewed) setSessions(renewed as SavedSession[]);
+    // And it replaces the active token only if it is the active account's.
+    if (!sameAccount(newToken, localStorage.getItem('token'))) return;
     localStorage.setItem('token', newToken);
     _setCookie(newToken);
     setToken(newToken);
@@ -162,19 +169,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Instant account switch — fetches fresh user data to pick up role changes ─
   const switchAccount = async (session: SavedSession) => {
+    // Start from the copy in storage, not React state: another tab may have
+    // renewed this account's token since this one rendered the list.
+    let live = session.token;
+    try {
+      const stored = JSON.parse(localStorage.getItem('sessions') || '[]');
+      const entry = Array.isArray(stored) ? stored.find((s: SavedSession) => s?.user?.id === session.user.id) : null;
+      if (entry?.token) live = entry.token;
+    } catch {}
+
     // Apply the token immediately so API calls use the right account
-    localStorage.setItem('token', session.token);
-    _setCookie(session.token);
-    setToken(session.token);
+    localStorage.setItem('token', live);
+    _setCookie(live);
+    setToken(live);
 
     // Fetch fresh user data (picks up is_admin changes made after last login)
     let freshUser: User = session.user;
     try {
       const API = getApiBase();
       const res = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${session.token}` },
+        headers: { Authorization: `Bearer ${live}` },
       });
-      if (res.ok) freshUser = await res.json();
+      if (res.ok) {
+        freshUser = await res.json();
+        // For an account that has sat unused, this /me IS the renewal, and the
+        // server will not issue another for a minute — so keep the one it
+        // sent rather than saving the old token back (SESSION-01).
+        const renewedToken = res.headers.get('X-New-Token');
+        if (renewedToken && tokenSubject(renewedToken) === String(session.user.id)) {
+          live = renewedToken;
+          localStorage.setItem('token', live);
+          _setCookie(live);
+          setToken(live);
+        }
+      }
     } catch {}
 
     localStorage.setItem('user', JSON.stringify(freshUser));
@@ -183,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Bring the switched-to account to the front, with fresh data. Written
     // synchronously for the same reason as login: the caller reloads the page
     // the moment this resolves.
-    _rememberSession({ token: session.token, user: freshUser });
+    _rememberSession({ token: live, user: freshUser });
   };
 
   // ── Remove one saved session (without affecting the active one) ───────────

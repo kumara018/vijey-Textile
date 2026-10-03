@@ -16,7 +16,7 @@ reading the backend, **read-only** — no schema, endpoint, or migration touched
 | `get_optional_user` | `backend/auth.py:142` | Returns `None` rather than 401 — used where a page works signed-out |
 
 The axios layer already implements both critical behaviours and must not change:
-`x-new-token` → localStorage + 90-day cookie, and the 401 path re-checks
+`x-new-token` → localStorage + 30-day cookie, and the 401 path re-checks
 `/api/auth/me` before logging anyone out.
 
 ---

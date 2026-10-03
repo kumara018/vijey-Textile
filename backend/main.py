@@ -582,7 +582,7 @@ def _migrate_db():
                 # backfilling means the sliding-window logic has a real value
                 # to extend from the next time each session is used.
                 conn.execute(text(
-                    "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '90 days' "
+                    "UPDATE user_sessions SET expires_at = NOW() + INTERVAL '30 days' "
                     "WHERE expires_at IS NULL AND revoked_at IS NULL"
                 ))
                 conn.commit()

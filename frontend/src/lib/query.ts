@@ -11,7 +11,7 @@ import {
  * That instance carries two behaviours the whole session depends on:
  *
  *   1. the sliding session — an `x-new-token` response header is written to
- *      localStorage and a 90-day cookie on any authenticated call, which is
+ *      localStorage and a 30-day cookie on any authenticated call, which is
  *      what keeps a device signed in indefinitely while it is being used
  *   2. the 401 path — before logging anyone out it re-checks /api/auth/me,
  *      so a single endpoint failing does not sign the customer out

@@ -20,7 +20,14 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 # pushes UserSession.expires_at forward by the same amount) on every active
 # use, so a user who keeps using the site never hits this ceiling. Only a
 # device that goes fully unused for the whole window actually logs out.
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "129600"))  # 90 days
+#
+# THIRTY DAYS, chosen by the owner in October 2026 for both shops, and
+# deliberately NOT read from the environment any more. The two had drifted
+# through it: Vijey's server set ACCESS_TOKEN_EXPIRE_MINUTE (no S), which
+# nothing read, so a 90-day default applied; Ammalu's set 1440, signing
+# customers out after a single day away. A policy the owner decided belongs in
+# the code, where a stale or misspelt server setting cannot quietly change it.
+ACCESS_TOKEN_EXPIRE_MINUTES = 43200  # 30 days
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
@@ -116,6 +123,21 @@ def get_current_user(
                 detail="You've been signed out of this device. Please log in again.",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        # The device's own expiry, which slides forward on every use below. It
+        # was written and never read, so the only limit was the token's built-in
+        # date — and tokens issued under the old 90-day setting would have kept
+        # an idle device signed in for 90 days after the owner chose 30
+        # (CFG-01, October 2026). Idle past it means signed out.
+        session_expires = session.expires_at
+        if session_expires is not None:
+            if session_expires.tzinfo is None:
+                session_expires = session_expires.replace(tzinfo=timezone.utc)
+            if session_expires < datetime.now(timezone.utc):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="You've been away a while, so we signed you out. Please log in again.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
         # Throttled "last active" touch — avoid a DB write on every single
         # request. This is also where the sliding session renews: as long as
         # a device makes at least one request within the window, its expiry

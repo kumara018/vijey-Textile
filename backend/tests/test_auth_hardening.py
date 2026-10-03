@@ -187,3 +187,33 @@ class TestAuth10SignInCodesAreEmailedNotLogged:
         code = _code(db, "begin.qa.customer@gmail.com", "begin")
         assert code in sent[0][1]
         assert code not in capsys.readouterr().out, "a working sign-in code was printed to the log"
+
+
+class TestCfg01SignInLastsThirtyDays:
+    """CFG-01: the owner chose 30 days for both shops (Vijey ran at 90 through a
+    misspelt variable, Ammalu at 1 day). Each renewal on activity is 30 days."""
+
+    def test_a_sign_in_token_is_good_for_thirty_days(self, make_user):
+        from datetime import datetime, timezone
+        import jwt
+        _, headers = make_user()
+        token = headers["Authorization"].split(" ", 1)[1]
+        exp = jwt.decode(token, options={"verify_signature": False})["exp"]
+        days = (exp - datetime.now(timezone.utc).timestamp()) / 86400
+        assert 29.9 < days <= 30.01, f"a sign-in lasts {days:.1f} days, not 30"
+
+
+    def test_a_device_idle_past_its_expiry_is_signed_out(self, client, db, make_user):
+        """Old 90-day tokens must not outlive the 30-day policy on an idle device."""
+        from datetime import datetime, timedelta, timezone
+        user, headers = make_user()
+        assert client.get("/api/auth/me", headers=headers).status_code == 200
+        session = (db.query(models.UserSession)
+                   .filter(models.UserSession.user_id == user.id, models.UserSession.revoked_at.is_(None))
+                   .first())
+        assert session is not None, "sign-in created no device session"
+        session.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
+        session.last_active_at = datetime.now(timezone.utc) - timedelta(days=31)
+        db.commit()
+        r = client.get("/api/auth/me", headers=headers)
+        assert r.status_code == 401, f"an expired device was still signed in: {r.status_code}"

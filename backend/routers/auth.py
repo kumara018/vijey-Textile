@@ -534,7 +534,7 @@ def reset_password(request: Request, payload: schemas.OTPVerify, db: Session = D
     # The reason someone resets a password is usually that someone else might
     # know the old one — a lost phone, a shared computer, a shoulder read. A
     # reset that leaves those sessions alive changes the lock and hands the old
-    # key back. The tokens are 90 days long, so "it will expire" is not an answer.
+    # key back. The tokens are 30 days long, so "it will expire" is not an answer.
     #
     # Revoking is enough on its own: `get_current_user` refuses a revoked
     # session on the next request, so every other device lands back on sign-in

@@ -170,7 +170,7 @@ export function performLogout(to: string = '/') {
     const next = remaining[0];
     localStorage.setItem('token', next.token);
     localStorage.setItem('user', JSON.stringify(next.user));
-    document.cookie = `auth_token=${next.token}; path=/; max-age=7776000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+    document.cookie = `auth_token=${next.token}; path=/; max-age=2592000; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
     window.location.href = next.user?.is_admin ? '/admin' : '/';
     return;
   }

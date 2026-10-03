@@ -11,7 +11,7 @@ Two rules, both learned from this endpoint doing the opposite:
   2. It signs every other device out. The usual reason for a reset is that
      somebody else might know the old password — a lost phone, a shared
      computer. Changing the lock while the old key still opens the door is not
-     a reset. Sign-in tokens last 90 days, so waiting is not an answer either.
+     a reset. Sign-in tokens last 30 days, so waiting is not an answer either.
 """
 import models
 

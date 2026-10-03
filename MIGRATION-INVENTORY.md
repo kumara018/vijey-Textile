@@ -34,7 +34,7 @@ breaks in production.
    an explicit token that must not be clobbered.
 2. **Response:** reads the **`x-new-token`** response header on *any* authenticated
    call and writes it to `localStorage.token` plus an `auth_token` cookie
-   (`max-age=7776000`, 90 days, `SameSite=Lax`). This is a sliding session — dropping
+   (`max-age=2592000`, 30 days, `SameSite=Lax`). This is a sliding session — dropping
    it silently signs users out once their original token expires.
 3. **401 handling:** does **not** log out immediately. It re-checks `/api/auth/me`
    first, and only clears storage and redirects to `/auth/login` if that *also*
