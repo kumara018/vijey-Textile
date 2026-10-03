@@ -44,12 +44,15 @@ export const metadata: Metadata = {
   authors: [{ name: 'Vijey Textile' }],
   creator: 'Vijey Textile',
   publisher: 'Vijey Textile',
-  metadataBase: new URL('https://vijeytextile.com'),
-  alternates: { canonical: 'https://vijeytextile.com' },
+  // The host the site is actually served from. The bare domain answers with a
+  // redirect to www, so canonicals, og:url and the sitemap on the bare host all
+  // pointed search engines at a redirect (SEO-10, October 2026 test pass).
+  // No site-wide canonical: see app/(home)/layout.tsx.
+  metadataBase: new URL('https://www.vijeytextile.com'),
   openGraph: {
     title: `${STORE.name} — ${STORE.tagline}`,
     description: 'Shop Baby Frocks, Chudithar, Frocks, Lehenga & Party Wear for Baby, Kids & Girls (sizes 12–40) at Vijey Textile, Texvalley Gangapuram, Erode.',
-    url: 'https://vijeytextile.com',
+    url: 'https://www.vijeytextile.com',
     siteName: 'Vijey Textile',
     locale: 'en_IN',
     type: 'website',

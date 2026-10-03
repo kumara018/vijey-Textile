@@ -72,6 +72,8 @@ function apiHostname() {
 }
 
 const nextConfig = {
+  // No framework fingerprint on dynamic pages (SEC-59, October 2026 test pass).
+  poweredByHeader: false,
   // Explicitly set Turbopack workspace root so Vercel (no parent lockfile)
   // doesn't fail with "path argument must be string, received undefined".
   turbopack: {

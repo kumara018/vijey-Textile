@@ -25,7 +25,11 @@ api.vijeytextile.com {
 	# security headers come from the app; this one belongs to the TLS layer.
 	header {
 		-Server
+		-Via
 		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
 	log {
@@ -41,7 +45,11 @@ api.ammalutex.com {
 
 	header {
 		-Server
+		-Via
 		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
 	}
 
 	log {

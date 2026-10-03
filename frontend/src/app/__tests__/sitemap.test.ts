@@ -17,15 +17,15 @@ describe('sitemap', () => {
       { status: 200, headers: { 'content-type': 'application/json' } },
     )));
     const u = urls(await sitemap());
-    expect(u).toContain('https://vijeytextile.com/products/7');
-    expect(u).toContain('https://vijeytextile.com/products/12');
-    expect(u).toContain('https://vijeytextile.com/products');
+    expect(u).toContain('https://www.vijeytextile.com/products/7');
+    expect(u).toContain('https://www.vijeytextile.com/products/12');
+    expect(u).toContain('https://www.vijeytextile.com/products');
   });
 
   it('still returns the fixed pages when the API is unreachable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('ECONNREFUSED'); }));
     const u = urls(await sitemap());
-    expect(u).toContain('https://vijeytextile.com');
+    expect(u).toContain('https://www.vijeytextile.com');
     expect(u.some((x) => /\/products\/\d+$/.test(x))).toBe(false);
   });
 

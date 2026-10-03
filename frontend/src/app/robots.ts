@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin', '/api/', '/account', '/orders', '/cart', '/checkout'],
     },
-    sitemap: ['https://vijeytextile.com/sitemap.xml', 'https://www.vijeytextile.com/sitemap.xml'],
+    sitemap: ['https://www.vijeytextile.com/sitemap.xml'],
   };
 }

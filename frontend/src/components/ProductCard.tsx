@@ -49,9 +49,8 @@ export default function ProductCard({ product }: Props) {
     queryClient.setQueryData(qk.products.detail(product.id), (old: unknown) => old ?? product);
   }, [product, queryClient]);
 
-  const images = (product.images || []).filter(Boolean);
+  const allImages = (product.images || []).filter(Boolean);
   const hasVideo = Boolean(product.video_url);
-  const totalSlides = images.length + (hasVideo ? 1 : 0);
 
   const [imgIdx, setImgIdx] = useState(0);
   const [hovering, setHovering] = useState(false);
@@ -69,6 +68,19 @@ export default function ProductCard({ product }: Props) {
    * possible thing to put where the garment should be.
    */
   const [failedImages, setFailedImages] = useState<string[]>([]);
+  /**
+   * A PHOTOGRAPH THAT WILL NOT LOAD IS SKIPPED, NOT SHOWN AS "NOT YET
+   * PHOTOGRAPHED" (UI-02, October 2026 test pass).
+   *
+   * A failure was remembered for the life of the page and its slide then showed
+   * the no-photograph placeholder. One dropped request on a phone — the network
+   * blinking while the carousel advanced — and a garment with seven real
+   * photographs cycled through five slides of "Not yet photographed". Now the
+   * slide is simply left out; the placeholder means what it says, and appears
+   * only when no photograph of the piece can be shown at all.
+   */
+  const images = allImages.filter((u) => !failedImages.includes(mediaUrl(u)));
+  const totalSlides = images.length + (hasVideo ? 1 : 0);
   const touchStartX = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -113,6 +125,11 @@ export default function ProductCard({ product }: Props) {
     }, hovering ? 1800 : 3400);
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [totalSlides, hovering, onScreen]);
+
+  // A slide that dropped out can leave the index past the end; start again.
+  useEffect(() => {
+    if (totalSlides > 0 && imgIdx >= totalSlides) setImgIdx(0);
+  }, [imgIdx, totalSlides]);
 
   // Reset to first slide on mouse leave
   const handleMouseLeave = () => {

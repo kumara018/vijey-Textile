@@ -79,7 +79,10 @@ export async function generateMetadata({ params }: Params, parent: ResolvingMeta
   const title = `${p.name}${addsCategory ? ` — ${p.category}` : ''} | ${STORE.name}`;
   // Price first: it is what a shared link is usually asked about.
   const firstLine = (p.description ?? '').trim().split(/(?<=[.!?])\s+/)[0]?.slice(0, 150);
-  const description = [rupees(p.price), p.fabric, firstLine].filter(Boolean).join(' · ');
+  // Whole description held under 160 characters (SEO-02): price + fabric + a
+  // 150-character first line reached 172 on a real product and was cut off.
+  const full = [rupees(p.price), p.fabric, firstLine].filter(Boolean).join(' · ');
+  const description = full.length <= 158 ? full : `${full.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 
   const img = photo(p);
   // With no photograph, keep the shop's own preview image rather than none.
